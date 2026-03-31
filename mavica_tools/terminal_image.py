@@ -191,15 +191,25 @@ def show_image(
     protocol: str | None = None,
     label: bool = True,
 ) -> None:
-    """Display an image file in the terminal.
+    """Display a local image file in the terminal.
+
+    Only reads from local disk — never from floppy devices or
+    remote paths. Floppy transfer speeds are too slow for inline
+    preview; always import first, then preview the local copy.
 
     Args:
-        path: Path to image file
+        path: Path to a local image file
         width: Display width in characters/pixels (protocol-dependent)
         protocol: Force a specific protocol, or None for auto-detect
         label: Show filename and dimensions above the image
     """
     if not os.path.isfile(path):
+        return
+
+    # Guard: skip device paths and remote mounts that may be slow
+    abs_path = os.path.abspath(path)
+    skip_prefixes = ("/dev/", "\\\\.\\", "/mnt/floppy")
+    if any(abs_path.startswith(p) for p in skip_prefixes):
         return
 
     if label:

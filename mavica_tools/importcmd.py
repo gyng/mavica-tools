@@ -106,7 +106,7 @@ def main():
     )
     parser.add_argument(
         "--preview", action="store_true",
-        help="Show image thumbnails in the terminal (auto-detects protocol)",
+        help="Show imported photos in the terminal (from local disk, not floppy)",
     )
 
     args = parser.parse_args()

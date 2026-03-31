@@ -142,7 +142,7 @@ def main():
     )
     parser.add_argument(
         "--preview", action="store_true",
-        help="Show carved images in the terminal",
+        help="Show carved images after extraction (from local output dir)",
     )
     args = parser.parse_args()
 
