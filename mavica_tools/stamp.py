@@ -11,9 +11,9 @@ Uses Pillow's EXIF support — no extra dependencies needed.
 
 import argparse
 import os
-import struct
 import sys
 from datetime import datetime
+from fractions import Fraction
 from io import BytesIO
 
 from mavica_tools.utils import gather_jpegs
@@ -377,7 +377,6 @@ def stamp_jpeg(
 
         # Write accurate camera specs into EXIF IFD
         if specs:
-            from fractions import Fraction
 
             exif_ifd = exif.get_ifd(TAG_EXIF_IFD)
 

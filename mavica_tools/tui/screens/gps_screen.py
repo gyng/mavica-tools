@@ -54,6 +54,17 @@ class GpsScreen(Screen):
         table = self.query_one("#results-table", DataTable)
         table.add_columns("Status", "Filename", "Location", "Offset")
 
+        # Check for piexif
+        try:
+            import piexif  # noqa: F401
+        except ImportError:
+            log = self.query_one("#log", RichLog)
+            log.write(
+                "[#ffaa00]Note:[/] GPS writing requires piexif.\n"
+                "  Install with: [bold]pip install mavica-tools\\[gps][/]\n"
+                "  GPX parsing and preview still work without it."
+            )
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-browse-photos":
             self._browse("photos-path", select_directory=True, title="Select photos directory")

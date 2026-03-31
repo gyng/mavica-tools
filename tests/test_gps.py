@@ -167,6 +167,7 @@ class TestDecimalToDms:
 
 class TestStampGps:
     def test_writes_gps_exif(self, tmp_dir):
+        piexif = pytest.importorskip("piexif")
         path = os.path.join(tmp_dir, "photo.jpg")
         img = Image.new("RGB", (640, 480))
         img.save(path, "JPEG")
@@ -174,6 +175,28 @@ class TestStampGps:
         ok, msg = stamp_gps_exif(path, 47.6062, -122.3321, alt=50.0)
         assert ok is True
         assert "47.6062" in msg
+
+    def test_graceful_without_piexif(self, tmp_dir, monkeypatch):
+        """stamp_gps_exif should fail gracefully if piexif is not installed."""
+        import mavica_tools.gps as gps_mod
+        import importlib
+
+        # Simulate piexif missing by making import fail
+        original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+
+        def mock_import(name, *args, **kwargs):
+            if name == "piexif":
+                raise ImportError("mocked")
+            return original_import(name, *args, **kwargs)
+
+        path = os.path.join(tmp_dir, "photo.jpg")
+        img = Image.new("RGB", (640, 480))
+        img.save(path, "JPEG")
+
+        monkeypatch.setattr("builtins.__import__", mock_import)
+        ok, msg = stamp_gps_exif(path, 47.0, -122.0)
+        assert ok is False
+        assert "piexif" in msg.lower()
 
 
 class TestMergeTracks:

@@ -76,6 +76,8 @@ def main():
         print("  mavica stamp      — Add EXIF metadata to recovered JPEGs")
         print("  mavica detect     — Auto-detect floppy drives")
         print("  mavica history    — Disk health history tracking")
+        print("  mavica export     — Export images (organize, contact sheets, watermarks)")
+        print("  mavica gps        — Merge GPS track data into photos (requires piexif)")
         print("  mavica report     — Generate HTML recovery report")
         print("  mavica tui        — Launch interactive terminal UI")
         print("\nQuick start:")

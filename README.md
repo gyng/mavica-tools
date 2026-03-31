@@ -14,6 +14,9 @@ uv sync
 
 # Or with pip
 pip install -e .
+
+# Optional: GPS track merging (adds piexif dependency)
+pip install -e ".[gps]"
 ```
 
 ## Quick Start
@@ -300,4 +303,5 @@ See [AGENTS.md](AGENTS.md) for architecture, function signatures, and convention
 - Python 3.10+
 - [Pillow](https://pillow.readthedocs.io/) (image decoding + EXIF)
 - [Textual](https://textual.textualize.io/) (terminal UI)
+- [piexif](https://piexif.readthedocs.io/) (optional — GPS track merging only, install with `pip install mavica-tools[gps]`)
 - [uv](https://docs.astral.sh/uv/) (recommended package manager)
