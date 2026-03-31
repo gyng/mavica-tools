@@ -21,16 +21,23 @@ pip install -e ".[gps]"
 
 ## Quick Start
 
-The fastest way to recover images from a Mavica floppy:
+**For photographers — daily use:**
 
 ```bash
-# Option 1: Interactive TUI (recommended)
-mavica tui
+# One command: copies photos, adds camera EXIF, makes contact sheet
+mavica import /mnt/floppy -m fd7 --contact-sheet
 
-# Option 2: One command does everything
+# Or use the interactive TUI
+mavica tui    # → [1] Import from Floppy
+```
+
+**For recovery — damaged floppies:**
+
+```bash
+# One command does everything
 mavica recover images my_disk.img -o recovery/
 
-# Option 3: Step by step
+# Or step by step
 mavica multipass read /dev/fd0 -n 5 -o my_disk    # read floppy
 mavica fat12 extract my_disk/merged.img            # extract with original names
 mavica check extracted/                             # find corrupt files

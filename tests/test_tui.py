@@ -167,7 +167,7 @@ async def test_import_workflow_has_expected_widgets():
         await pilot.pause()
         await _push_and_wait(app, pilot, "import_workflow")
         assert isinstance(app.screen, ImportWorkflowScreen)
-        for btn_id in ("#btn-browse-floppy", "#btn-extract", "#btn-stamp", "#btn-export"):
+        for btn_id in ("#btn-browse", "#btn-import", "#btn-import-all"):
             btn = app.screen.query_one(btn_id, Button)
             assert btn is not None
 
