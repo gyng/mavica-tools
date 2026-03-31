@@ -18,6 +18,8 @@ TOOLS = [
     ("7", "recover", "Batch Recover", "Full pipeline in one step"),
     ("8", "format", "Format Disk", "Create Mavica-compatible FAT12 format"),
     ("9", "stamp", "Stamp Metadata", "Add EXIF to recovered JPEGs"),
+    ("e", "export", "Photo Export", "Organize, contact sheets, watermarks"),
+    ("g", "gps", "GPS Merge", "Match photos to GPS tracks"),
 ]
 
 
@@ -34,6 +36,8 @@ class HomeScreen(Screen):
         Binding("7", "tool('recover')", "Recover", show=False),
         Binding("8", "tool('format')", "Format", show=False),
         Binding("9", "tool('stamp')", "Stamp", show=False),
+        Binding("e", "tool('export')", "Export", show=False),
+        Binding("g", "tool('gps')", "GPS", show=False),
         Binding("w", "tool('workflow')", "Workflow", show=False),
     ]
 

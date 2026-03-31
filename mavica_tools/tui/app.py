@@ -14,6 +14,8 @@ from mavica_tools.tui.screens.fat12_screen import Fat12Screen
 from mavica_tools.tui.screens.recover_screen import RecoverScreen
 from mavica_tools.tui.screens.stamp_screen import StampScreen
 from mavica_tools.tui.screens.format_screen import FormatScreen
+from mavica_tools.tui.screens.export_screen import ExportScreen
+from mavica_tools.tui.screens.gps_screen import GpsScreen
 
 
 CSS = """
@@ -177,6 +179,8 @@ class MavicaApp(App):
         "recover": RecoverScreen,
         "stamp": StampScreen,
         "format": FormatScreen,
+        "export": ExportScreen,
+        "gps": GpsScreen,
     }
 
     def on_mount(self) -> None:

@@ -23,6 +23,8 @@ def main():
     subparsers.add_parser("detect", help="Auto-detect floppy drives")
     subparsers.add_parser("history", help="Disk health history tracking")
     subparsers.add_parser("report", help="Generate HTML recovery report")
+    subparsers.add_parser("export", help="Export images with organization and effects")
+    subparsers.add_parser("gps", help="Merge GPS track data into photos")
     subparsers.add_parser("tui", help="Launch interactive terminal UI")
 
     # Parse only the first argument to determine which tool to run
@@ -56,6 +58,10 @@ def main():
         from mavica_tools.history import main as tool_main
     elif args.tool == "report":
         from mavica_tools.report import main as tool_main
+    elif args.tool == "export":
+        from mavica_tools.export import main as tool_main
+    elif args.tool == "gps":
+        from mavica_tools.gps import main as tool_main
     else:
         parser.print_help()
         print("\nTools:")
