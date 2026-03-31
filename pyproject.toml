@@ -5,6 +5,7 @@ description = "Floppy disk recovery and troubleshooting toolkit for Sony Mavica 
 requires-python = ">=3.10"
 dependencies = [
     "Pillow>=9.0",
+    "piexif>=1.1.3",
     "textual>=0.50",
 ]
 

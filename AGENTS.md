@@ -4,7 +4,7 @@
 
 Floppy disk recovery and troubleshooting toolkit for Sony Mavica cameras (FD5, FD7, FD73, FD88, FD91, etc). Helps diagnose whether issues are caused by the camera, the floppy disk, or the PC floppy drive, and recovers images from damaged disks.
 
-Cross-platform: Windows, macOS, Linux. Managed with `uv`. 160 tests.
+Cross-platform: Windows, macOS, Linux. Managed with `uv`. 195 tests.
 
 ## Repository Structure
 
@@ -26,10 +26,13 @@ mavica-tools/
 │   ├── detect.py                 # Floppy drive auto-detection (Linux/Win/Mac)
 │   ├── history.py                # Disk health history tracking + degradation detection
 │   ├── report.py                 # HTML recovery report generator
+│   ├── export.py                 # Photo export (organize, rename, contact sheets, watermark)
+│   ├── gps.py                    # GPS track merge (GPX parser, timestamp matching, piexif)
+│   ├── utils.py                  # Shared utilities (gather_jpegs, get_photo_timestamp, JPEG constants)
 │   └── tui/                      # Textual terminal UI
 │       ├── app.py                # Main App class, CSS theme, screen registry
 │       ├── screens/
-│       │   ├── home.py           # Tool menu (10 options, keyboard shortcuts)
+│       │   ├── home.py           # Categorized tool menu (4 sections, keyboard shortcuts)
 │       │   ├── multipass.py      # Floppy imager with live sector map
 │       │   ├── carve.py          # JPEG extraction with image preview
 │       │   ├── check.py          # Corruption scanner with progress bar
@@ -39,12 +42,15 @@ mavica-tools/
 │       │   ├── fat12_screen.py   # FAT12 file browser
 │       │   ├── recover_screen.py # Batch recovery pipeline
 │       │   ├── stamp_screen.py   # EXIF metadata stamper
-│       │   └── format_screen.py  # Floppy formatter (image + device)
+│       │   ├── format_screen.py  # Floppy formatter (image + device)
+│       │   ├── export_screen.py # Photo export with contact sheets
+│       │   ├── gps_screen.py    # GPS track merge
+│       │   └── troubleshoot.py  # Interactive troubleshooting wizard
 │       └── widgets/
 │           ├── sector_map.py     # Colored sector health grid
 │           ├── image_preview.py  # Half-block Unicode image renderer
 │           └── file_picker.py    # DirectoryTree-based file/folder modal
-├── tests/                        # pytest test suite (160 tests)
+├── tests/                        # pytest test suite (195 tests)
 │   ├── test_multipass.py         # Sector merge, blank detection, image padding (10)
 │   ├── test_carve.py             # JPEG finding, carving, boundary detection (8)
 │   ├── test_check.py             # Structural checks, zero-byte detection (10)
@@ -57,6 +63,8 @@ mavica-tools/
 │   ├── test_detect.py            # Drive detection mocking (4)
 │   ├── test_history.py           # Snapshots, comparison, persistence (12)
 │   ├── test_report.py            # HTML generation, XSS escaping (8)
+│   ├── test_export.py            # Contact sheets, watermark, rename, organize (18)
+│   ├── test_gps.py               # GPX parsing, matching, interpolation, map (15)
 │   └── test_tui.py               # Headless screen navigation + widget tests (31)
 ├── screenshots/                  # SVG screenshots for README
 ├── pyproject.toml                # uv/hatch config, dependencies, pytest config
@@ -157,7 +165,7 @@ All tests run without hardware. Synthetic disk images and JPEG data are created 
 
 ### Dependencies
 
-- **Runtime**: Python 3.10+, Pillow>=9.0, Textual>=0.50
+- **Runtime**: Python 3.10+, Pillow>=9.0, piexif>=1.1.3 (GPS EXIF), Textual>=0.50
 - **Dev**: pytest>=7.0, pytest-asyncio>=0.23
 - **CI**: GitHub Actions (Linux/Windows/macOS × Python 3.11/3.12)
 

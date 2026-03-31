@@ -10,12 +10,13 @@ Uses Pillow's EXIF support — no extra dependencies needed.
 """
 
 import argparse
-import glob
 import os
 import struct
 import sys
 from datetime import datetime
 from io import BytesIO
+
+from mavica_tools.utils import gather_jpegs
 
 
 # EXIF tag IDs
@@ -529,11 +530,7 @@ def main():
     # Expand directories
     files = []
     for path in args.paths:
-        if os.path.isdir(path):
-            for ext in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG"):
-                files.extend(glob.glob(os.path.join(path, ext)))
-        else:
-            files.append(path)
+        files.extend(gather_jpegs(path))
 
     if not files:
         print("No JPEG files found.")
