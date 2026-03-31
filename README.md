@@ -71,8 +71,11 @@ The TUI has 14 screens organized by workflow stage:
 <details>
 <summary>TUI screenshots</summary>
 
-**Guided Workflow** — 8-step recovery journey
-![workflow screen](screenshots/workflow.svg)
+**Import from Floppy** — regular use: read, tag, export
+![import workflow](screenshots/import_workflow.svg)
+
+**Repair & Recovery** — damaged disk workflow
+![recovery workflow](screenshots/recovery_workflow.svg)
 
 **Troubleshooting Wizard** — interactive diagnostic
 ![troubleshoot screen](screenshots/troubleshoot.svg)
