@@ -50,6 +50,52 @@ def read_pass(device, pass_num, output_dir):
     return img_path, errors
 
 
+def read_pass_sectored(device, pass_num, output_dir, on_sector=None):
+    """Read a floppy sector-by-sector with per-sector callbacks.
+
+    on_sector(sector_index, success) is called after each sector.
+    This is slower than dd but enables live progress visualization.
+
+    Falls back to bulk dd if the device can't be opened directly.
+    """
+    img_path = os.path.join(output_dir, f"pass_{pass_num:02d}.img")
+
+    try:
+        data = bytearray(DISK_SIZE)
+        errors = 0
+
+        with open(device, "rb") as dev:
+            for sector_idx in range(TOTAL_SECTORS):
+                if on_sector:
+                    on_sector(sector_idx, "reading")
+
+                try:
+                    chunk = dev.read(SECTOR_SIZE)
+                    if len(chunk) == SECTOR_SIZE:
+                        data[sector_idx * SECTOR_SIZE : (sector_idx + 1) * SECTOR_SIZE] = chunk
+                        if on_sector:
+                            on_sector(sector_idx, "good")
+                    else:
+                        # Short read — pad with zeros
+                        data[sector_idx * SECTOR_SIZE : sector_idx * SECTOR_SIZE + len(chunk)] = chunk
+                        errors += 1
+                        if on_sector:
+                            on_sector(sector_idx, "bad")
+                except OSError:
+                    errors += 1
+                    if on_sector:
+                        on_sector(sector_idx, "bad")
+
+        with open(img_path, "wb") as f:
+            f.write(data)
+
+        return img_path, errors
+
+    except (OSError, PermissionError):
+        # Can't open device directly — fall back to dd
+        return read_pass(device, pass_num, output_dir)
+
+
 def read_image_file(path):
     """Read a disk image file, padding to full disk size if needed."""
     with open(path, "rb") as f:

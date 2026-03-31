@@ -10,8 +10,9 @@ from textual.widgets import Header, Footer, Static, Input, Button, RichLog, Prog
 from textual.containers import Horizontal
 from textual.worker import get_current_worker
 
-from mavica_tools.multipass import merge_passes, DISK_SIZE, SECTOR_SIZE
+from mavica_tools.multipass import merge_passes, read_pass_sectored, DISK_SIZE, SECTOR_SIZE, TOTAL_SECTORS
 from mavica_tools.tui.widgets.sector_map import SectorMap
+from mavica_tools.tui.widgets.defrag_map import DefragMap
 from mavica_tools.tui.widgets.file_picker import FilePicker
 
 
@@ -53,7 +54,7 @@ class MultipassScreen(Screen):
             yield Button("Browse & Merge", variant="warning", id="btn-merge")
         yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
         yield Static("", id="pass-status")
-        yield SectorMap(id="sector-map")
+        yield DefragMap(id="defrag-map")
         yield Static("", id="sector-summary")
         yield Static("", id="next-step")
         with Horizontal(classes="button-row"):
@@ -112,10 +113,11 @@ class MultipassScreen(Screen):
         log = self.query_one("#log", RichLog)
         status = self.query_one("#pass-status", Static)
         progress = self.query_one("#progress", ProgressBar)
+        defrag = self.query_one("#defrag-map", DefragMap)
         system = platform.system()
 
         os.makedirs(output_dir, exist_ok=True)
-        progress.update(total=passes, progress=0)
+        progress.update(total=passes * TOTAL_SECTORS, progress=0)
         log.write(f"[bold]Multi-pass read[/]: {device}, {passes} passes ({system})\n")
 
         image_paths = []
@@ -127,42 +129,30 @@ class MultipassScreen(Screen):
                 return
 
             img_path = os.path.join(output_dir, f"pass_{p:02d}.img")
-            log_path = os.path.join(output_dir, f"pass_{p:02d}.log")
             status.update(f"  Pass {p}/{passes}: reading {device}...")
+            defrag.reset(pass_num=p)
+
+            # Sector-by-sector callback for live defrag visualization
+            sectors_read = [0]
+
+            def on_sector(idx, state, _p=p):
+                defrag.update_sector(idx, state)
+                sectors_read[0] += 1
+                if sectors_read[0] % 50 == 0:  # throttle progress updates
+                    progress.update(progress=(_p - 1) * TOTAL_SECTORS + idx)
 
             try:
-                if system == "Windows":
-                    log.write(f"  Pass {p}: reading via direct I/O...")
-                    try:
-                        with open(device, "rb") as dev:
-                            data = dev.read(DISK_SIZE)
-                        with open(img_path, "wb") as f:
-                            f.write(data)
-                        log.write(f"  Pass {p}: [green]read {len(data):,} bytes[/]")
-                    except PermissionError:
-                        log.write(f"  Pass {p}: [red]Permission denied — run as Administrator[/]")
-                        continue
-                    except OSError as e:
-                        log.write(f"  Pass {p}: [red]{e}[/]")
-                        continue
-                else:
-                    result = subprocess.run(
-                        ["dd", f"if={device}", f"of={img_path}",
-                         f"bs={SECTOR_SIZE}", "conv=noerror,sync"],
-                        capture_output=True, text=True,
-                    )
-                    with open(log_path, "w") as f:
-                        f.write(result.stderr)
-                    errors = result.stderr.lower().count("error")
-                    if errors:
-                        log.write(f"  Pass {p}: [#ffaa00]{errors} error(s)[/]")
-                    else:
-                        log.write(f"  Pass {p}: [green]clean read[/]")
-
+                img_path, errors = read_pass_sectored(
+                    device, p, output_dir, on_sector=on_sector
+                )
                 image_paths.append(img_path)
+
+                if errors:
+                    log.write(f"  Pass {p}: [#ffaa00]{errors} error(s)[/]")
+                else:
+                    log.write(f"  Pass {p}: [green]clean read[/]")
+
             except FileNotFoundError:
-                import platform
-                system = platform.system()
                 log.write(f"  [red]Device not found: {device}[/]")
                 if system == "Windows":
                     log.write("  [dim]Check that the floppy drive is connected and disk is inserted.[/]")
@@ -224,7 +214,7 @@ class MultipassScreen(Screen):
         log = self.query_one("#log", RichLog)
         status = self.query_one("#pass-status", Static)
 
-        self.query_one("#sector-map", SectorMap).sector_status = sector_status
+        self.query_one("#defrag-map", DefragMap).set_merged_result(sector_status)
 
         total = len(sector_status)
         good = sector_status.count("good")

@@ -17,7 +17,7 @@ from mavica_tools.tui.screens.multipass import MultipassScreen
 from mavica_tools.tui.screens.swaptest import SwapTestScreen
 from mavica_tools.tui.screens.import_workflow import ImportWorkflowScreen
 from mavica_tools.tui.screens.recovery_workflow import RecoveryWorkflowScreen
-from mavica_tools.tui.widgets.sector_map import SectorMap
+from mavica_tools.tui.widgets.defrag_map import DefragMap
 
 
 # ---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ async def test_repair_screen_has_expected_widgets():
 
 @pytest.mark.asyncio
 async def test_multipass_screen_has_expected_widgets():
-    """MultipassScreen should have #device-path Input, #btn-read Button, SectorMap."""
+    """MultipassScreen should have #device-path Input, #btn-read Button, DefragMap."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
@@ -142,7 +142,7 @@ async def test_multipass_screen_has_expected_widgets():
         assert isinstance(app.screen, MultipassScreen)
         assert isinstance(app.screen.query_one("#device-path"), Input)
         assert isinstance(app.screen.query_one("#btn-read"), Button)
-        assert isinstance(app.screen.query_one("#sector-map"), SectorMap)
+        assert isinstance(app.screen.query_one("#defrag-map"), DefragMap)
 
 
 @pytest.mark.asyncio
