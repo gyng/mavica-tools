@@ -86,7 +86,8 @@ class HomeScreen(Screen):
             "[bold #33ff33]mavica-tools[/] — Sony Mavica Floppy Toolkit\n",
             id="title-bar",
         )
-        yield Static("  [dim]What do you want to do?[/]\n")
+        from mavica_tools.fun import random_trivia
+        yield Static(f"  [dim italic]{random_trivia()}[/]\n")
 
         options = []
 

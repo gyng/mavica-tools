@@ -120,6 +120,8 @@ def main():
         contact_sheet=args.contact_sheet,
     )
 
+    from mavica_tools.fun import random_trivia
+
     print(f"\n{result['imported']} photo(s) imported to {args.output}/")
     if result["tagged"]:
         print(f"  Tagged with camera: {args.model}")
@@ -128,14 +130,23 @@ def main():
 
     if result["imported"] == 0:
         print("\n  No photos found. Check the path and try again.")
-    elif args.preview:
-        from mavica_tools.terminal_image import show_images, show_image
-        if result["contact_sheet"]:
-            print()
-            show_image(result["contact_sheet"], label=False)
-        else:
-            print()
-            show_images(result["files"], max_images=6)
+    else:
+        # Show fun stats
+        total_bytes = sum(
+            os.path.getsize(f) for f in result["files"] if os.path.exists(f)
+        )
+        from mavica_tools.fun import disk_stats_text
+        print(disk_stats_text(result["imported"], total_bytes))
+        print(f"\n  \033[2m{random_trivia()}\033[0m")
+
+        if args.preview:
+            from mavica_tools.terminal_image import show_images, show_image
+            if result["contact_sheet"]:
+                print()
+                show_image(result["contact_sheet"], label=False)
+            else:
+                print()
+                show_images(result["files"], max_images=6)
 
 
 if __name__ == "__main__":

@@ -136,18 +136,25 @@ def print_summary(sector_status):
     blank = sector_status.count("blank")
     conflict = sector_status.count("conflict")
 
-    print(f"\nSector summary:")
+    readable_pct = 100 * (good + recovered) / total if total else 0
+
+    from mavica_tools.fun import health_bar, sector_sparkline, recovery_suggestions
+
+    print(f"\nDisk health:")
+    print(health_bar(readable_pct))
+    print(sector_sparkline(sector_status))
+    print()
     print(f"  Total:     {total}")
     print(f"  Good:      {good} ({100 * good / total:.1f}%)")
     print(f"  Recovered: {recovered} ({100 * recovered / total:.1f}%)")
     print(f"  Conflict:  {conflict} ({100 * conflict / total:.1f}%)")
     print(f"  Blank:     {blank} ({100 * blank / total:.1f}%)")
 
-    if blank == 0 and conflict == 0:
-        print("\n  Disk appears fully readable!")
-    elif blank > 0:
-        print(f"\n  WARNING: {blank} sectors unreadable across all passes.")
-        print("  Try more passes, clean the drive head, or try a different drive.")
+    suggestions = recovery_suggestions(sector_status)
+    if suggestions:
+        print()
+        for s in suggestions:
+            print(f"  {s}")
 
 
 def multipass_image(device, output_dir, passes=5, eject_between=True):

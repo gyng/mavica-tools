@@ -250,6 +250,9 @@ class ImportWorkflowScreen(Screen):
         log.write(f"\n[bold #33ff33]{count} photo(s) {action_str}[/]")
         log.write("[dim]Select a row to preview. Press 'Next Disk' to import another floppy.[/]")
 
+        from mavica_tools.fun import random_trivia
+        log.write(f"\n  [dim italic]{random_trivia()}[/]")
+
         # Show contact sheet in preview if we made one
         if contact_path:
             self.query_one("#preview", ImagePreview).image_path = contact_path

@@ -232,7 +232,13 @@ class MultipassScreen(Screen):
         blank = sector_status.count("blank")
         conflict = sector_status.count("conflict")
 
+        from mavica_tools.fun import health_bar_rich, sector_sparkline_rich, recovery_suggestions
+
+        readable_pct = 100 * (good + recovered) / total if total else 0
+
         self.query_one("#sector-summary", Static).update(
+            health_bar_rich(readable_pct) + "\n"
+            + sector_sparkline_rich(sector_status) + "\n\n"
             f"  [bold]Sectors:[/] {total} total — "
             f"[green]{good} good ({100 * good / total:.1f}%)[/]  "
             f"[#33aaff]{recovered} recovered[/]  "
@@ -240,6 +246,12 @@ class MultipassScreen(Screen):
             f"[magenta]{conflict} conflict[/]"
         )
         log.write(f"\n[green]Merged image: {merged_path}[/]")
+
+        # Show suggestions
+        suggestions = recovery_suggestions(sector_status)
+        for s in suggestions:
+            log.write(f"  [dim]{s}[/]")
+
         status.update(f"  Done — {merged_path}")
 
         self.query_one("#next-step", Static).update(
