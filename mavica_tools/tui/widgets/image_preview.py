@@ -5,6 +5,8 @@ Uses upper-half-block (U+2580) with fg/bg colors to get 2 vertical
 pixels per character cell.
 """
 
+import os
+
 from textual.widget import Widget
 from textual.reactive import reactive
 from rich.text import Text
@@ -16,7 +18,7 @@ class ImagePreview(Widget):
     DEFAULT_CSS = """
     ImagePreview {
         height: auto;
-        min-height: 5;
+        min-height: 3;
         max-height: 30;
         padding: 0 1;
         border: tall #333333;
@@ -27,32 +29,39 @@ class ImagePreview(Widget):
 
     def render(self) -> Text:
         if not self.image_path:
-            return Text("No image selected", style="dim")
+            return Text("  No image selected", style="dim")
 
         try:
             return self._render_image()
         except Exception as e:
-            return Text(f"Cannot preview: {e}", style="red")
+            return Text(f"  Cannot preview: {e}", style="red")
 
     def _render_image(self) -> Text:
         from PIL import Image
 
+        # Show file info header
+        file_size = os.path.getsize(self.image_path)
+        name = os.path.basename(self.image_path)
+
         img = Image.open(self.image_path)
         img = img.convert("RGB")
+        orig_w, orig_h = img.size
 
-        # Target size: fit within widget, ~60 chars wide, height proportional
-        # Each char = 1 pixel wide, 2 pixels tall (half-block trick)
+        text = Text()
+        text.append(f"  {name}", style="bold")
+        text.append(f"  {orig_w}x{orig_h}  {file_size / 1024:.0f}KB\n", style="dim")
+
+        # Target size: fit within widget
         target_w = min(60, self.size.width - 4) if self.size.width > 4 else 60
         aspect = img.height / img.width
         target_h = int(target_w * aspect)
-        # Must be even for half-block pairing
         if target_h % 2 != 0:
             target_h += 1
+        target_h = min(target_h, 40)  # Cap height
 
         img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
         pixels = img.load()
 
-        text = Text()
         for y in range(0, target_h, 2):
             for x in range(target_w):
                 top_r, top_g, top_b = pixels[x, y]
@@ -61,7 +70,6 @@ class ImagePreview(Widget):
                 else:
                     bot_r, bot_g, bot_b = 0, 0, 0
 
-                # Upper half block: fg = top pixel, bg = bottom pixel
                 fg = f"#{top_r:02x}{top_g:02x}{top_b:02x}"
                 bg = f"#{bot_r:02x}{bot_g:02x}{bot_b:02x}"
                 text.append("\u2580", style=f"{fg} on {bg}")

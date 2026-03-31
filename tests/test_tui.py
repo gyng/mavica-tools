@@ -56,7 +56,7 @@ async def test_home_screen_has_all_tool_options():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
-        assert option_list.option_count == 6
+        assert option_list.option_count == 10
 
 
 # ---------------------------------------------------------------------------
@@ -346,51 +346,48 @@ async def test_swaptest_empty_inputs_shows_notification():
 
 
 @pytest.mark.asyncio
-async def test_option_list_selection_navigates_to_multipass():
-    """Selecting the first option in the OptionList should navigate to MultipassScreen."""
-    app = MavicaApp()
-    async with app.run_test(size=(100, 32)) as pilot:
-        await pilot.pause()
-        option_list = app.screen.query_one("#tool-list", OptionList)
-        # Focus the option list and select the first item (Multipass)
-        option_list.focus()
-        await pilot.pause()
-        # Highlighted index should start at 0 (Multipass)
-        await pilot.press("enter")
-        await pilot.pause()
-        assert isinstance(app.screen, MultipassScreen)
-
-
-@pytest.mark.asyncio
 async def test_option_list_selection_navigates_to_workflow():
-    """Selecting the last option (Guided Workflow) should navigate to WorkflowScreen."""
+    """Selecting the first option (Guided Workflow) should navigate to WorkflowScreen."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
         option_list.focus()
         await pilot.pause()
-        # Move to the last item (index 5 = workflow)
-        for _ in range(5):
-            await pilot.press("down")
-        await pilot.pause()
+        # First item (index 0) is Workflow
         await pilot.press("enter")
         await pilot.pause()
         assert isinstance(app.screen, WorkflowScreen)
 
 
 @pytest.mark.asyncio
-async def test_option_list_selection_navigates_to_check():
-    """Selecting 'Check Files' (index 2) via OptionList navigates to CheckScreen."""
+async def test_option_list_selection_navigates_to_multipass():
+    """Selecting Multipass (index 1) via OptionList navigates to MultipassScreen."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
         option_list.focus()
         await pilot.pause()
-        # Move down twice to reach Check Files (index 2)
         await pilot.press("down")
-        await pilot.press("down")
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        assert isinstance(app.screen, MultipassScreen)
+
+
+@pytest.mark.asyncio
+async def test_option_list_selection_navigates_to_check():
+    """Selecting 'Check Files' (index 3) via OptionList navigates to CheckScreen."""
+    app = MavicaApp()
+    async with app.run_test(size=(100, 32)) as pilot:
+        await pilot.pause()
+        option_list = app.screen.query_one("#tool-list", OptionList)
+        option_list.focus()
+        await pilot.pause()
+        # Move down 3 times: workflow(0) -> multipass(1) -> carve(2) -> check(3)
+        for _ in range(3):
+            await pilot.press("down")
         await pilot.pause()
         await pilot.press("enter")
         await pilot.pause()
@@ -452,10 +449,11 @@ async def test_workflow_step_buttons_push_correct_screens():
         await pilot.pause()
         assert isinstance(app.screen, WorkflowScreen)
 
-        # Click Step 3 -> should push CheckScreen
-        await pilot.click("#btn-step3")
+        # After step 1, step 2 should be enabled. Click it -> RecoverScreen
+        await pilot.click("#btn-step2")
         await pilot.pause()
-        assert isinstance(app.screen, CheckScreen)
+        from mavica_tools.tui.screens.recover_screen import RecoverScreen
+        assert isinstance(app.screen, RecoverScreen)
 
 
 @pytest.mark.asyncio

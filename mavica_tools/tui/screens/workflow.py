@@ -10,10 +10,11 @@ from textual.containers import Horizontal
 
 
 STEPS = [
-    ("Image the Floppy", "Run a multi-pass read to capture data from the disk."),
-    ("Carve JPEGs", "Extract JPEG images from the raw disk image."),
-    ("Check Files", "Scan extracted images for corruption."),
-    ("Repair", "Attempt to salvage corrupt images."),
+    ("1. Image the Floppy", "Multi-pass read to capture every readable sector."),
+    ("2. Extract JPEGs", "Try FAT12 first (preserves names), fall back to carving."),
+    ("3. Check Files", "Scan extracted images for corruption."),
+    ("4. Repair", "Salvage pixels from corrupt images."),
+    ("5. Stamp Metadata", "Add camera model and date to recovered JPEGs."),
 ]
 
 
@@ -26,79 +27,98 @@ class WorkflowScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Static("[bold #ffaa00]Guided Recovery Workflow[/]\n", id="title-bar")
+        yield Static(
+            "[bold #ffaa00]Guided Recovery Workflow[/]  "
+            "[dim]Follow these steps in order[/]\n",
+            id="title-bar",
+        )
 
         # Step indicators
-        step_text = "  ".join(
-            f"[bold #ffaa00][{i+1}][/] {name}" for i, (name, _) in enumerate(STEPS)
+        step_text = "  >  ".join(
+            f"[bold #ffaa00]{name.split('.')[0]}[/]" for name, _ in STEPS
         )
-        yield Static(f"  {step_text}\n", id="step-bar")
+        yield Static(f"  {step_text}\n")
 
-        yield Static("", id="step-description")
         yield Static(
-            "  This workflow guides you through the full recovery process.\n"
-            "  Each step feeds into the next automatically.\n",
+            "  Each step feeds into the next. Complete them in order\n"
+            "  for best results. Paths auto-fill between steps.\n"
         )
 
-        with Horizontal():
-            yield Button("1. Multipass Read", variant="success", id="btn-step1")
-            yield Button("2. Carve JPEGs", variant="default", id="btn-step2")
-            yield Button("3. Check Files", variant="default", id="btn-step3")
-            yield Button("4. Repair", variant="default", id="btn-step4")
+        yield Static("  [bold]Output Directory[/]", classes="section-title")
+        with Horizontal(classes="input-row"):
+            yield Input(value="recovery", placeholder="Base directory for this session", id="base-dir")
 
-        yield Static("\n  [bold]Working Directory[/]", classes="section-title")
-        with Horizontal():
-            yield Input(
-                placeholder="Base output directory for this recovery session",
-                value="recovery",
-                id="base-dir",
-            )
+        with Horizontal(classes="button-row"):
+            yield Button("1. Read Floppy", variant="success", id="btn-step1")
+            yield Button("2. Extract", variant="success", id="btn-step2")
+            yield Button("3. Check", variant="default", id="btn-step3", disabled=True)
+            yield Button("4. Repair", variant="default", id="btn-step4", disabled=True)
+            yield Button("5. Stamp", variant="default", id="btn-step5", disabled=True)
 
         yield Static("", id="workflow-status")
         yield RichLog(id="log", markup=True)
         yield Footer()
 
     def on_mount(self) -> None:
-        self._update_step_description(0)
+        self._check_existing_state()
+
+    def _check_existing_state(self) -> None:
+        """Enable step buttons based on what files already exist."""
+        base = self.query_one("#base-dir", Input).value.strip()
+        log = self.query_one("#log", RichLog)
+
+        merged = os.path.join(base, "merged.img")
+        extracted = os.path.join(base, "extracted")
+        carved = os.path.join(base, "carved_images")
+
+        if os.path.exists(merged):
+            log.write(f"[dim]Found: {merged}[/]")
+        if os.path.isdir(extracted) or os.path.isdir(carved):
+            img_dir = extracted if os.path.isdir(extracted) else carved
+            log.write(f"[dim]Found: {img_dir}/[/]")
+            self.query_one("#btn-step3", Button).disabled = False
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        base_dir = self.query_one("#base-dir", Input).value.strip() or "recovery"
+        base = self.query_one("#base-dir", Input).value.strip() or "recovery"
         log = self.query_one("#log", RichLog)
 
         if event.button.id == "btn-step1":
             log.write("[bold]Step 1:[/] Opening Multipass Read...")
-            log.write(f"  Tip: Output will go to [bold]{base_dir}/[/]")
+            log.write(f"  Output directory: [bold]{base}/[/]")
             self.app.push_screen("multipass")
 
         elif event.button.id == "btn-step2":
-            merged_path = os.path.join(base_dir, "merged.img")
-            if os.path.exists(merged_path):
-                log.write(f"[bold]Step 2:[/] Found {merged_path}")
-            else:
-                log.write(
-                    f"[#ffaa00]Step 2:[/] No merged.img found in {base_dir}/. "
-                    "Run step 1 first, or enter the path manually on the Carve screen."
-                )
-            self.app.push_screen("carve")
+            log.write("[bold]Step 2:[/] Opening Batch Recover...")
+            log.write(f"  Will look for images in [bold]{base}/[/]")
+            # Push recover screen which does FAT12 + carve + check
+            self.app.push_screen("recover")
 
         elif event.button.id == "btn-step3":
-            carved_dir = os.path.join(base_dir, "carved_images")
-            if os.path.isdir(carved_dir):
-                log.write(f"[bold]Step 3:[/] Checking files in {carved_dir}/")
+            extracted = os.path.join(base, "extracted")
+            carved = os.path.join(base, "carved_images")
+            target = extracted if os.path.isdir(extracted) else carved
+            if os.path.isdir(target):
+                log.write(f"[bold]Step 3:[/] Checking files in {target}/")
+                screen = self.app.SCREENS["check"]()
+                screen._prefill_path = target
+                self.app.push_screen(screen)
             else:
-                log.write(
-                    f"[#ffaa00]Step 3:[/] No carved_images/ found. "
-                    "Run step 2 first, or enter the path manually."
-                )
-            self.app.push_screen("check")
+                log.write("[#ffaa00]Step 3:[/] No extracted files found. Run step 2 first.")
+                self.notify("Run step 2 first to extract images", severity="warning")
 
         elif event.button.id == "btn-step4":
             log.write("[bold]Step 4:[/] Opening Repair...")
             self.app.push_screen("repair")
 
-    def _update_step_description(self, step_idx: int) -> None:
-        if 0 <= step_idx < len(STEPS):
-            name, desc = STEPS[step_idx]
-            self.query_one("#step-description", Static).update(
-                f"  [bold]{name}[/]: {desc}\n"
-            )
+        elif event.button.id == "btn-step5":
+            log.write("[bold]Step 5:[/] Opening Stamp Metadata...")
+            self.app.push_screen("stamp")
+
+        # Enable subsequent steps
+        if event.button.id == "btn-step1":
+            self.query_one("#btn-step2", Button).disabled = False
+        elif event.button.id == "btn-step2":
+            self.query_one("#btn-step3", Button).disabled = False
+        elif event.button.id == "btn-step3":
+            self.query_one("#btn-step4", Button).disabled = False
+            self.query_one("#btn-step5", Button).disabled = False

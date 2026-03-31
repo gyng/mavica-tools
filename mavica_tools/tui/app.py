@@ -10,6 +10,10 @@ from mavica_tools.tui.screens.repair import RepairScreen
 from mavica_tools.tui.screens.multipass import MultipassScreen
 from mavica_tools.tui.screens.swaptest import SwapTestScreen
 from mavica_tools.tui.screens.workflow import WorkflowScreen
+from mavica_tools.tui.screens.fat12_screen import Fat12Screen
+from mavica_tools.tui.screens.recover_screen import RecoverScreen
+from mavica_tools.tui.screens.stamp_screen import StampScreen
+from mavica_tools.tui.screens.format_screen import FormatScreen
 
 
 CSS = """
@@ -58,22 +62,15 @@ Screen {
 
 Button {
     margin: 0 1;
+    min-width: 10;
 }
 
-Button.primary {
-    background: #1a3a1a;
-    color: #33ff33;
-    border: tall #33ff33;
-}
-
-Button.primary:hover {
+Button.-active {
     background: #2a5a2a;
 }
 
-Button.warning {
-    background: #3a3a1a;
-    color: #ffaa00;
-    border: tall #ffaa00;
+Button:disabled {
+    opacity: 0.4;
 }
 
 DataTable {
@@ -102,12 +99,14 @@ Input:focus {
     border: tall #33ff33;
 }
 
-#footer-bar {
-    dock: bottom;
-    height: 1;
-    background: #1a1a1a;
-    color: #666666;
-    padding: 0 1;
+.input-row {
+    height: 3;
+    margin: 0 0 1 0;
+}
+
+.button-row {
+    height: 3;
+    margin: 0 0 1 0;
 }
 
 .results-summary {
@@ -115,6 +114,19 @@ Input:focus {
     padding: 1;
     background: #111111;
     border: tall #333333;
+}
+
+ProgressBar {
+    margin: 0 1;
+    padding: 0;
+}
+
+ProgressBar > .bar--bar {
+    color: #33ff33;
+}
+
+ProgressBar > .bar--complete {
+    color: #33ff33;
 }
 
 RichLog {
@@ -130,6 +142,12 @@ RichLog {
     height: auto;
     max-height: 20;
     overflow-y: auto;
+}
+
+.preview-pane {
+    width: 1fr;
+    height: auto;
+    min-height: 8;
 }
 """
 
@@ -155,21 +173,25 @@ class MavicaApp(App):
         "multipass": MultipassScreen,
         "swaptest": SwapTestScreen,
         "workflow": WorkflowScreen,
+        "fat12": Fat12Screen,
+        "recover": RecoverScreen,
+        "stamp": StampScreen,
+        "format": FormatScreen,
     }
 
     def on_mount(self) -> None:
         self.push_screen("home")
 
     def action_go_home(self) -> None:
-        # Pop all screens back to the base, then push home
         while len(self.screen_stack) > 1:
             self.pop_screen()
         self.push_screen("home")
 
     def action_help(self) -> None:
         self.notify(
-            "1-5: Tools  w: Workflow  h: Home  q: Quit\n"
-            "Tab/Shift+Tab: Navigate  Enter: Select",
+            "1-9: Tools  w: Workflow  h: Home  q: Quit\n"
+            "Tab/Shift+Tab: Navigate  Enter: Select  Esc: Back\n"
+            "b: Browse for file/directory",
             title="Keyboard Shortcuts",
             timeout=5,
         )

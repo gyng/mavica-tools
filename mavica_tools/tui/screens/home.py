@@ -8,12 +8,16 @@ from textual.widgets.option_list import Option
 
 
 TOOLS = [
-    ("1", "multipass", "Multipass Read", "Multi-pass floppy imager — merge best sectors"),
+    ("w", "workflow", "Guided Workflow", "Step-by-step recovery (start here)"),
+    ("1", "multipass", "Multipass Read", "Multi-pass floppy imager"),
     ("2", "carve", "Carve JPEGs", "Extract images from raw disk images"),
     ("3", "check", "Check Files", "Batch JPEG corruption checker"),
     ("4", "repair", "Repair Images", "Salvage pixels from corrupt JPEGs"),
     ("5", "swaptest", "Swap Test", "Cross-camera test tracker"),
-    ("w", "workflow", "Guided Workflow", "Step-by-step recovery (recommended)"),
+    ("6", "fat12", "FAT12 Browser", "View/extract files with original names"),
+    ("7", "recover", "Batch Recover", "Full pipeline in one step"),
+    ("8", "format", "Format Disk", "Create Mavica-compatible FAT12 format"),
+    ("9", "stamp", "Stamp Metadata", "Add EXIF to recovered JPEGs"),
 ]
 
 
@@ -26,32 +30,36 @@ class HomeScreen(Screen):
         Binding("3", "tool('check')", "Check", show=False),
         Binding("4", "tool('repair')", "Repair", show=False),
         Binding("5", "tool('swaptest')", "Swap Test", show=False),
+        Binding("6", "tool('fat12')", "FAT12", show=False),
+        Binding("7", "tool('recover')", "Recover", show=False),
+        Binding("8", "tool('format')", "Format", show=False),
+        Binding("9", "tool('stamp')", "Stamp", show=False),
         Binding("w", "tool('workflow')", "Workflow", show=False),
     ]
 
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
-            "[bold #33ff33]mavica-tools[/] — Floppy Recovery Toolkit\n",
+            "[bold #33ff33]mavica-tools[/] — Floppy Recovery Toolkit for Sony Mavica\n",
             id="title-bar",
         )
         yield Static(
-            "  Select a tool or press [bold #ffaa00]w[/] for the guided workflow:\n",
+            "  Press [bold #ffaa00]w[/] for guided recovery, "
+            "or select a tool:\n",
         )
-        yield OptionList(
-            *[
-                Option(
-                    f"[bold #ffaa00][{key}][/]  [bold]{name}[/]\n"
-                    f"     [dim]{desc}[/]",
-                    id=screen_id,
-                )
-                for key, screen_id, name, desc in TOOLS
-            ],
-            id="tool-list",
-        )
+
+        options = []
+        for item in TOOLS:
+            key, screen_id, name, desc = item
+            options.append(Option(
+                f"[bold #ffaa00][{key}][/]  [bold]{name}[/]\n"
+                f"     [dim]{desc}[/]",
+                id=screen_id,
+            ))
+
+        yield OptionList(*options, id="tool-list")
         yield Static(
-            "\n  [dim]Supports Windows, macOS, and Linux.[/]\n"
-            "  [dim]Floppy device reads require platform-appropriate drivers.[/]",
+            "\n  [dim]Windows / macOS / Linux  |  ? for help  |  q to quit[/]",
         )
         yield Footer()
 
