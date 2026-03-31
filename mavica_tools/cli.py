@@ -11,6 +11,7 @@ def main():
     )
     subparsers = parser.add_subparsers(dest="tool")
 
+    subparsers.add_parser("import", help="Quick import: copy, tag, and go")
     subparsers.add_parser("multipass", help="Multi-pass floppy disk imager")
     subparsers.add_parser("carve", help="Carve JPEG images from disk images")
     subparsers.add_parser("check", help="Check JPEG files for corruption")
@@ -34,6 +35,8 @@ def main():
         from mavica_tools.tui.app import run
         run()
         return
+    elif args.tool == "import":
+        from mavica_tools.importcmd import main as tool_main
     elif args.tool == "multipass":
         from mavica_tools.multipass import main as tool_main
     elif args.tool == "carve":
@@ -65,6 +68,7 @@ def main():
     else:
         parser.print_help()
         print("\nTools:")
+        print("  mavica import     — Quick import: copy photos, tag, contact sheet")
         print("  mavica multipass  — Multi-pass floppy reader (merges best sectors)")
         print("  mavica carve      — Extract JPEGs from raw disk images")
         print("  mavica check      — Batch-check JPEGs for corruption")
