@@ -16,6 +16,7 @@ from mavica_tools.tui.screens.stamp_screen import StampScreen
 from mavica_tools.tui.screens.format_screen import FormatScreen
 from mavica_tools.tui.screens.export_screen import ExportScreen
 from mavica_tools.tui.screens.gps_screen import GpsScreen
+from mavica_tools.tui.screens.troubleshoot import TroubleshootScreen
 
 
 CSS = """
@@ -181,6 +182,7 @@ class MavicaApp(App):
         "format": FormatScreen,
         "export": ExportScreen,
         "gps": GpsScreen,
+        "troubleshoot": TroubleshootScreen,
     }
 
     def on_mount(self) -> None:

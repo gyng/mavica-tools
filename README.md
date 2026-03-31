@@ -42,21 +42,37 @@ mavica report recovery/ --label "Beach Trip 2001"  # generate HTML report
 mavica tui
 ```
 
-The TUI has 11 screens with guided workflow, file browser, image preview, and live progress:
+The TUI has 14 screens organized by workflow stage:
 
-- **Guided Workflow** — walks you through recovery step by step
-- **Multipass Read** — multi-pass floppy imager with visual sector map
-- **JPEG Carver** — extract images from raw disk images
-- **Health Check** — batch corruption scanner with color-coded results
-- **Repair** — before/after image preview for recovered files
-- **Swap Test** — interactive camera/disk test matrix
-- **FAT12 Browser** — view files with original Mavica names
-- **Batch Recover** — full pipeline in one step
-- **Format** — create Mavica-compatible floppies
-- **Stamp Metadata** — add EXIF to recovered JPEGs
+**Start Here:**
+- **Guided Recovery** — 8-step walkthrough from floppy read to export
+- **One-Click Recover** — full pipeline in one command
+- **Troubleshoot** — interactive wizard to diagnose floppy problems
+
+**Recovery Steps:**
+- **Read Floppy** — multi-pass imager with visual sector map
+- **Extract with Names** — recover files with original Mavica names
+- **Carve from Raw** — extract JPEGs from damaged disk images
+- **Check for Damage** — batch corruption scanner
+- **Repair** — salvage pixels from corrupt files
+
+**Post-Processing:**
+- **Add Photo Info** — stamp camera model, focal length, and date into EXIF
+- **Add GPS Location** — match photos to GPS tracks
+- **Export & Share** — organize, contact sheets, watermarks
+
+**Diagnostic:**
+- **Camera Swap Test** — isolate faulty hardware
+- **Format Floppy** — create Mavica-compatible disks
 
 <details>
 <summary>TUI screenshots</summary>
+
+**Guided Workflow** — 8-step recovery journey
+![workflow screen](screenshots/workflow.svg)
+
+**Troubleshooting Wizard** — interactive diagnostic
+![troubleshoot screen](screenshots/troubleshoot.svg)
 
 **Multipass Read** — sector map and progress
 ![multipass screen](screenshots/multipass.svg)
@@ -64,11 +80,14 @@ The TUI has 11 screens with guided workflow, file browser, image preview, and li
 **JPEG Health Check** — corruption scanner
 ![check screen](screenshots/check.svg)
 
+**Photo Export** — contact sheets, watermarks
+![export screen](screenshots/export.svg)
+
+**GPS Track Merge** — match photos to GPS data
+![gps screen](screenshots/gps.svg)
+
 **Swap Test** — camera/disk test matrix
 ![swaptest screen](screenshots/swaptest.svg)
-
-**Guided Workflow** — step-by-step recovery
-![workflow screen](screenshots/workflow.svg)
 
 </details>
 

@@ -5,9 +5,10 @@ Outputs repaired images as PNG to avoid re-encoding artifacts.
 """
 
 import argparse
-import glob
 import os
 import sys
+
+from mavica_tools.utils import gather_jpegs
 
 
 def repair_jpeg(input_path, output_path=None):
@@ -152,11 +153,7 @@ def main():
 
     files = []
     for path in args.paths:
-        if os.path.isdir(path):
-            for ext in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG"):
-                files.extend(glob.glob(os.path.join(path, ext)))
-        else:
-            files.append(path)
+        files.extend(gather_jpegs(path))
 
     if not files:
         print("No JPEG files found.")

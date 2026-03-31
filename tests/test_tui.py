@@ -56,7 +56,7 @@ async def test_home_screen_has_all_tool_options():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
-        assert option_list.option_count == 16  # 12 tools + 4 section headers
+        assert option_list.option_count == 17  # 13 tools + 4 section headers
 
 
 # ---------------------------------------------------------------------------

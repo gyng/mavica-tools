@@ -23,6 +23,7 @@ TOOLS = [
     ("g", "gps", "Add GPS Location", "Match photos to GPS tracks from a logger"),
     ("e", "export", "Export & Share", "Organize, contact sheets, watermarks, resize"),
     # Diagnostic & utility
+    ("t", "troubleshoot", "Troubleshoot", "Interactive wizard — what's wrong with my floppy?"),
     ("5", "swaptest", "Camera Swap Test", "Find the faulty camera, disk, or drive"),
     ("8", "format", "Format Floppy", "Create Mavica-compatible FAT12 format"),
 ]
@@ -43,6 +44,7 @@ class HomeScreen(Screen):
         Binding("9", "tool('stamp')", "Stamp", show=False),
         Binding("e", "tool('export')", "Export", show=False),
         Binding("g", "tool('gps')", "GPS", show=False),
+        Binding("t", "tool('troubleshoot')", "Troubleshoot", show=False),
         Binding("w", "tool('workflow')", "Workflow", show=False),
     ]
 

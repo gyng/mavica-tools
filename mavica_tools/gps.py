@@ -7,13 +7,13 @@ external GPS logger data (Garmin, phone GPX export, Google Timeline).
 
 import argparse
 import glob as globmod
-import math
 import os
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from io import BytesIO
+
+from mavica_tools.utils import get_photo_timestamp as _utils_get_timestamp
 
 
 @dataclass
@@ -110,22 +110,11 @@ def _parse_gpx_time(time_str: str) -> datetime | None:
 
 
 def _get_photo_time(filepath: str, use_mtime: bool = False) -> datetime | None:
-    """Get photo timestamp from EXIF or file mtime."""
-    if not use_mtime:
-        try:
-            from PIL import Image
-            img = Image.open(filepath)
-            exif = img.getexif()
-            date_str = exif.get(0x9003) or exif.get(0x0132)  # DateTimeOriginal or DateTime
-            if date_str:
-                dt = datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
-                return dt.replace(tzinfo=timezone.utc)
-        except Exception:
-            pass
-
-    # Fall back to mtime
-    mtime = os.path.getmtime(filepath)
-    return datetime.fromtimestamp(mtime, tz=timezone.utc)
+    """Get photo timestamp from EXIF or file mtime, with timezone."""
+    dt = _utils_get_timestamp(filepath, use_mtime=use_mtime)
+    if dt and dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 
 def _interpolate_point(p1: GpsPoint, p2: GpsPoint, target_time: datetime) -> GpsPoint:
@@ -222,38 +211,44 @@ def stamp_gps_exif(
     alt: float | None = None,
     timestamp: datetime | None = None,
 ) -> tuple[bool, str]:
-    """Write GPS coordinates into JPEG EXIF.
+    """Write GPS coordinates into JPEG EXIF using piexif.
 
-    Writes coordinates into the ImageDescription tag as a parseable string,
-    since Pillow's GPS IFD serialization is fragile across versions.
-    Also writes via stamp_jpeg for the software tag.
+    Writes proper GPS IFD tags (GPSLatitude, GPSLongitude, etc.)
+    that are compatible with all photo viewers and mapping tools.
 
     Returns (success, message).
     """
     try:
-        from PIL import Image
+        import piexif
     except ImportError:
-        return False, "Pillow required"
+        return False, "piexif required: pip install piexif"
 
     try:
-        img = Image.open(photo_path)
-        exif = img.getexif()
+        exif_dict = piexif.load(photo_path)
 
-        # Write GPS as structured text in UserComment for maximum compatibility
-        lat_ref = "N" if lat >= 0 else "S"
-        lon_ref = "E" if lon >= 0 else "W"
-        gps_text = f"GPS:{abs(lat):.6f}{lat_ref},{abs(lon):.6f}{lon_ref}"
+        lat_dms = _decimal_to_dms(lat)
+        lon_dms = _decimal_to_dms(lon)
+
+        gps_ifd = {
+            piexif.GPSIFD.GPSLatitudeRef: b"N" if lat >= 0 else b"S",
+            piexif.GPSIFD.GPSLatitude: lat_dms,
+            piexif.GPSIFD.GPSLongitudeRef: b"E" if lon >= 0 else b"W",
+            piexif.GPSIFD.GPSLongitude: lon_dms,
+        }
+
         if alt is not None:
-            gps_text += f",{alt:.1f}m"
+            gps_ifd[piexif.GPSIFD.GPSAltitudeRef] = 0 if alt >= 0 else 1
+            gps_ifd[piexif.GPSIFD.GPSAltitude] = (int(abs(alt) * 100), 100)
 
-        # Store in standard EXIF tags that Pillow handles reliably
-        existing_desc = exif.get(0x010E, "")
-        if existing_desc and "GPS:" not in existing_desc:
-            exif[0x010E] = f"{existing_desc} | {gps_text}"
-        else:
-            exif[0x010E] = gps_text
+        if timestamp:
+            gps_ifd[piexif.GPSIFD.GPSDateStamp] = timestamp.strftime("%Y:%m:%d").encode()
+            h, m, s = timestamp.hour, timestamp.minute, timestamp.second
+            gps_ifd[piexif.GPSIFD.GPSTimeStamp] = ((h, 1), (m, 1), (s, 1))
 
-        img.save(photo_path, "JPEG", exif=exif.tobytes())
+        exif_dict["GPS"] = gps_ifd
+        exif_bytes = piexif.dump(exif_dict)
+        piexif.insert(exif_bytes, photo_path)
+
         return True, f"{lat:.6f}, {lon:.6f}"
     except Exception as e:
         return False, str(e)

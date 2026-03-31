@@ -10,25 +10,8 @@ import math
 import os
 import re
 import sys
-from datetime import datetime
 
-
-def _get_photo_date(filepath: str) -> str | None:
-    """Get date from EXIF or file mtime, return as YYYY-MM-DD."""
-    try:
-        from PIL import Image
-        img = Image.open(filepath)
-        exif = img.getexif()
-        date_str = exif.get(0x9003) or exif.get(0x0132)  # DateTimeOriginal or DateTime
-        if date_str:
-            # EXIF format: "YYYY:MM:DD HH:MM:SS"
-            return date_str[:10].replace(":", "-")
-    except Exception:
-        pass
-
-    # Fall back to file mtime
-    mtime = os.path.getmtime(filepath)
-    return datetime.fromtimestamp(mtime).strftime("%Y-%m-%d")
+from mavica_tools.utils import get_photo_date
 
 
 def organize_path(filepath: str, scheme: str, base_dir: str) -> str:
@@ -44,7 +27,7 @@ def organize_path(filepath: str, scheme: str, base_dir: str) -> str:
     if scheme == "flat":
         return os.path.join(base_dir, name)
     elif scheme in ("date", "year"):
-        date_str = _get_photo_date(filepath)
+        date_str = get_photo_date(filepath)
         if date_str and len(date_str) >= 10:
             year = date_str[:4]
             month_day = date_str[5:10]

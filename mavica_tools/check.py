@@ -5,13 +5,11 @@ Detects: truncation, marker errors, premature EOF, and partial decode failures.
 """
 
 import argparse
-import glob
 import os
 import struct
 import sys
 
-JPEG_SOI = b"\xff\xd8"
-JPEG_EOI = b"\xff\xd9"
+from mavica_tools.utils import gather_jpegs, JPEG_SOI_SHORT as JPEG_SOI, JPEG_EOI
 
 
 def check_jpeg_structure(filepath):
@@ -181,11 +179,7 @@ def main():
     # Expand directories to JPEG files
     files = []
     for path in args.paths:
-        if os.path.isdir(path):
-            for ext in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG"):
-                files.extend(glob.glob(os.path.join(path, ext)))
-        else:
-            files.append(path)
+        files.extend(gather_jpegs(path))
 
     if not files:
         print("No JPEG files found.")
