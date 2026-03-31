@@ -37,8 +37,10 @@ def find_jpegs(data):
             break
 
         # Find the matching EOI marker
-        # Start searching after SOI — JPEGs can contain thumbnail JPEGs,
-        # so we look for the LAST EOI within a reasonable range
+        # Look for the next SOI to bound our search — if another JPEG starts
+        # before we find EOI, the current JPEG's EOI must be before that SOI.
+        next_soi_pos = data.find(JPEG_SOI, soi_pos + 3)
+
         eoi_search_start = soi_pos + 3
         eoi_pos = -1
 
@@ -46,6 +48,12 @@ def find_jpegs(data):
             next_eoi = data.find(JPEG_EOI, eoi_search_start)
             if next_eoi == -1:
                 break
+
+            # If there's another JPEG starting before this EOI, stop here —
+            # use the last EOI we found before that next SOI
+            if next_soi_pos != -1 and next_eoi >= next_soi_pos:
+                break
+
             eoi_pos = next_eoi
             eoi_search_start = next_eoi + 2
 
