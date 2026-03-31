@@ -99,12 +99,16 @@ class WorkflowScreen(Screen):
             log.write("[bold]Step 1:[/] Opening Read Floppy...")
             log.write(f"  Output: [bold]{base}/[/]")
             log.write("[dim]Tip: After reading, come back here for step 2.[/]")
-            self.app.push_screen("multipass")
+            screen = self.app.SCREENS["multipass"]()
+            screen._prefill_output_dir = base
+            self.app.push_screen(screen)
             self._enable_from_step(2)
 
         elif event.button.id == "btn-step2":
-            log.write("[bold]Step 2:[/] Opening Batch Recover (extract + check + repair)...")
-            self.app.push_screen("recover")
+            log.write("[bold]Step 2:[/] Opening Batch Recover...")
+            log.write(f"  Looking in [bold]{base}/[/] for disk images")
+            screen = self.app.SCREENS["recover"]()
+            self.app.push_screen(screen)
             self._enable_from_step(3)
 
         elif event.button.id == "btn-step3":

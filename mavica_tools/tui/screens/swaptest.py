@@ -46,6 +46,9 @@ class SwapTestScreen(Screen):
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Camera name", id="log-camera")
             yield Input(placeholder="Disk label", id="log-disk")
+        yield Static(
+            "  [dim]OK = all photos transferred  |  Partial = some corrupt  |  Fail = can't read disk[/]"
+        )
         with Horizontal(classes="button-row"):
             yield Button("OK", variant="success", id="btn-ok")
             yield Button("Partial", variant="warning", id="btn-partial")

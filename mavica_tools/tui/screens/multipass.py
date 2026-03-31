@@ -32,6 +32,8 @@ class MultipassScreen(Screen):
         Binding("b", "browse", "Browse", show=True),
     ]
 
+    _prefill_output_dir: str | None = None
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static("[bold #ffaa00]Multi-Pass Floppy Imager[/]  [dim]Merge best sectors from multiple reads[/]\n", id="title-bar")
@@ -49,22 +51,30 @@ class MultipassScreen(Screen):
         with Horizontal(classes="button-row"):
             yield Button("Read Device", variant="success", id="btn-read")
             yield Button("Browse & Merge", variant="warning", id="btn-merge")
-            yield Button("Carve Merged", variant="default", id="btn-carve", disabled=True)
-
         yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
         yield Static("", id="pass-status")
         yield SectorMap(id="sector-map")
         yield Static("", id="sector-summary")
+        yield Static("", id="next-step")
+        with Horizontal(classes="button-row"):
+            yield Button("Next: Extract with Names", variant="success", id="btn-next-fat12", disabled=True)
+            yield Button("Next: Carve from Raw", variant="warning", id="btn-next-carve", disabled=True)
         yield RichLog(id="log", markup=True)
         yield Footer()
+
+    def on_mount(self) -> None:
+        if self._prefill_output_dir:
+            self.query_one("#output-dir", Input).value = self._prefill_output_dir
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-read":
             self._start_read()
         elif event.button.id == "btn-merge":
             self.action_browse()
-        elif event.button.id == "btn-carve":
+        elif event.button.id == "btn-next-carve":
             self._go_to_carve()
+        elif event.button.id == "btn-next-fat12":
+            self._go_to_fat12()
 
     def action_browse(self) -> None:
         def on_selected(path: str) -> None:
@@ -222,7 +232,13 @@ class MultipassScreen(Screen):
         log.write(f"\n[green]Merged image: {merged_path}[/]")
         status.update(f"  Done — {merged_path}")
 
-        self.query_one("#btn-carve", Button).disabled = False
+        self.query_one("#next-step", Static).update(
+            "\n  [bold #33ff33]What next?[/]\n"
+            "  [bold]Extract with Names[/] — tries to recover original filenames (MVC-001.JPG)\n"
+            "  [bold]Carve from Raw[/] — scans for JPEG data directly (works if filesystem is damaged)\n"
+        )
+        self.query_one("#btn-next-fat12", Button).disabled = False
+        self.query_one("#btn-next-carve", Button).disabled = False
         self._merged_path = merged_path
 
     def _reset_read_button(self) -> None:
@@ -233,5 +249,11 @@ class MultipassScreen(Screen):
     def _go_to_carve(self) -> None:
         if hasattr(self, "_merged_path"):
             screen = self.app.SCREENS["carve"]()
+            screen._prefill_image = self._merged_path
+            self.app.push_screen(screen)
+
+    def _go_to_fat12(self) -> None:
+        if hasattr(self, "_merged_path"):
+            screen = self.app.SCREENS["fat12"]()
             screen._prefill_image = self._merged_path
             self.app.push_screen(screen)

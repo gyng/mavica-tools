@@ -30,7 +30,8 @@ class GpsScreen(Screen):
         )
         yield Static(
             "  [dim]Pair your Mavica photos with GPS tracks from a Garmin,\n"
-            "  phone GPX export, or Google Timeline.[/]\n"
+            "  phone GPX export, or Google Timeline.\n"
+            "  Uses EXIF DateTimeOriginal (from 'Add Photo Info') or file modification time.[/]\n"
         )
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Photos directory...", id="photos-path")

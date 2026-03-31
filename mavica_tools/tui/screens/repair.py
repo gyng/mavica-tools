@@ -49,6 +49,9 @@ class RepairScreen(Screen):
         with Horizontal():
             yield ImagePreview(id="preview-original", classes="preview-pane")
             yield ImagePreview(id="preview-repaired", classes="preview-pane")
+        with Horizontal(classes="button-row"):
+            yield Button("Next: Add Photo Info", variant="success", id="btn-next-stamp", disabled=True)
+            yield Button("Next: Export & Share", variant="default", id="btn-next-export", disabled=True)
         yield RichLog(id="log", markup=True)
         yield Footer()
 
@@ -71,6 +74,10 @@ class RepairScreen(Screen):
             self._start_repair()
         elif event.button.id == "btn-browse":
             self.action_browse()
+        elif event.button.id == "btn-next-stamp":
+            self.app.push_screen("stamp")
+        elif event.button.id == "btn-next-export":
+            self.app.push_screen("export")
 
     def action_browse(self) -> None:
         def on_selected(path: str) -> None:
@@ -170,6 +177,8 @@ class RepairScreen(Screen):
         log.write(f"\n[bold]Results:[/] [green]{success} fixed[/], [red]{fail} failed[/]")
         if success:
             log.write("[dim]Select a row to preview original vs repaired.[/]")
+            self.query_one("#btn-next-stamp", Button).disabled = False
+            self.query_one("#btn-next-export", Button).disabled = False
         self._reset_button()
 
     def _reset_button(self) -> None:
