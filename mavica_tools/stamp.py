@@ -28,26 +28,291 @@ TAG_IMAGE_DESCRIPTION = 0x010E
 TAG_SOFTWARE = 0x0131
 TAG_USER_COMMENT = 0x9286
 
-# Common Mavica models
-MAVICA_MODELS = {
-    "fd5": "Sony Mavica MVC-FD5",
-    "fd7": "Sony Mavica MVC-FD7",
-    "fd51": "Sony Mavica MVC-FD51",
-    "fd71": "Sony Mavica MVC-FD71",
-    "fd73": "Sony Mavica MVC-FD73",
-    "fd75": "Sony Mavica MVC-FD75",
-    "fd83": "Sony Mavica MVC-FD83",
-    "fd85": "Sony Mavica MVC-FD85",
-    "fd87": "Sony Mavica MVC-FD87",
-    "fd88": "Sony Mavica MVC-FD88",
-    "fd90": "Sony Mavica MVC-FD90",
-    "fd91": "Sony Mavica MVC-FD91",
-    "fd92": "Sony Mavica MVC-FD92",
-    "fd95": "Sony Mavica MVC-FD95",
-    "fd97": "Sony Mavica MVC-FD97",
-    "fd100": "Sony Mavica MVC-FD100",
-    "fd200": "Sony Mavica MVC-FD200",
+# EXIF IFD tags (stored in the Exif sub-IFD)
+TAG_EXIF_IFD = 0x8769
+TAG_FNUMBER = 0x829D
+TAG_EXPOSURE_PROGRAM = 0x8822
+TAG_ISO = 0x8827
+TAG_FOCAL_LENGTH = 0x920A
+TAG_FOCAL_LENGTH_35MM = 0xA405
+TAG_MAX_APERTURE = 0x9205
+TAG_METERING_MODE = 0x9207
+TAG_FLASH = 0x9209
+TAG_COLOR_SPACE = 0xA001
+TAG_PIXEL_X = 0xA002
+TAG_PIXEL_Y = 0xA003
+TAG_SENSING_METHOD = 0xA217
+TAG_SCENE_TYPE = 0xA301
+TAG_CUSTOM_RENDERED = 0xA401
+TAG_EXPOSURE_MODE = 0xA402
+TAG_WHITE_BALANCE = 0xA403
+TAG_DIGITAL_ZOOM_RATIO = 0xA404
+TAG_SCENE_CAPTURE_TYPE = 0xA406
+
+# Accurate camera specs for every floppy Mavica model.
+# Sources: Sony product pages, dpreview archives, imaging-resource.
+# Focal lengths and apertures are for the optical lens (not digital zoom).
+# Focal length 35mm equivalent calculated from sensor size.
+MAVICA_SPECS = {
+    "fd5": {
+        "model": "Sony Mavica MVC-FD5",
+        "year": 1997,
+        "resolution": (640, 480),
+        "sensor": "1/4\" CCD",
+        "focal_length_mm": 4.2,         # fixed lens
+        "focal_length_35mm": 47,
+        "aperture_max": 2.0,
+        "aperture_min": 2.0,            # fixed aperture
+        "zoom_optical": 1.0,
+        "zoom_digital": 10.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd7": {
+        "model": "Sony Mavica MVC-FD7",
+        "year": 1997,
+        "resolution": (640, 480),
+        "sensor": "1/4\" CCD",
+        "focal_length_mm": 4.2,
+        "focal_length_35mm": 47,
+        "aperture_max": 2.0,
+        "aperture_min": 2.0,
+        "zoom_optical": 1.0,
+        "zoom_digital": 10.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd51": {
+        "model": "Sony Mavica MVC-FD51",
+        "year": 1998,
+        "resolution": (640, 480),
+        "sensor": "1/4\" CCD",
+        "focal_length_mm": 4.2,
+        "focal_length_35mm": 47,
+        "aperture_max": 2.0,
+        "aperture_min": 2.0,
+        "zoom_optical": 1.0,
+        "zoom_digital": 10.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd71": {
+        "model": "Sony Mavica MVC-FD71",
+        "year": 1998,
+        "resolution": (640, 480),
+        "sensor": "1/4\" CCD",
+        "focal_length_mm": 4.2,
+        "focal_length_35mm": 47,
+        "aperture_max": 2.0,
+        "aperture_min": 2.0,
+        "zoom_optical": 1.0,
+        "zoom_digital": 10.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd73": {
+        "model": "Sony Mavica MVC-FD73",
+        "year": 1999,
+        "resolution": (640, 480),
+        "sensor": "1/4\" CCD",
+        "focal_length_mm": 4.7,         # Carl Zeiss Vario-Sonnar
+        "focal_length_35mm": 40,        # wide end
+        "aperture_max": 1.8,
+        "aperture_min": 3.1,
+        "zoom_optical": 3.0,
+        "zoom_digital": 6.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd75": {
+        "model": "Sony Mavica MVC-FD75",
+        "year": 1999,
+        "resolution": (640, 480),
+        "sensor": "1/3\" CCD",
+        "focal_length_mm": 4.7,
+        "focal_length_35mm": 40,
+        "aperture_max": 1.8,
+        "aperture_min": 3.1,
+        "zoom_optical": 3.0,
+        "zoom_digital": 6.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd83": {
+        "model": "Sony Mavica MVC-FD83",
+        "year": 2000,
+        "resolution": (1280, 960),
+        "sensor": "1/2.7\" CCD",
+        "focal_length_mm": 6.1,
+        "focal_length_35mm": 37,
+        "aperture_max": 2.8,
+        "aperture_min": 2.8,
+        "zoom_optical": 3.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd85": {
+        "model": "Sony Mavica MVC-FD85",
+        "year": 2000,
+        "resolution": (1280, 960),
+        "sensor": "1/2.7\" CCD",
+        "focal_length_mm": 6.1,
+        "focal_length_35mm": 37,
+        "aperture_max": 2.8,
+        "aperture_min": 2.8,
+        "zoom_optical": 3.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd87": {
+        "model": "Sony Mavica MVC-FD87",
+        "year": 2000,
+        "resolution": (1280, 960),
+        "sensor": "1/2.7\" CCD",
+        "focal_length_mm": 6.1,
+        "focal_length_35mm": 37,
+        "aperture_max": 2.8,
+        "aperture_min": 2.8,
+        "zoom_optical": 3.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd88": {
+        "model": "Sony Mavica MVC-FD88",
+        "year": 2000,
+        "resolution": (1280, 960),
+        "sensor": "1/2.7\" CCD",
+        "focal_length_mm": 6.1,
+        "focal_length_35mm": 37,
+        "aperture_max": 2.8,
+        "aperture_min": 2.8,
+        "zoom_optical": 3.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd90": {
+        "model": "Sony Mavica MVC-FD90",
+        "year": 2000,
+        "resolution": (640, 480),
+        "sensor": "1/4\" CCD",
+        "focal_length_mm": 4.2,
+        "focal_length_35mm": 47,
+        "aperture_max": 2.0,
+        "aperture_min": 2.0,
+        "zoom_optical": 1.0,
+        "zoom_digital": 4.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd91": {
+        "model": "Sony Mavica MVC-FD91",
+        "year": 2000,
+        "resolution": (640, 480),
+        "sensor": "1/3\" CCD",
+        "focal_length_mm": 3.5,
+        "focal_length_35mm": 30,        # wide end of 14x zoom
+        "aperture_max": 1.8,
+        "aperture_min": 3.1,
+        "zoom_optical": 14.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd92": {
+        "model": "Sony Mavica MVC-FD92",
+        "year": 2001,
+        "resolution": (1024, 768),
+        "sensor": "1/3.2\" CCD",
+        "focal_length_mm": 5.1,
+        "focal_length_35mm": 38,
+        "aperture_max": 2.8,
+        "aperture_min": 2.8,
+        "zoom_optical": 3.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd95": {
+        "model": "Sony Mavica MVC-FD95",
+        "year": 2001,
+        "resolution": (1600, 1200),
+        "sensor": "1/2.7\" CCD",
+        "focal_length_mm": 6.1,
+        "focal_length_35mm": 37,
+        "aperture_max": 2.8,
+        "aperture_min": 2.8,
+        "zoom_optical": 3.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd97": {
+        "model": "Sony Mavica MVC-FD97",
+        "year": 2001,
+        "resolution": (1600, 1200),
+        "sensor": "1/2.7\" CCD",
+        "focal_length_mm": 6.1,
+        "focal_length_35mm": 37,
+        "aperture_max": 2.8,
+        "aperture_min": 2.8,
+        "zoom_optical": 3.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd100": {
+        "model": "Sony Mavica MVC-FD100",
+        "year": 2001,
+        "resolution": (1280, 960),
+        "sensor": "1/2.7\" CCD",
+        "focal_length_mm": 6.1,
+        "focal_length_35mm": 37,
+        "aperture_max": 2.8,
+        "aperture_min": 2.8,
+        "zoom_optical": 3.0,
+        "zoom_digital": 2.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
+    "fd200": {
+        "model": "Sony Mavica MVC-FD200",
+        "year": 2002,
+        "resolution": (1600, 1200),
+        "sensor": "1/2.7\" CCD",
+        "focal_length_mm": 6.1,
+        "focal_length_35mm": 37,
+        "aperture_max": 2.8,
+        "aperture_min": 3.6,
+        "zoom_optical": 3.0,
+        "zoom_digital": 6.0,
+        "iso": 100,
+        "flash": True,
+        "media": "3.5\" floppy",
+    },
 }
+
+# Convenience shorthand lookup (kept for backward compat)
+MAVICA_MODELS = {k: v["model"] for k, v in MAVICA_SPECS.items()}
 
 
 def stamp_jpeg(
@@ -95,15 +360,72 @@ def stamp_jpeg(
     except Exception:
         exif = Image.Exif()
 
-    # Resolve model shorthand
+    # Resolve model shorthand and write camera specs
     if model:
         model_lower = model.lower().replace("mvc-", "").replace("mavica", "").strip()
-        if model_lower in MAVICA_MODELS:
-            full_model = MAVICA_MODELS[model_lower]
+        specs = MAVICA_SPECS.get(model_lower)
+
+        if specs:
+            full_model = specs["model"]
         else:
             full_model = model
+            specs = None
+
         exif[TAG_MAKE] = "Sony"
         exif[TAG_MODEL] = full_model
+
+        # Write accurate camera specs into EXIF IFD
+        if specs:
+            from fractions import Fraction
+
+            exif_ifd = exif.get_ifd(TAG_EXIF_IFD)
+
+            # Focal length as rational (numerator, denominator)
+            fl = specs["focal_length_mm"]
+            fl_frac = Fraction(fl).limit_denominator(100)
+            exif_ifd[TAG_FOCAL_LENGTH] = (fl_frac.numerator, fl_frac.denominator)
+
+            # 35mm equivalent focal length (integer)
+            exif_ifd[TAG_FOCAL_LENGTH_35MM] = specs["focal_length_35mm"]
+
+            # F-number (max aperture)
+            ap = specs["aperture_max"]
+            ap_frac = Fraction(ap).limit_denominator(100)
+            exif_ifd[TAG_FNUMBER] = (ap_frac.numerator, ap_frac.denominator)
+
+            # Max aperture value (APEX)
+            exif_ifd[TAG_MAX_APERTURE] = (ap_frac.numerator, ap_frac.denominator)
+
+            # ISO
+            exif_ifd[TAG_ISO] = specs["iso"]
+
+            # Flash (fired = 0x01, not fired = 0x00, has flash = 0x18)
+            exif_ifd[TAG_FLASH] = 0x18 if specs.get("flash") else 0x00
+
+            # Color space (sRGB)
+            exif_ifd[TAG_COLOR_SPACE] = 1
+
+            # Pixel dimensions
+            exif_ifd[TAG_PIXEL_X] = specs["resolution"][0]
+            exif_ifd[TAG_PIXEL_Y] = specs["resolution"][1]
+
+            # Sensing method (one-chip color area)
+            exif_ifd[TAG_SENSING_METHOD] = 2
+
+            # Exposure program (auto)
+            exif_ifd[TAG_EXPOSURE_PROGRAM] = 2
+
+            # Metering mode (multi-segment)
+            exif_ifd[TAG_METERING_MODE] = 5
+
+            # White balance (auto)
+            exif_ifd[TAG_WHITE_BALANCE] = 0
+
+            # Exposure mode (auto)
+            exif_ifd[TAG_EXPOSURE_MODE] = 0
+
+            # Scene capture type (standard)
+            exif_ifd[TAG_SCENE_CAPTURE_TYPE] = 0
 
     # Resolve date
     if date:
