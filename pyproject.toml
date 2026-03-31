@@ -1,0 +1,25 @@
+[project]
+name = "mavica-tools"
+version = "0.1.0"
+description = "Floppy disk recovery and troubleshooting toolkit for Sony Mavica cameras"
+requires-python = ">=3.10"
+dependencies = [
+    "Pillow>=9.0",
+    "textual>=0.50",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.23",
+]
+
+[project.scripts]
+mavica = "mavica_tools.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
