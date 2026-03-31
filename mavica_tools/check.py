@@ -174,6 +174,10 @@ def main():
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="Show OK files too"
     )
+    parser.add_argument(
+        "--preview", action="store_true",
+        help="Show thumbnails of bad/warning files in the terminal",
+    )
     args = parser.parse_args()
 
     # Expand directories to JPEG files
@@ -187,7 +191,14 @@ def main():
 
     files.sort()
     print(f"Checking {len(files)} file(s)...\n")
-    check_files(files, verbose=args.verbose)
+    results = check_files(files, verbose=args.verbose)
+
+    if args.preview:
+        bad_files = [r["path"] for r in results if r["issues"]]
+        if bad_files:
+            print("\nPreviews of damaged files:")
+            from mavica_tools.terminal_image import show_images
+            show_images(bad_files, max_images=5)
 
 
 if __name__ == "__main__":

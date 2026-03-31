@@ -104,6 +104,10 @@ def main():
         "--contact-sheet", action="store_true",
         help="Generate a contact sheet grid",
     )
+    parser.add_argument(
+        "--preview", action="store_true",
+        help="Show image thumbnails in the terminal (auto-detects protocol)",
+    )
 
     args = parser.parse_args()
 
@@ -124,6 +128,14 @@ def main():
 
     if result["imported"] == 0:
         print("\n  No photos found. Check the path and try again.")
+    elif args.preview:
+        from mavica_tools.terminal_image import show_images, show_image
+        if result["contact_sheet"]:
+            print()
+            show_image(result["contact_sheet"], label=False)
+        else:
+            print()
+            show_images(result["files"], max_images=6)
 
 
 if __name__ == "__main__":
