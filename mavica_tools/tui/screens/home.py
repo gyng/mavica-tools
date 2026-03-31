@@ -109,11 +109,14 @@ class HomeScreen(Screen):
         )
         yield Footer()
 
+    # Longest tool name across all sections (for alignment)
+    _NAME_WIDTH = 22
+
     def _make_option(self, item):
         key, screen_id, name, desc = item
+        padded = name.ljust(self._NAME_WIDTH)
         return Option(
-            f"[bold #ffaa00][{key}][/]  [bold]{name}[/]\n"
-            f"     [dim]{desc}[/]",
+            f"[bold #ffaa00][{key}][/]  [bold]{padded}[/]  [dim]{desc}[/]",
             id=screen_id,
         )
 
