@@ -20,6 +20,9 @@ def main():
     subparsers.add_parser("recover", help="Full recovery pipeline")
     subparsers.add_parser("format", help="Create Mavica-compatible FAT12 format")
     subparsers.add_parser("stamp", help="Add EXIF metadata to recovered JPEGs")
+    subparsers.add_parser("detect", help="Auto-detect floppy drives")
+    subparsers.add_parser("history", help="Disk health history tracking")
+    subparsers.add_parser("report", help="Generate HTML recovery report")
     subparsers.add_parser("tui", help="Launch interactive terminal UI")
 
     # Parse only the first argument to determine which tool to run
@@ -47,6 +50,12 @@ def main():
         from mavica_tools.format import main as tool_main
     elif args.tool == "stamp":
         from mavica_tools.stamp import main as tool_main
+    elif args.tool == "detect":
+        from mavica_tools.detect import main as tool_main
+    elif args.tool == "history":
+        from mavica_tools.history import main as tool_main
+    elif args.tool == "report":
+        from mavica_tools.report import main as tool_main
     else:
         parser.print_help()
         print("\nTools:")
@@ -59,6 +68,9 @@ def main():
         print("  mavica recover    — Full recovery pipeline (read+extract+check+repair)")
         print("  mavica format     — Create Mavica-compatible FAT12 floppy format")
         print("  mavica stamp      — Add EXIF metadata to recovered JPEGs")
+        print("  mavica detect     — Auto-detect floppy drives")
+        print("  mavica history    — Disk health history tracking")
+        print("  mavica report     — Generate HTML recovery report")
         print("  mavica tui        — Launch interactive terminal UI")
         print("\nQuick start:")
         print("  mavica multipass read /dev/fd0 -n 5 -o my_disk")

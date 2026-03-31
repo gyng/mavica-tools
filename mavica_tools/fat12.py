@@ -139,8 +139,19 @@ def read_directory(data: bytes, dir_offset: int, max_entries: int) -> list[FileE
         raw_ext = raw[8:11]
 
         # For deleted files, the first byte was overwritten with 0xE5
+        # Mavica files are typically MVC-NNN.JPG or MVC-NNNN.JPG
+        # so the first byte is almost always 'M'
         if is_deleted:
-            raw_name = b"?" + raw_name[1:]
+            remaining = raw_name[1:]
+            ext = raw_ext.rstrip(b" ").decode("ascii", errors="replace").upper()
+            if remaining.startswith(b"VC-") or remaining.startswith(b"VC"):
+                # Almost certainly a Mavica file — reconstruct as 'M'
+                raw_name = b"M" + raw_name[1:]
+            elif ext in ("JPG", "JPEG"):
+                # JPEG file but unknown naming — use 'M' as best guess
+                raw_name = b"M" + raw_name[1:]
+            else:
+                raw_name = b"_" + raw_name[1:]
 
         name = _decode_dos_name(raw_name, raw_ext)
 
@@ -210,8 +221,16 @@ def parse_disk_image(image_path: str) -> tuple[list[FileEntry], list[int]]:
     return files, fat, data
 
 
-def extract_with_names(image_path: str, output_dir: str, include_deleted: bool = False):
+def extract_with_names(
+    image_path: str,
+    output_dir: str,
+    include_deleted: bool = False,
+    auto_stamp: bool = False,
+    camera_model: str = None,
+):
     """Extract files from a Mavica disk image preserving original names.
+
+    If auto_stamp=True, writes FAT12 timestamps into EXIF metadata for JPEGs.
 
     Returns list of (original_name, output_path, size, is_deleted).
     """
@@ -246,9 +265,37 @@ def extract_with_names(image_path: str, output_dir: str, include_deleted: bool =
         with open(out_path, "wb") as f:
             f.write(file_data)
 
+        # Auto-stamp EXIF from FAT12 timestamps
+        if auto_stamp and name.upper().endswith((".JPG", ".JPEG")):
+            _auto_stamp_exif(out_path, entry, camera_model)
+
         results.append((entry.name, out_path, entry.size, entry.is_deleted))
 
     return results
+
+
+def _auto_stamp_exif(filepath: str, entry: FileEntry, camera_model: str = None):
+    """Stamp EXIF metadata from FAT12 directory entry timestamps."""
+    try:
+        from mavica_tools.stamp import stamp_jpeg
+
+        date_str = None
+        if entry.date_str:
+            if entry.time_str:
+                date_str = f"{entry.date_str} {entry.time_str}"
+            else:
+                date_str = entry.date_str
+
+        if date_str or camera_model:
+            stamp_jpeg(
+                filepath,
+                output_path=filepath,
+                model=camera_model,
+                date=date_str,
+                overwrite=True,
+            )
+    except Exception:
+        pass  # Best-effort — don't fail extraction on stamp errors
 
 
 def list_files(image_path: str, include_deleted: bool = False) -> list[FileEntry]:
