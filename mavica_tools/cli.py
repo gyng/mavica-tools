@@ -16,6 +16,10 @@ def main():
     subparsers.add_parser("check", help="Check JPEG files for corruption")
     subparsers.add_parser("repair", help="Repair corrupt/truncated JPEGs")
     subparsers.add_parser("swaptest", help="Cross-camera swap test tracker")
+    subparsers.add_parser("fat12", help="FAT12 filesystem tools (ls, extract)")
+    subparsers.add_parser("recover", help="Full recovery pipeline")
+    subparsers.add_parser("format", help="Create Mavica-compatible FAT12 format")
+    subparsers.add_parser("stamp", help="Add EXIF metadata to recovered JPEGs")
     subparsers.add_parser("tui", help="Launch interactive terminal UI")
 
     # Parse only the first argument to determine which tool to run
@@ -35,6 +39,14 @@ def main():
         from mavica_tools.repair import main as tool_main
     elif args.tool == "swaptest":
         from mavica_tools.swaptest import main as tool_main
+    elif args.tool == "fat12":
+        from mavica_tools.fat12 import main as tool_main
+    elif args.tool == "recover":
+        from mavica_tools.recover import main as tool_main
+    elif args.tool == "format":
+        from mavica_tools.format import main as tool_main
+    elif args.tool == "stamp":
+        from mavica_tools.stamp import main as tool_main
     else:
         parser.print_help()
         print("\nTools:")
@@ -43,6 +55,10 @@ def main():
         print("  mavica check      — Batch-check JPEGs for corruption")
         print("  mavica repair     — Salvage pixels from corrupt JPEGs")
         print("  mavica swaptest   — Track cross-camera swap tests")
+        print("  mavica fat12      — FAT12 filesystem tools (list/extract files)")
+        print("  mavica recover    — Full recovery pipeline (read+extract+check+repair)")
+        print("  mavica format     — Create Mavica-compatible FAT12 floppy format")
+        print("  mavica stamp      — Add EXIF metadata to recovered JPEGs")
         print("  mavica tui        — Launch interactive terminal UI")
         print("\nQuick start:")
         print("  mavica multipass read /dev/fd0 -n 5 -o my_disk")
