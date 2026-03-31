@@ -1,4 +1,8 @@
-# TUI Implementation Plan
+# TUI Implementation Plan (Historical)
+
+> **Note:** This was the original design document. The TUI has been fully implemented
+> and extended beyond this plan (11 screens vs 7 planned, file picker, progress bars,
+> cross-screen data flow). See [AGENTS.md](AGENTS.md) for current architecture.
 
 ## Decision: Python TUI with Textual
 
