@@ -15,7 +15,8 @@ from mavica_tools.tui.screens.carve import CarveScreen
 from mavica_tools.tui.screens.repair import RepairScreen
 from mavica_tools.tui.screens.multipass import MultipassScreen
 from mavica_tools.tui.screens.swaptest import SwapTestScreen
-from mavica_tools.tui.screens.workflow import WorkflowScreen
+from mavica_tools.tui.screens.import_workflow import ImportWorkflowScreen
+from mavica_tools.tui.screens.recovery_workflow import RecoveryWorkflowScreen
 from mavica_tools.tui.widgets.sector_map import SectorMap
 
 
@@ -56,7 +57,7 @@ async def test_home_screen_has_all_tool_options():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
-        assert option_list.option_count == 17  # 13 tools + 4 section headers
+        assert option_list.option_count == 21  # 17 tools + 4 section headers
 
 
 # ---------------------------------------------------------------------------
@@ -65,12 +66,13 @@ async def test_home_screen_has_all_tool_options():
 
 
 _KEY_SCREEN_MAP = [
-    ("1", MultipassScreen),
-    ("2", CarveScreen),
-    ("3", CheckScreen),
-    ("4", RepairScreen),
-    ("5", SwapTestScreen),
-    ("w", WorkflowScreen),
+    ("1", ImportWorkflowScreen),
+    ("r", RecoveryWorkflowScreen),
+    ("m", MultipassScreen),
+    ("c", CarveScreen),
+    ("k", CheckScreen),
+    ("p", RepairScreen),
+    ("w", SwapTestScreen),
 ]
 
 
@@ -158,15 +160,15 @@ async def test_swaptest_screen_has_expected_widgets():
 
 
 @pytest.mark.asyncio
-async def test_workflow_screen_has_expected_widgets():
-    """WorkflowScreen should have step buttons #btn-step1 through #btn-step4."""
+async def test_import_workflow_has_expected_widgets():
+    """ImportWorkflowScreen should have key buttons."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await _push_and_wait(app, pilot, "workflow")
-        assert isinstance(app.screen, WorkflowScreen)
-        for i in range(1, 5):
-            btn = app.screen.query_one(f"#btn-step{i}", Button)
+        await _push_and_wait(app, pilot, "import_workflow")
+        assert isinstance(app.screen, ImportWorkflowScreen)
+        for btn_id in ("#btn-browse-floppy", "#btn-extract", "#btn-stamp", "#btn-export"):
+            btn = app.screen.query_one(btn_id, Button)
             assert btn is not None
 
 
@@ -182,7 +184,7 @@ async def test_escape_returns_to_previous_screen():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         # Navigate to check screen
-        await pilot.press("3")
+        await pilot.press("k")
         await pilot.pause()
         assert isinstance(app.screen, CheckScreen)
         # Press Escape
@@ -198,7 +200,7 @@ async def test_escape_from_multiple_screens():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         # Navigate to carve screen via key 2
-        await pilot.press("2")
+        await pilot.press("c")
         await pilot.pause()
         assert isinstance(app.screen, CarveScreen)
         await pilot.press("escape")
@@ -218,7 +220,7 @@ async def test_check_screen_run_check_with_valid_path():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         # Navigate via key to ensure proper focus/layout
-        await pilot.press("3")
+        await pilot.press("k")
         await pilot.pause()
 
         # Create a temporary JPEG file
@@ -250,7 +252,7 @@ async def test_check_screen_empty_path_shows_notification():
     app = MavicaApp()
     async with app.run_test(size=(100, 32), notifications=True) as pilot:
         await pilot.pause()
-        await pilot.press("3")
+        await pilot.press("k")
         await pilot.pause()
 
         # Trigger check with empty path via action
@@ -266,7 +268,7 @@ async def test_check_screen_no_files_found():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("3")
+        await pilot.press("k")
         await pilot.pause()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -299,7 +301,7 @@ async def test_swaptest_setup_populates_matrix():
             db_path = os.path.join(tmp_dir, "test_swap.json")
 
             # Navigate to swaptest via key
-            await pilot.press("5")
+            await pilot.press("w")
             await pilot.pause()
 
             screen = app.screen
@@ -330,7 +332,7 @@ async def test_swaptest_empty_inputs_shows_notification():
     app = MavicaApp()
     async with app.run_test(size=(120, 40), notifications=True) as pilot:
         await pilot.pause()
-        await pilot.press("5")
+        await pilot.press("w")
         await pilot.pause()
 
         # Trigger setup with empty inputs
@@ -346,14 +348,14 @@ async def test_swaptest_empty_inputs_shows_notification():
 
 
 @pytest.mark.asyncio
-async def test_key_binding_navigates_to_workflow():
-    """Pressing 'w' should navigate to WorkflowScreen."""
+async def test_key_binding_navigates_to_import():
+    """Pressing '1' should navigate to ImportWorkflowScreen."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("w")
+        await pilot.press("1")
         await pilot.pause()
-        assert isinstance(app.screen, WorkflowScreen)
+        assert isinstance(app.screen, ImportWorkflowScreen)
 
 
 @pytest.mark.asyncio
@@ -392,7 +394,7 @@ async def test_home_key_binding_returns_home():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         # Navigate to check screen
-        await pilot.press("3")
+        await pilot.press("k")
         await pilot.pause()
         assert isinstance(app.screen, CheckScreen)
         # Press 'h' to go home — need to ensure focus is not on an Input
@@ -416,27 +418,27 @@ async def test_check_screen_results_table_has_correct_columns():
 
 
 @pytest.mark.asyncio
-async def test_workflow_step_buttons_push_correct_screens():
-    """Clicking step buttons in the workflow screen should navigate to the right tools."""
+async def test_recovery_workflow_step_buttons():
+    """Clicking step buttons in recovery workflow should navigate correctly."""
     app = MavicaApp()
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("w")
+        await pilot.press("r")
         await pilot.pause()
-        assert isinstance(app.screen, WorkflowScreen)
+        assert isinstance(app.screen, RecoveryWorkflowScreen)
 
-        # Click Step 1 -> should push MultipassScreen
-        await pilot.click("#btn-step1")
+        # Click Multi-Pass Read -> should push MultipassScreen
+        await pilot.click("#btn-multipass")
         await pilot.pause()
         assert isinstance(app.screen, MultipassScreen)
 
         # Go back
         await pilot.press("escape")
         await pilot.pause()
-        assert isinstance(app.screen, WorkflowScreen)
+        assert isinstance(app.screen, RecoveryWorkflowScreen)
 
-        # After step 1, step 2 should be enabled. Click it -> RecoverScreen
-        await pilot.click("#btn-step2")
+        # One-Click Recover -> RecoverScreen
+        await pilot.click("#btn-recover")
         await pilot.pause()
         from mavica_tools.tui.screens.recover_screen import RecoverScreen
         assert isinstance(app.screen, RecoverScreen)
@@ -462,10 +464,9 @@ async def test_multipass_screen_has_default_device_path():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("1")
+        await pilot.press("m")
         await pilot.pause()
         device_input = app.screen.query_one("#device-path", Input)
-        # Should have a non-empty default value
         assert len(device_input.value) > 0
 
 
@@ -475,7 +476,7 @@ async def test_carve_screen_has_output_dir_default():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("2")
+        await pilot.press("c")
         await pilot.pause()
         output_input = app.screen.query_one("#output-dir", Input)
         assert output_input.value == "carved_images"
@@ -487,7 +488,7 @@ async def test_repair_screen_has_output_dir_default():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("4")
+        await pilot.press("p")
         await pilot.pause()
         output_input = app.screen.query_one("#output-dir", Input)
         assert output_input.value == "repaired"
