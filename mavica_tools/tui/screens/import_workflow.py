@@ -26,6 +26,7 @@ class ImportWorkflowScreen(Screen):
     BINDINGS = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("b", "browse", "Browse", show=True),
+        Binding("d", "detect", "Detect", show=True),
     ]
 
     def compose(self) -> ComposeResult:
@@ -36,14 +37,17 @@ class ImportWorkflowScreen(Screen):
         )
 
         # Settings bar
+        yield Static("  [bold]Source[/]")
         with Horizontal(classes="input-row"):
             yield Input(
                 placeholder="Floppy path or mounted drive (e.g., E:\\, /mnt/floppy, disk.img)",
                 id="source-path",
             )
+            yield Button("Auto-Detect", variant="primary", id="btn-detect")
             yield Button("Browse", id="btn-browse")
+        yield Static("  [bold]Output Dir[/]  /  [bold]Camera Model[/]")
         with Horizontal(classes="input-row"):
-            yield Input(value="photos", placeholder="Save photos to...", id="output-dir")
+            yield Input(value="mavica_out/photos", placeholder="Save photos to...", id="output-dir")
             yield Input(placeholder="Camera model (e.g., fd7, fd88)", id="camera-model")
 
         # Main action
@@ -51,7 +55,8 @@ class ImportWorkflowScreen(Screen):
             yield Button("Import Photos", variant="success", id="btn-import")
             yield Button("Import + Tag + Export", variant="warning", id="btn-import-all")
 
-        yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
+        yield Static("", id="breadcrumb")
+        yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
         yield Static("", id="status")
 
         # Results
@@ -61,11 +66,12 @@ class ImportWorkflowScreen(Screen):
         # Post-import actions
         with Horizontal(classes="button-row"):
             yield Button("Next Disk", variant="success", id="btn-next-disk", disabled=True)
+            yield Button("Open Folder", variant="default", id="btn-open-folder", disabled=True)
             yield Button("Open in Export", variant="default", id="btn-open-export", disabled=True)
             yield Button("Add GPS Track", variant="default", id="btn-gps", disabled=True)
             yield Button("Contact Sheet", variant="default", id="btn-contact", disabled=True)
 
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:
@@ -74,9 +80,26 @@ class ImportWorkflowScreen(Screen):
         table.cursor_type = "row"
         self._imported_files = []
         self._disk_count = 0
+        self._show_breadcrumbs = False
+
+    def _update_breadcrumb(self, current: int) -> None:
+        labels = ["Copy", "Tag", "Export"]
+        parts = []
+        for i, label in enumerate(labels):
+            if i < current:
+                parts.append(f"[green][bold]\u2713[/bold] {label}[/green]")
+            elif i == current:
+                parts.append(f"[bold #ffaa00]\u25cf {label}[/bold #ffaa00]")
+            else:
+                parts.append(f"[dim]\u25cb {label}[/dim]")
+        self.query_one("#breadcrumb", Static).update(
+            "  " + "  \u2500\u25b6  ".join(parts)
+        )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "btn-browse":
+        if event.button.id == "btn-detect":
+            self.action_detect()
+        elif event.button.id == "btn-browse":
             self.action_browse()
         elif event.button.id == "btn-import":
             self._start_import(tag=False, export=False)
@@ -84,6 +107,11 @@ class ImportWorkflowScreen(Screen):
             self._start_import(tag=True, export=True)
         elif event.button.id == "btn-next-disk":
             self._next_disk()
+        elif event.button.id == "btn-open-folder":
+            output_dir = self.query_one("#output-dir", Input).value.strip()
+            if output_dir and os.path.isdir(output_dir):
+                from mavica_tools.utils import open_directory
+                open_directory(output_dir)
         elif event.button.id == "btn-open-export":
             screen = self.app.SCREENS["export"]()
             screen._prefill_path = self.query_one("#output-dir", Input).value.strip()
@@ -93,13 +121,29 @@ class ImportWorkflowScreen(Screen):
         elif event.button.id == "btn-contact":
             self._make_contact_sheet()
 
+    def action_detect(self) -> None:
+        """Auto-detect a mounted floppy drive and fill the source path."""
+        from mavica_tools.detect import detect_floppy_mount_points
+        mounts = detect_floppy_mount_points()
+        if not mounts:
+            self.notify("No mounted floppy drives detected", severity="warning")
+            return
+        self.query_one("#source-path", Input).value = mounts[0]
+        if len(mounts) == 1:
+            self.notify(f"Found floppy: {mounts[0]}", severity="information")
+        else:
+            self.notify(
+                f"Found {len(mounts)} drives, using {mounts[0]}",
+                severity="information",
+            )
+
     def action_browse(self) -> None:
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#source-path", Input).value = path
         self.app.push_screen(
             FilePicker(
-                extensions=(".img", ".jpg", ".jpeg"),
+                extensions=(".img", ".jpg", ".jpeg", ".411"),
                 title="Select floppy drive, mounted folder, or disk image",
                 select_directory=True,
             ),
@@ -118,6 +162,11 @@ class ImportWorkflowScreen(Screen):
 
         for btn_id in ("#btn-import", "#btn-import-all"):
             self.query_one(btn_id, Button).disabled = True
+
+        # Show breadcrumbs for all-in-one flow
+        self._show_breadcrumbs = tag or export
+        if self._show_breadcrumbs:
+            self._update_breadcrumb(0)
 
         self.run_worker(self._do_import(source, tag, export), exclusive=True)
 
@@ -142,14 +191,23 @@ class ImportWorkflowScreen(Screen):
 
         files = []
         if os.path.isdir(source):
-            # Mounted floppy or directory — copy JPEGs directly
-            for ext in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG"):
+            # Mounted floppy or directory — copy JPEGs and .411 thumbnails
+            for ext in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG", "*.411"):
                 files.extend(globmod.glob(os.path.join(source, ext)))
-            files.sort()
+            # Deduplicate (Windows is case-insensitive, so *.jpg and *.JPG match the same files)
+            seen: set[str] = set()
+            deduped: list[str] = []
+            for f in files:
+                key = os.path.normcase(f)
+                if key not in seen:
+                    seen.add(key)
+                    deduped.append(f)
+            files = sorted(deduped)
 
             if files:
-                log.write(f"  Found {len(files)} photo(s) on mounted disk")
+                log.write(f"  Found {len(files)} file(s) on mounted disk")
                 progress.update(total=len(files), progress=0)
+                failed = 0
 
                 for i, src_file in enumerate(files):
                     if worker.is_cancelled:
@@ -165,15 +223,25 @@ class ImportWorkflowScreen(Screen):
                         dest = os.path.join(output_dir, f"{base}_disk{self._disk_count}{ext_str}")
 
                     import shutil
-                    shutil.copy2(src_file, dest)
+                    try:
+                        shutil.copy2(src_file, dest)
+                    except OSError as e:
+                        failed += 1
+                        log.write(f"  [red]Failed to read {name}: {e}[/]")
+                        table.add_row("[red]ERR[/]", name, "—", "")
+                        progress.update(progress=i + 1)
+                        continue
                     self._imported_files.append(dest)
 
                     size_kb = os.path.getsize(dest) / 1024
                     from mavica_tools.utils import get_photo_date
                     date = get_photo_date(dest) or ""
 
-                    table.add_row(str(i + 1), os.path.basename(dest), f"{size_kb:.0f}KB", date)
+                    table.add_row(str(i + 1 - failed), os.path.basename(dest), f"{size_kb:.0f}KB", date)
                     progress.update(progress=i + 1)
+
+                if failed:
+                    log.write(f"  [#ffaa00]{failed} file(s) could not be read (damaged sectors)[/]")
 
         elif source.lower().endswith(".img"):
             # Disk image — try FAT12 extraction
@@ -212,6 +280,8 @@ class ImportWorkflowScreen(Screen):
 
         # Step 2: Tag (if requested and not already done via FAT12)
         if tag and model and self._imported_files:
+            if self._show_breadcrumbs:
+                self._update_breadcrumb(1)
             status.update("  [bold]Adding camera info...[/]")
             log.write(f"  Stamping with [bold]{model}[/]...")
             from mavica_tools.stamp import stamp_jpeg
@@ -223,6 +293,8 @@ class ImportWorkflowScreen(Screen):
         # Step 3: Export (if requested — organize + contact sheet)
         contact_path = None
         if export and self._imported_files:
+            if self._show_breadcrumbs:
+                self._update_breadcrumb(2)
             status.update("  [bold]Creating contact sheet...[/]")
             from mavica_tools.export import make_contact_sheet
             contact_path = os.path.join(output_dir, "contact_sheet.jpg")
@@ -235,6 +307,8 @@ class ImportWorkflowScreen(Screen):
             log.write(f"  [green]Contact sheet: {contact_path}[/]")
 
         # Done
+        if self._show_breadcrumbs:
+            self._update_breadcrumb(3)  # all steps complete
         count = len(self._imported_files)
         actions = ["imported"]
         if tag and model:
@@ -261,6 +335,7 @@ class ImportWorkflowScreen(Screen):
 
         # Enable post-import actions
         self.query_one("#btn-next-disk", Button).disabled = False
+        self.query_one("#btn-open-folder", Button).disabled = False
         self.query_one("#btn-open-export", Button).disabled = False
         self.query_one("#btn-gps", Button).disabled = False
         self.query_one("#btn-contact", Button).disabled = False
@@ -304,7 +379,7 @@ class ImportWorkflowScreen(Screen):
         self.query_one("#progress", ProgressBar).update(total=100, progress=0)
 
         # Disable post-import buttons
-        for btn_id in ("#btn-next-disk", "#btn-open-export", "#btn-gps", "#btn-contact"):
+        for btn_id in ("#btn-next-disk", "#btn-open-folder", "#btn-open-export", "#btn-gps", "#btn-contact"):
             self.query_one(btn_id, Button).disabled = True
 
         self._imported_files = []

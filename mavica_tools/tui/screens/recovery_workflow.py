@@ -26,6 +26,7 @@ class RecoveryWorkflowScreen(Screen):
             "[dim]For damaged floppies and corrupt photos[/]\n",
             id="title-bar",
         )
+        yield Static("", id="breadcrumb")
         yield Static(
             "  Can't read your floppy? Photos look corrupt? Follow these\n"
             "  steps. Multi-pass reading often recovers sectors that fail\n"
@@ -34,7 +35,7 @@ class RecoveryWorkflowScreen(Screen):
 
         yield Static("  [bold]Output Directory[/]", classes="section-title")
         with Horizontal(classes="input-row"):
-            yield Input(value="recovery", placeholder="Where to save recovered files", id="base-dir")
+            yield Input(value="mavica_out/recovery", placeholder="Where to save recovered files", id="base-dir")
 
         yield Static("\n  [bold #ff3333]Step 1: Image the disk[/]")
         yield Static(
@@ -64,11 +65,41 @@ class RecoveryWorkflowScreen(Screen):
 
         yield Static("\n  [dim]After recovery, go back and use [bold]Import & Tag[/dim] to add metadata and export.[/]")
 
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:
+        self._current_step = 1
+        self._previewed = False
+        self._update_breadcrumb()
         self._check_existing()
+
+    def on_screen_resume(self) -> None:
+        """Called when this screen is shown again after a sub-screen is popped."""
+        base = self.query_one("#base-dir", Input).value.strip() or "recovery"
+        merged = os.path.join(base, "merged.img")
+        if os.path.exists(merged) and not self._previewed:
+            self._enable_step2()
+            self._preview_files(base)
+        for subdir in ("extracted", "carved_images"):
+            if os.path.isdir(os.path.join(base, subdir)):
+                self._enable_step3()
+                break
+
+    def _update_breadcrumb(self) -> None:
+        step = self._current_step
+        labels = ["Image Disk", "Extract Photos", "Check & Repair"]
+        parts = []
+        for i, label in enumerate(labels, 1):
+            if i < step:
+                parts.append(f"[green][bold]\u2713[/bold] {label}[/green]")
+            elif i == step:
+                parts.append(f"[bold #ffaa00]\u25cf {label}[/bold #ffaa00]")
+            else:
+                parts.append(f"[dim]\u25cb {label}[/dim]")
+        self.query_one("#breadcrumb", Static).update(
+            "  " + "  \u2500\u25b6  ".join(parts)
+        )
 
     def _check_existing(self) -> None:
         base = self.query_one("#base-dir", Input).value.strip()
@@ -76,11 +107,37 @@ class RecoveryWorkflowScreen(Screen):
             self._enable_step2()
             log = self.query_one("#log", RichLog)
             log.write(f"[dim]Found existing merged.img in {base}/[/]")
+            self._preview_files(base)
 
         for subdir in ("extracted", "carved_images"):
             if os.path.isdir(os.path.join(base, subdir)):
                 self._enable_step3()
                 break
+
+    def _preview_files(self, base: str) -> None:
+        """Attempt a FAT12 file listing from merged.img and show in log."""
+        merged = os.path.join(base, "merged.img")
+        if not os.path.exists(merged):
+            return
+        self._previewed = True
+        log = self.query_one("#log", RichLog)
+        try:
+            from mavica_tools.fat12 import list_files
+            files = list_files(merged, include_deleted=True)
+            if not files:
+                log.write("  [dim]No files found in FAT12 filesystem.[/]")
+                return
+            log.write(f"\n  [bold]Files on disk[/] ({len(files)} found):")
+            for f in files:
+                status = "[red]DEL[/]" if f.is_deleted else "[green]OK[/]"
+                offset = f"0x{f.byte_offset:06X}"
+                log.write(
+                    f"    {status}  {f.name:<15s}  {f.size:>6,} bytes  @ {offset}  {f.date_str}"
+                )
+            total = sum(f.size for f in files if not f.is_deleted)
+            log.write(f"    [dim]Total: {total:,} bytes[/]\n")
+        except Exception:
+            log.write("  [#ffaa00]FAT12 unreadable — use Carve from Raw for this disk.[/]\n")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         base = self.query_one("#base-dir", Input).value.strip() or "recovery"
@@ -149,10 +206,16 @@ class RecoveryWorkflowScreen(Screen):
     def _enable_step2(self) -> None:
         self.query_one("#btn-fat12", Button).disabled = False
         self.query_one("#btn-carve", Button).disabled = False
+        if self._current_step < 2:
+            self._current_step = 2
+            self._update_breadcrumb()
 
     def _enable_step3(self) -> None:
         self.query_one("#btn-check", Button).disabled = False
         self.query_one("#btn-repair", Button).disabled = False
+        if self._current_step < 3:
+            self._current_step = 3
+            self._update_breadcrumb()
 
     def _find_images(self, base: str) -> str | None:
         for subdir in ("extracted", "carved_images", "repaired"):

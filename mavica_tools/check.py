@@ -117,10 +117,17 @@ def check_jpeg_structure(filepath):
 
 def check_files(paths, verbose=False):
     """Check multiple JPEG files and print a report."""
+    from mavica_tools.utils import print_progress
+    import time
+
     results = []
-    for path in paths:
+    start = time.time()
+    total = len(paths)
+    for i, path in enumerate(paths):
         result = check_jpeg_structure(path)
         results.append(result)
+        if total > 3:
+            print_progress(i + 1, total, start, "Checking")
 
     # Print results
     good = 0

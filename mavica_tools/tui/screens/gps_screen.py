@@ -42,21 +42,24 @@ class GpsScreen(Screen):
                 "  [#ffaa00]piexif not installed[/] — preview works, but GPS won't be saved to files.\n"
                 "  [dim]Install with:[/] [bold]pip install mavica-tools\\[gps][/]\n"
             )
+        yield Static("  [bold]Photos[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Photos directory...", id="photos-path")
             yield Button("Browse Photos", id="btn-browse-photos")
+        yield Static("  [bold]GPX Track[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="GPX track file...", id="gpx-path")
             yield Button("Browse GPX", id="btn-browse-gpx")
+        yield Static("  [bold]Tolerance[/]")
         with Horizontal(classes="input-row"):
             yield Input(value="5m", placeholder="Tolerance (e.g., 5m, 30s, 1h)", id="tolerance")
         with Horizontal(classes="button-row"):
             yield Button("Preview (Dry Run)", variant="warning", id="btn-preview")
             yield Button("Merge GPS", variant="success", id="btn-merge")
             yield Button("Generate Map", variant="default", id="btn-map", disabled=True)
-        yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
+        yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
         yield DataTable(id="results-table")
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:

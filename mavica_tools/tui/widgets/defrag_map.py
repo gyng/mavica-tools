@@ -43,7 +43,6 @@ class DefragMap(Widget):
     DefragMap {
         height: auto;
         min-height: 8;
-        max-height: 28;
         padding: 0 1;
         border: tall #333333;
         background: #0a0a0a;
@@ -57,23 +56,32 @@ class DefragMap(Widget):
         self._cells = ["waiting"] * TOTAL_SECTORS
         self._current_sector = -1
         self._pass_num = 0
+        self._file_boundaries: list[tuple[str, list[int]]] = []  # (name, [sectors])
 
-    def reset(self, pass_num: int = 0) -> None:
+    def reset(self, pass_num: int = 0, clear_files: bool = False) -> None:
         """Reset all sectors to waiting state for a new pass."""
         self._cells = ["waiting"] * TOTAL_SECTORS
         self._current_sector = -1
         self._pass_num = pass_num
+        if clear_files:
+            self._file_boundaries = []
         self.refresh()
 
     def update_sector(self, index: int, state: str) -> None:
         """Update a single sector's state."""
         if 0 <= index < TOTAL_SECTORS:
-            # Clear previous "reading" indicator
-            if self._current_sector >= 0 and self._cells[self._current_sector] == "reading":
+            # Clear previous "reading" indicator only when moving to a different sector
+            if (self._current_sector >= 0
+                    and self._current_sector != index
+                    and self._cells[self._current_sector] == "reading"):
                 self._cells[self._current_sector] = "waiting"
 
             self._cells[index] = state
             if state == "reading":
+                self._current_sector = index
+            elif state in ("good", "bad"):
+                # Track read head position even for non-reading states
+                # so the indicator shows during bulk track reads
                 self._current_sector = index
             self.refresh()
 
@@ -91,6 +99,11 @@ class DefragMap(Widget):
         self._current_sector = -1
         self.refresh()
 
+    def set_file_boundaries(self, boundaries: list[tuple[str, list[int]]]) -> None:
+        """Set file boundary overlay: list of (filename, [sector_indices])."""
+        self._file_boundaries = boundaries
+        self.refresh()
+
     def watch_sectors(self, new_sectors: list) -> None:
         """React to the sectors reactive changing."""
         if new_sectors:
@@ -103,6 +116,16 @@ class DefragMap(Widget):
         cols = max(20, self.size.width - 4) if self.size.width > 10 else DEFAULT_COLS
         rows = (TOTAL_SECTORS + cols - 1) // cols
 
+        # Build file boundary lookup: sector -> file_index
+        sector_to_file: dict[int, int] = {}  # sector -> file_index
+        file_start_sectors: dict[int, int] = {}  # sector -> file_index
+        if self._file_boundaries:
+            for fi, (_name, sectors) in enumerate(self._file_boundaries):
+                if sectors:
+                    file_start_sectors[sectors[0]] = fi
+                for s in sectors:
+                    sector_to_file[s] = fi
+
         # Header
         if self._pass_num > 0:
             text.append(f"  Pass {self._pass_num}  ", style="bold")
@@ -112,7 +135,46 @@ class DefragMap(Widget):
         text.append("▓ reading  ", style="#ffffff")
         text.append("▓ good  ", style="#33ff33")
         text.append("▓ recovered  ", style="#33aaff")
-        text.append("▓ bad\n\n", style="#ff3333")
+        text.append("▓ bad", style="#ff3333")
+        text.append("\n\n")
+
+        # File colors — cycle for visual distinction between files
+        _FILE_COLORS = [
+            "#ffaa00", "#00ccff", "#ff66cc", "#66ff66",
+            "#ffff44", "#cc88ff", "#ff8844", "#44ffcc",
+        ]
+
+        # Sector state as background color — shows progress under filename text
+        _STATE_BG = {
+            "good":      "#1a6b1a",
+            "recovered": "#1a4a6b",
+            "reading":   "#666666",
+            "waiting":   "#1a1a1a",
+            "bad":       "#6b1a1a",
+            "blank":     "#6b1a1a",
+            "conflict":  "#6b1a6b",
+        }
+
+        # Build sector -> overlay info for filename text on grid
+        # Each entry: (char_to_show, file_color)
+        # First sector of each file gets a space separator, then the filename
+        # is spelled out across the file's sectors. If the name is longer than
+        # the sectors, it's truncated.
+        sector_char: dict[int, tuple[str, str]] = {}
+        if self._file_boundaries:
+            for fi, (name, sectors) in enumerate(self._file_boundaries):
+                fc = _FILE_COLORS[fi % len(_FILE_COLORS)]
+                if not sectors:
+                    continue
+                # If filename fits within sectors (with leading space), use it.
+                # Otherwise truncate the name to fit.
+                display_name = " " + name if len(name) + 1 <= len(sectors) else name
+                for ci, s in enumerate(sectors):
+                    if ci < len(display_name):
+                        sector_char[s] = (display_name[ci], fc)
+                    else:
+                        # Past the filename — show normal sector state with tinted bg
+                        sector_char[s] = ("", fc)
 
         # Grid
         for row in range(rows):
@@ -125,13 +187,38 @@ class DefragMap(Widget):
 
                 state = self._cells[idx] if idx < len(self._cells) else "waiting"
                 char, color = STATE_STYLE.get(state, ("?", "#666666"))
-                text.append(char, style=color)
+
+                # File overlay: filename text with sector state as background
+                if idx in sector_char:
+                    oc, fc = sector_char[idx]
+                    bg = _STATE_BG.get(state, "#1a1a1a")
+
+                    if oc:
+                        text.append(oc, style=f"{fc} on {bg}")
+                    else:
+                        text.append(char, style=f"{color} on {bg}")
+                else:
+                    text.append(char, style=color)
             text.append("\n")
 
-        # Read head indicator (during live reads)
+        # Read head indicator (during live reads — hidden after completion
+        # when the screen resets _current_sector to -1)
         if self._current_sector >= 0:
-            from mavica_tools.fun import read_head_indicator_rich
-            text.append(read_head_indicator_rich(self._current_sector))
+            sectors_per_track = 18
+            track = self._current_sector // (sectors_per_track * 2)
+            head = (self._current_sector // sectors_per_track) % 2
+            sector_in_track = self._current_sector % sectors_per_track
+
+            bar_width = 40
+            pos = int(bar_width * track / 80)
+
+            text.append("  Reading: ", style="bold")
+            text.append(f"Track {track:02d}", style="bold #33ff33")
+            text.append(f"  Side {'A' if head == 0 else 'B'}", style="bold")
+            text.append(f"  Sector {sector_in_track + 1}/18  ", style="dim")
+            text.append("─" * pos, style="dim")
+            text.append("▸", style="bold #33ff33")
+            text.append("─" * (bar_width - pos - 1), style="dim")
             text.append("\n")
 
         # Stats
@@ -149,5 +236,28 @@ class DefragMap(Widget):
                 f"[{good} good, {recovered} recovered, {bad} bad]",
                 style="dim"
             )
+
+        # File boundary legend with details
+        if self._file_boundaries:
+            text.append("\n\n  Files on disk:\n", style="bold")
+            for fi, (name, sectors) in enumerate(self._file_boundaries):
+                if not sectors:
+                    continue
+                size_kb = len(sectors) * 512 / 1024
+                start_offset = sectors[0] * 512
+                # Count how many sectors are good/recovered vs bad
+                file_good = sum(1 for s in sectors if s < len(self._cells) and self._cells[s] in ("good", "recovered"))
+                file_total = len(sectors)
+                health = f"{100 * file_good // file_total}%" if file_total else "?"
+                fc = _FILE_COLORS[fi % len(_FILE_COLORS)]
+                text.append(f"    {name:<15s}", style=f"{fc} bold")
+                text.append(f"  {size_kb:.0f}KB  @ 0x{start_offset:06X}  ", style="dim")
+                if file_good == file_total:
+                    text.append(f"{health} OK", style="green")
+                elif file_good == 0:
+                    text.append(f"{health} damaged", style="red bold")
+                else:
+                    text.append(f"{health} partial", style="#ffaa00")
+                text.append("\n")
 
         return text

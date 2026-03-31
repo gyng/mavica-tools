@@ -27,12 +27,14 @@ class CarveScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static("[bold #ffaa00]JPEG Carver[/]  [dim]Extract images from raw disk images[/]\n", id="title-bar")
+        yield Static("  [bold]Disk Image[/]")
         with Horizontal(classes="input-row"):
             yield Input(
                 placeholder="Path to disk image (.img)...",
                 id="image-path",
             )
             yield Button("Browse", id="btn-browse")
+        yield Static("  [bold]Output Dir[/]")
         with Horizontal(classes="input-row"):
             yield Input(
                 placeholder="Output directory",
@@ -40,12 +42,12 @@ class CarveScreen(Screen):
                 id="output-dir",
             )
             yield Button("Carve", variant="success", id="btn-carve")
-        yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
+        yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
         yield DataTable(id="results-table")
         with Horizontal(classes="button-row"):
             yield Button("Check All", variant="warning", id="btn-check", disabled=True)
         yield ImagePreview(id="preview")
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:

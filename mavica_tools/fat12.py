@@ -41,6 +41,16 @@ class FileEntry:
     date_str: str       # "YYYY-MM-DD" or "" if invalid
     time_str: str       # "HH:MM:SS" or "" if invalid
 
+    @property
+    def start_sector(self) -> int:
+        """Disk sector where this file's data begins."""
+        return DATA_START_SECTOR + (self.start_cluster - 2)
+
+    @property
+    def byte_offset(self) -> int:
+        """Byte offset from start of disk image."""
+        return self.start_sector * SECTOR_SIZE
+
 
 def _decode_dos_name(raw_name: bytes, raw_ext: bytes) -> str:
     """Decode an 8.3 DOS filename."""
@@ -221,6 +231,41 @@ def parse_disk_image(image_path: str) -> tuple[list[FileEntry], list[int]]:
     return files, fat, data
 
 
+def file_sector_map(image_path: str) -> list[tuple[str, list[int]]]:
+    """Return a list of (filename, [sector_numbers]) for each file on disk.
+
+    Useful for overlaying file boundaries on a sector visualization.
+    """
+    files, fat, _data = parse_disk_image(image_path)
+    return _build_sector_map(files, fat)
+
+
+def file_sector_map_from_data(data: bytes) -> list[tuple[str, list[int]]]:
+    """Like file_sector_map but works on raw bytes instead of a file path.
+
+    Can be called mid-read as soon as the first 33 sectors (FAT12 metadata)
+    are available — the data area can be incomplete/zeroed.
+    """
+    fat = read_fat12(data)
+    root_dir_offset = (FAT_OFFSET + FATS_COUNT * SECTORS_PER_FAT) * SECTOR_SIZE
+    files = read_directory(data, root_dir_offset, ROOT_DIR_ENTRIES)
+    return _build_sector_map(files, fat)
+
+
+def _build_sector_map(
+    files: list[FileEntry], fat: list[int]
+) -> list[tuple[str, list[int]]]:
+    """Build (filename, [sector_numbers]) list from parsed FAT12 data."""
+    result = []
+    for entry in files:
+        if entry.is_directory or entry.size == 0:
+            continue
+        chain = get_cluster_chain(fat, entry.start_cluster)
+        sectors = [DATA_START_SECTOR + (c - 2) for c in chain]
+        result.append((entry.name, sectors))
+    return result
+
+
 def extract_with_names(
     image_path: str,
     output_dir: str,
@@ -321,7 +366,7 @@ def main():
 
     extract_parser = subparsers.add_parser("extract", help="Extract files with original names")
     extract_parser.add_argument("image", help="Disk image file")
-    extract_parser.add_argument("-o", "--output", default="extracted", help="Output directory")
+    extract_parser.add_argument("-o", "--output", default="mavica_out/extracted", help="Output directory")
     extract_parser.add_argument("--deleted", action="store_true", help="Include deleted files")
 
     args = parser.parse_args()

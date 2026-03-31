@@ -27,15 +27,18 @@ class RecoverScreen(Screen):
             "[dim]Full pipeline: merge > extract > check > repair[/]\n",
             id="title-bar",
         )
+        yield Static("", id="breadcrumb")
         yield Static(
             "  Point this at a directory containing disk image passes\n"
             "  (pass_01.img, pass_02.img, ...) or select individual .img files.\n"
         )
+        yield Static("  [bold]Source Dir[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Directory with .img files...", id="source-dir")
             yield Button("Browse", id="btn-browse")
+        yield Static("  [bold]Output Dir[/]")
         with Horizontal(classes="input-row"):
-            yield Input(value="recovery", placeholder="Output directory", id="output-dir")
+            yield Input(value="mavica_out/recovery", placeholder="Output directory", id="output-dir")
         yield Static(
             "  [dim][bold]FAT12 first[/] — recovers original Mavica filenames (MVC-001.JPG).\n"
             "  [bold]Carve only[/] — scans raw data for JPEGs. Use if FAT12 fails or disk is very damaged.[/]\n"
@@ -43,13 +46,31 @@ class RecoverScreen(Screen):
         with Horizontal(classes="button-row"):
             yield Button("Recover (FAT12 first)", variant="success", id="btn-recover")
             yield Button("Recover (carve only)", variant="warning", id="btn-recover-carve")
-        yield ProgressBar(total=4, show_percentage=True, show_eta=False, id="progress")
+        yield ProgressBar(total=4, show_percentage=True, show_eta=True, id="progress")
         yield Static("", id="step-status")
         with Horizontal(classes="button-row"):
             yield Button("Next: Add Photo Info", variant="default", id="btn-next-stamp", disabled=True)
             yield Button("Next: Export & Share", variant="default", id="btn-next-export", disabled=True)
-        yield RichLog(id="log", markup=True)
+            yield Button("Open Folder", variant="default", id="btn-open-folder", disabled=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
+
+    def on_mount(self) -> None:
+        self._update_breadcrumb(0)
+
+    def _update_breadcrumb(self, current: int) -> None:
+        labels = ["Merge", "Extract", "Check", "Repair"]
+        parts = []
+        for i, label in enumerate(labels):
+            if i < current:
+                parts.append(f"[green][bold]\u2713[/bold] {label}[/green]")
+            elif i == current:
+                parts.append(f"[bold #ffaa00]\u25cf {label}[/bold #ffaa00]")
+            else:
+                parts.append(f"[dim]\u25cb {label}[/dim]")
+        self.query_one("#breadcrumb", Static).update(
+            "  " + "  \u2500\u25b6  ".join(parts)
+        )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-browse":
@@ -62,6 +83,11 @@ class RecoverScreen(Screen):
             self.app.push_screen("stamp")
         elif event.button.id == "btn-next-export":
             self.app.push_screen("export")
+        elif event.button.id == "btn-open-folder":
+            output = self.query_one("#output-dir", Input).value.strip()
+            if output and os.path.isdir(output):
+                from mavica_tools.utils import open_directory
+                open_directory(output)
 
     def action_browse(self) -> None:
         def on_selected(path: str) -> None:
@@ -111,6 +137,7 @@ class RecoverScreen(Screen):
         log.write(f"Found {len(img_files)} image file(s)\n")
         progress.update(total=4, progress=0)
 
+        self._update_breadcrumb(0)
         status.update("  [1/4] Merging passes...")
         log.write("[bold][1/4] Merging...[/]")
 
@@ -121,6 +148,7 @@ class RecoverScreen(Screen):
             self._reset_buttons()
             return
 
+        self._update_breadcrumb(4)
         progress.update(progress=4)
 
         # Show results
@@ -140,6 +168,7 @@ class RecoverScreen(Screen):
             )
             self.query_one("#btn-next-stamp", Button).disabled = False
             self.query_one("#btn-next-export", Button).disabled = False
+            self.query_one("#btn-open-folder", Button).disabled = False
         else:
             status.update("  No files recovered.")
 

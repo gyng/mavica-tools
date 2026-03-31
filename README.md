@@ -29,6 +29,9 @@ pip install "mavica-tools[gps]"
 
 # Development
 uv sync && uv sync --extra dev
+
+# Local dev TUI
+uv run mavica
 ```
 
 ## Quick Start

@@ -28,6 +28,7 @@ class CheckScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static("[bold #ffaa00]JPEG Health Check[/]\n", id="title-bar")
+        yield Static("  [bold]Source[/]")
         with Horizontal(classes="input-row"):
             yield Input(
                 placeholder="Path to directory or JPEG file(s)...",
@@ -35,13 +36,13 @@ class CheckScreen(Screen):
             )
             yield Button("Browse", id="btn-browse")
             yield Button("Check", variant="success", id="btn-check")
-        yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
+        yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
         yield DataTable(id="results-table")
         yield Static("", id="summary")
         with Horizontal(classes="button-row"):
             yield Button("Repair Bad Files", variant="warning", id="btn-repair", disabled=True)
             yield Button("Stamp Metadata", variant="default", id="btn-stamp", disabled=True)
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:

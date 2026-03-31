@@ -30,12 +30,15 @@ class ExportScreen(Screen):
             "[dim]Organize, rename, watermark, contact sheets[/]\n",
             id="title-bar",
         )
+        yield Static("  [bold]Source[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Source directory...", id="source-path")
             yield Button("Browse", id="btn-browse")
+        yield Static("  [bold]Output Dir[/]  /  [bold]Organize[/]")
         with Horizontal(classes="input-row"):
-            yield Input(value="export", placeholder="Output directory", id="output-dir")
+            yield Input(value="mavica_out/exported", placeholder="Output directory", id="output-dir")
             yield Input(value="flat", placeholder="Organize: flat/date/year", id="organize")
+        yield Static("  [bold]Watermark[/]  /  [bold]Resize[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Watermark text (e.g., Shot on Mavica FD7)", id="watermark")
             yield Input(placeholder="Resize (e.g., 1280x960)", id="resize")
@@ -43,9 +46,9 @@ class ExportScreen(Screen):
             yield Button("Export", variant="success", id="btn-export")
             yield Button("Contact Sheet", variant="warning", id="btn-contact")
             yield Button("Export + All Effects", variant="default", id="btn-full")
-        yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
+        yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
         yield ImagePreview(id="preview")
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:

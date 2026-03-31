@@ -1,9 +1,12 @@
 """Tests for the quick import command."""
 
 import os
+import subprocess
+import sys
 import tempfile
 
 import pytest
+from unittest.mock import patch
 
 PIL = pytest.importorskip("PIL")
 from PIL import Image
@@ -97,3 +100,38 @@ class TestQuickImport:
         assert result["imported"] == 2
         assert result["tagged"] is True
         assert result["contact_sheet"] is not None
+
+
+class TestImportAutoDetect:
+    def test_cli_autodetects_single_drive(self, tmp_dir):
+        """mavica import (no source) should auto-detect and import."""
+        src = os.path.join(tmp_dir, "floppy")
+        os.makedirs(src)
+        make_jpeg(src, "MVC-001.JPG")
+        out = os.path.join(tmp_dir, "photos")
+
+        with patch(
+            "mavica_tools.detect.detect_floppy_mount_points",
+            return_value=[src],
+        ):
+            result = quick_import(src, out)
+        assert result["imported"] >= 1
+
+    def test_cli_no_source_no_drives_exits(self):
+        """mavica import with no source and no drives should exit 1."""
+        with patch(
+            "mavica_tools.detect.detect_floppy_mount_points",
+            return_value=[],
+        ):
+            result = subprocess.run(
+                [
+                    sys.executable, "-c",
+                    "from unittest.mock import patch; "
+                    "patch('mavica_tools.detect.detect_floppy_mount_points', return_value=[]).start(); "
+                    "from mavica_tools.importcmd import main; main()",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+        assert result.returncode != 0

@@ -206,6 +206,105 @@ def _detect_macos() -> list[FloppyDrive]:
     return drives
 
 
+def detect_floppy_mount_points() -> list[str]:
+    """Detect mounted floppy drive paths suitable for file access.
+
+    Returns directory paths (e.g., ``A:\\`` on Windows, ``/mnt/floppy`` on
+    Linux) rather than raw device paths like ``\\\\.\\A:``.
+    """
+    system = platform.system()
+
+    if system == "Windows":
+        return _mount_points_windows()
+    elif system == "Linux":
+        return _mount_points_linux()
+    elif system == "Darwin":
+        return _mount_points_macos()
+    return []
+
+
+def _mount_points_windows() -> list[str]:
+    """Return mounted removable-drive letters on Windows."""
+    paths: list[str] = []
+    try:
+        result = subprocess.run(
+            [
+                "powershell", "-NoProfile", "-Command",
+                "Get-WmiObject Win32_LogicalDisk | "
+                "Where-Object { $_.DriveType -eq 2 } | "
+                "Select-Object DeviceID | ConvertTo-Json",
+            ],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            import json
+            data = json.loads(result.stdout)
+            if isinstance(data, dict):
+                data = [data]
+            for disk in data:
+                letter = disk.get("DeviceID", "")
+                if letter:
+                    mount = f"{letter}\\"  # e.g. "A:\"
+                    if os.path.isdir(mount):
+                        paths.append(mount)
+    except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+        pass
+
+    # Fallback: check common floppy letters
+    if not paths:
+        for letter in ("A", "B"):
+            mount = f"{letter}:\\"
+            if os.path.isdir(mount):
+                paths.append(mount)
+    return paths
+
+
+def _mount_points_linux() -> list[str]:
+    """Return floppy mount points on Linux by reading /proc/mounts."""
+    floppy_devices = {f"/dev/fd{i}" for i in range(4)}
+    paths: list[str] = []
+    try:
+        with open("/proc/mounts") as f:
+            for line in f:
+                parts = line.split()
+                if len(parts) >= 2 and parts[0] in floppy_devices:
+                    paths.append(parts[1])
+    except OSError:
+        pass
+
+    # Also check common conventional mount points
+    for candidate in ("/mnt/floppy", "/media/floppy"):
+        if os.path.ismount(candidate) and candidate not in paths:
+            paths.append(candidate)
+    return paths
+
+
+def _mount_points_macos() -> list[str]:
+    """Return floppy mount points on macOS."""
+    paths: list[str] = []
+    # macOS auto-mounts removable media under /Volumes
+    try:
+        for entry in os.listdir("/Volumes"):
+            full = f"/Volumes/{entry}"
+            if not os.path.ismount(full):
+                continue
+            # Check if it's a small removable disk (~1.44 MB)
+            result = subprocess.run(
+                ["diskutil", "info", "-plist", full],
+                capture_output=True, timeout=5,
+            )
+            if result.returncode == 0:
+                import plistlib
+                info = plistlib.loads(result.stdout)
+                size = info.get("TotalSize", 0)
+                name = info.get("MediaName", "")
+                if 1400000 <= size <= 1500000 or "floppy" in name.lower():
+                    paths.append(full)
+    except (OSError, subprocess.TimeoutExpired, FileNotFoundError):
+        pass
+    return paths
+
+
 def main():
     """CLI entry point for drive detection."""
     drives = detect_floppy_drives()

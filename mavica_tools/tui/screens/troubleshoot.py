@@ -164,7 +164,7 @@ class TroubleshootScreen(Screen):
             yield Button("Re-test After Cleaning", variant="warning", id="btn-retest", disabled=True)
             yield Button("Open Swap Test", variant="default", id="btn-swaptest", disabled=True)
             yield Button("Open Multi-Pass Read", variant="success", id="btn-multipass", disabled=True)
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:

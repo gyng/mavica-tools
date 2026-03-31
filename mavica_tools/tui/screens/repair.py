@@ -28,20 +28,22 @@ class RepairScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static("[bold #ffaa00]JPEG Repair[/]  [dim]Salvage pixels from corrupt files[/]\n", id="title-bar")
+        yield Static("  [bold]Source[/]")
         with Horizontal(classes="input-row"):
             yield Input(
                 placeholder="Source path (directory or file)...",
                 id="source-path",
             )
             yield Button("Browse", id="btn-browse")
+        yield Static("  [bold]Output Dir[/]")
         with Horizontal(classes="input-row"):
             yield Input(
                 placeholder="Output directory",
-                value="repaired",
+                value="mavica_out/repaired",
                 id="output-dir",
             )
             yield Button("Repair", variant="success", id="btn-repair")
-        yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
+        yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
         yield DataTable(id="results-table")
         yield Static(
             "  [dim]Select a row to preview original vs repaired side-by-side[/]", id="preview-hint"
@@ -52,7 +54,8 @@ class RepairScreen(Screen):
         with Horizontal(classes="button-row"):
             yield Button("Next: Add Photo Info", variant="success", id="btn-next-stamp", disabled=True)
             yield Button("Next: Export & Share", variant="default", id="btn-next-export", disabled=True)
-        yield RichLog(id="log", markup=True)
+            yield Button("Open Folder", variant="default", id="btn-open-folder", disabled=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:
@@ -78,6 +81,11 @@ class RepairScreen(Screen):
             self.app.push_screen("stamp")
         elif event.button.id == "btn-next-export":
             self.app.push_screen("export")
+        elif event.button.id == "btn-open-folder":
+            output_dir = self.query_one("#output-dir", Input).value.strip()
+            if output_dir and os.path.isdir(output_dir):
+                from mavica_tools.utils import open_directory
+                open_directory(output_dir)
 
     def action_browse(self) -> None:
         def on_selected(path: str) -> None:
@@ -179,6 +187,7 @@ class RepairScreen(Screen):
             log.write("[dim]Select a row to preview original vs repaired.[/]")
             self.query_one("#btn-next-stamp", Button).disabled = False
             self.query_one("#btn-next-export", Button).disabled = False
+            self.query_one("#btn-open-folder", Button).disabled = False
         self._reset_button()
 
     def _reset_button(self) -> None:

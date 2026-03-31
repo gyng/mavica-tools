@@ -57,7 +57,7 @@ async def test_home_screen_has_all_tool_options():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
-        assert option_list.option_count == 21  # 17 tools + 4 section headers
+        assert option_list.option_count == 23  # 19 tools + 4 section headers
 
 
 # ---------------------------------------------------------------------------
@@ -491,4 +491,4 @@ async def test_repair_screen_has_output_dir_default():
         await pilot.press("p")
         await pilot.pause()
         output_input = app.screen.query_one("#output-dir", Input)
-        assert output_input.value == "repaired"
+        assert output_input.value == "mavica_out/repaired"

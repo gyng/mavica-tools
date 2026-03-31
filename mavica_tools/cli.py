@@ -26,10 +26,20 @@ def main():
     subparsers.add_parser("report", help="Generate HTML recovery report")
     subparsers.add_parser("export", help="Export images with organization and effects")
     subparsers.add_parser("gps", help="Merge GPS track data into photos")
+    subparsers.add_parser("thumb411", help="Decode .411 Mavica thumbnails")
+    subparsers.add_parser("diskcheck", help="Check if a floppy disk is safe for camera use")
     subparsers.add_parser("tui", help="Launch interactive terminal UI")
 
     # Parse only the first argument to determine which tool to run
     args, remaining = parser.parse_known_args()
+
+    if args.tool is None and not remaining:
+        # No subcommand — launch TUI if interactive, otherwise show help
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            from mavica_tools.tui.app import run
+            run()
+            return
+        # Non-interactive: fall through to help text below
 
     if args.tool == "tui":
         from mavica_tools.tui.app import run
@@ -65,6 +75,10 @@ def main():
         from mavica_tools.export import main as tool_main
     elif args.tool == "gps":
         from mavica_tools.gps import main as tool_main
+    elif args.tool == "thumb411":
+        from mavica_tools.thumb411 import main as tool_main
+    elif args.tool == "diskcheck":
+        from mavica_tools.diskcheck import main as tool_main
     else:
         parser.print_help()
         print("\nTools:")
@@ -82,6 +96,8 @@ def main():
         print("  mavica history    — Disk health history tracking")
         print("  mavica export     — Export images (organize, contact sheets, watermarks)")
         print("  mavica gps        — Merge GPS track data into photos (requires piexif)")
+        print("  mavica thumb411   — Decode .411 Mavica thumbnails to PNG/JPG")
+        print("  mavica diskcheck  — Check if a floppy disk is safe for camera use")
         print("  mavica report     — Generate HTML recovery report")
         print("  mavica tui        — Launch interactive terminal UI")
         print("\nQuick start:")

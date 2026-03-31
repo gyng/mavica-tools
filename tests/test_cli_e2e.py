@@ -318,7 +318,16 @@ class TestExportCLI:
 
 class TestDetectCLI:
     def test_detect_runs(self):
-        r = run(["detect"])
+        # Mock subprocess.run inside detect to avoid triggering real floppy hardware
+        r = subprocess.run(
+            [
+                sys.executable, "-c",
+                "from unittest.mock import patch, MagicMock; "
+                "patch('mavica_tools.detect.subprocess.run', side_effect=FileNotFoundError()).start(); "
+                "from mavica_tools.detect import main; main()",
+            ],
+            capture_output=True, text=True, timeout=10,
+        )
         assert r.returncode == 0
         assert "detection" in r.stdout.lower() or "drive" in r.stdout.lower()
 

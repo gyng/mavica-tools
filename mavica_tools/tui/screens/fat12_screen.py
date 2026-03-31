@@ -30,6 +30,7 @@ class Fat12Screen(Screen):
             "[dim]View files with original Mavica names[/]\n",
             id="title-bar",
         )
+        yield Static("  [bold]Disk Image[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Path to disk image (.img)...", id="image-path")
             yield Button("Browse", id="btn-browse")
@@ -39,12 +40,12 @@ class Fat12Screen(Screen):
             yield Button("Include Deleted", variant="default", id="btn-deleted")
         yield DataTable(id="results-table")
         yield ImagePreview(id="preview")
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:
         table = self.query_one("#results-table", DataTable)
-        table.add_columns("Status", "Filename", "Size", "Date", "Time")
+        table.add_columns("Status", "Filename", "Size", "Offset", "Date", "Time")
         table.cursor_type = "row"
         self._include_deleted = False
         self._files_data = []
@@ -108,7 +109,7 @@ class Fat12Screen(Screen):
 
         for f in files:
             status = "[red]DEL[/]" if f.is_deleted else "[green]OK[/]"
-            table.add_row(status, f.name, f"{f.size:,}", f.date_str, f.time_str)
+            table.add_row(status, f.name, f"{f.size:,}", f"0x{f.byte_offset:06X}", f.date_str, f.time_str)
 
         total = sum(f.size for f in files if not f.is_deleted)
         log.write(f"{len(files)} file(s), {total:,} bytes total")

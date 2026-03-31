@@ -206,13 +206,13 @@ def main():
     # From device
     dev_parser = subparsers.add_parser("device", help="Recover from floppy device")
     dev_parser.add_argument("device", help="Floppy device path")
-    dev_parser.add_argument("-o", "--output", default="recovery", help="Output directory")
+    dev_parser.add_argument("-o", "--output", default="mavica_out/recovery", help="Output directory")
     dev_parser.add_argument("-n", "--passes", type=int, default=5, help="Number of read passes")
 
     # From existing images
     img_parser = subparsers.add_parser("images", help="Recover from existing disk images")
     img_parser.add_argument("images", nargs="+", help="Disk image files")
-    img_parser.add_argument("-o", "--output", default="recovery", help="Output directory")
+    img_parser.add_argument("-o", "--output", default="mavica_out/recovery", help="Output directory")
     img_parser.add_argument("--no-fat", action="store_true", help="Skip FAT12, carve directly")
 
     args = parser.parse_args()

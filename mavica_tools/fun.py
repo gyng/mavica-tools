@@ -70,8 +70,9 @@ def health_bar(percent: float, width: int = 30) -> str:
         color = "\033[31m"  # red
         emoji = "poor"
 
-    bar = f"{color}{'█' * filled}{'░' * empty}\033[0m"
-    return f"  [{bar}] {percent:.1f}% — {emoji}"
+    # Use ASCII-safe chars to avoid UnicodeEncodeError on Windows cp1252
+    bar = f"{color}{'#' * filled}{'-' * empty}\033[0m"
+    return f"  [{bar}] {percent:.1f}% - {emoji}"
 
 
 def health_bar_rich(percent: float, width: int = 30) -> str:
@@ -267,11 +268,12 @@ def sector_sparkline(sector_status: list[str], width: int = 60) -> str:
         return ""
 
     bucket_size = max(1, len(sector_status) // width)
+    # Use ASCII-safe chars to avoid UnicodeEncodeError on Windows cp1252
     chars = {
-        "good": ("▓", "\033[32m"),      # green
-        "recovered": ("▒", "\033[36m"), # cyan
-        "blank": ("░", "\033[31m"),     # red
-        "conflict": ("▒", "\033[35m"), # magenta
+        "good": ("#", "\033[32m"),      # green
+        "recovered": ("=", "\033[36m"), # cyan
+        "blank": ("-", "\033[31m"),     # red
+        "conflict": ("!", "\033[35m"), # magenta
     }
 
     priority = {"blank": 3, "conflict": 2, "recovered": 1, "good": 0}

@@ -8,10 +8,24 @@ import os
 from datetime import datetime
 
 
+MAVICA_EXTENSIONS = (".jpg", ".jpeg", ".411")
+
+# Default root output directory — all tool outputs go under here
+OUTPUT_DIR = "mavica_out"
+
+# Subdirectory defaults per tool
+OUTPUT_PHOTOS = os.path.join(OUTPUT_DIR, "photos")
+OUTPUT_RECOVERY = os.path.join(OUTPUT_DIR, "recovery")
+OUTPUT_DISK_IMAGES = os.path.join(OUTPUT_DIR, "disk_images")
+OUTPUT_REPAIRED = os.path.join(OUTPUT_DIR, "repaired")
+OUTPUT_EXPORTED = os.path.join(OUTPUT_DIR, "exported")
+OUTPUT_EXTRACTED = os.path.join(OUTPUT_DIR, "extracted")
+
+
 def gather_jpegs(path: str) -> list[str]:
     """Gather JPEG files from a path (directory, file, or glob pattern).
 
-    Returns a sorted list of file paths.
+    Returns a sorted, deduplicated list of file paths.
     """
     files = []
     if os.path.isdir(path):
@@ -24,8 +38,47 @@ def gather_jpegs(path: str) -> list[str]:
         files.extend(glob.glob(path))
         files = [f for f in files if f.lower().endswith((".jpg", ".jpeg"))]
 
-    files.sort()
-    return files
+    # Deduplicate (case-insensitive filesystems return the same file for *.jpg and *.JPG)
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for f in files:
+        key = os.path.normcase(f)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(f)
+
+    deduped.sort()
+    return deduped
+
+
+def gather_mavica_files(path: str) -> list[str]:
+    """Gather all Mavica files (JPEGs + .411 thumbnails) from a path.
+
+    Returns a sorted, deduplicated list of file paths.
+    Deduplication uses ``os.path.normcase`` so that case-insensitive
+    filesystems (Windows) don't produce duplicates from mixed-case globs.
+    """
+    files = []
+    if os.path.isdir(path):
+        for ext in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG", "*.411"):
+            files.extend(glob.glob(os.path.join(path, ext)))
+    elif os.path.isfile(path):
+        files.append(path)
+    else:
+        files.extend(glob.glob(path))
+        files = [f for f in files if f.lower().endswith(MAVICA_EXTENSIONS)]
+
+    # Deduplicate (case-insensitive filesystems return the same file for *.jpg and *.JPG)
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for f in files:
+        key = os.path.normcase(f)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(f)
+
+    deduped.sort()
+    return deduped
 
 
 def get_photo_timestamp(filepath: str, use_mtime: bool = False) -> datetime | None:
@@ -55,6 +108,53 @@ def get_photo_date(filepath: str) -> str | None:
     if ts:
         return ts.strftime("%Y-%m-%d")
     return None
+
+
+import platform
+import subprocess
+import time
+
+
+def open_directory(path: str) -> None:
+    """Open a directory in the system file manager and bring to foreground."""
+    system = platform.system()
+    if system == "Windows":
+        # explorer.exe always opens a new window in the foreground
+        # os.startfile reuses existing windows and doesn't raise them
+        subprocess.Popen(["explorer.exe", os.path.normpath(path)])
+    elif system == "Darwin":
+        subprocess.Popen(["open", path])
+    else:
+        subprocess.Popen(["xdg-open", path])
+
+
+def format_eta(start_time: float, current: int, total: int) -> str:
+    """Format an ETA string like '1m 23s left' based on progress so far."""
+    if current <= 0 or total <= 0:
+        return ""
+    elapsed = time.time() - start_time
+    if elapsed <= 0:
+        return ""
+    rate = current / elapsed
+    remaining = (total - current) / rate
+    if remaining < 1:
+        return "< 1s left"
+    if remaining < 60:
+        return f"{int(remaining)}s left"
+    minutes = int(remaining // 60)
+    seconds = int(remaining % 60)
+    return f"{minutes}m {seconds:02d}s left"
+
+
+def print_progress(current: int, total: int, start_time: float, label: str = "") -> None:
+    """Print a progress line with ETA to stderr, overwriting the current line."""
+    import sys
+    pct = 100 * current / total if total else 0
+    eta = format_eta(start_time, current, total)
+    prefix = f"  {label} " if label else "  "
+    print(f"\r{prefix}{current}/{total} ({pct:.0f}%) {eta}    ", end="", file=sys.stderr, flush=True)
+    if current >= total:
+        print(file=sys.stderr)  # newline when done
 
 
 # JPEG marker constants

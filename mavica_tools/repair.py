@@ -118,10 +118,15 @@ def repair_files(paths, output_dir=None):
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
+    from mavica_tools.utils import print_progress
+    import time
+
     success_count = 0
     fail_count = 0
+    start = time.time()
+    total = len(paths)
 
-    for path in paths:
+    for i, path in enumerate(paths):
         name = os.path.basename(path)
 
         if output_dir:
@@ -139,6 +144,8 @@ def repair_files(paths, output_dir=None):
             fail_count += 1
             print(f"  FAIL  {name}")
             print(f"         {msg}")
+        if total > 3:
+            print_progress(i + 1, total, start, "Repairing")
 
     print(f"\nRepair results: {success_count} fixed, {fail_count} failed")
 

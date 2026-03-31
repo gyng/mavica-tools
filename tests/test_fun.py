@@ -134,13 +134,13 @@ class TestSparkline:
     def test_all_good(self):
         status = ["good"] * 2880
         result = sector_sparkline(status, width=30)
-        assert "▓" in result
+        assert "#" in result
 
     def test_mixed(self):
         status = ["good"] * 2000 + ["blank"] * 880
         result = sector_sparkline(status, width=30)
-        assert "▓" in result
-        assert "░" in result
+        assert "#" in result
+        assert "-" in result
 
     def test_empty(self):
         assert sector_sparkline([]) == ""

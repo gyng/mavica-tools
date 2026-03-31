@@ -19,6 +19,7 @@ USE_CASES = [
             ("s", "stamp", "Add Photo Info", "Add camera model, date, lens data to EXIF"),
             ("g", "gps", "Add GPS Location", "Match photos to a GPS track file"),
             ("e", "export", "Export & Share", "Organize, contact sheets, watermarks, resize"),
+            ("4", "thumb411", ".411 Thumbnails", "View and convert Mavica .411 thumbnail files"),
         ],
     },
     # Use case 2: Recovery — damaged disk, corrupt photos
@@ -38,6 +39,7 @@ USE_CASES = [
         "header": "Diagnose Problems",
         "desc": "Figure out if the problem is the camera, disk, or drive",
         "tools": [
+            ("x", "diskcheck", "Disk Checker", "Test if a floppy is safe before using it"),
             ("t", "troubleshoot", "Troubleshooting Wizard", "Guided Q&A to find the problem"),
             ("w", "swaptest", "Camera Swap Test", "Test camera+disk combos to isolate the fault"),
             ("d", "detect", "Detect Floppy Drives", "Auto-detect available floppy drives"),
@@ -57,6 +59,15 @@ UTILITY_TOOLS = [
 class HomeScreen(Screen):
     """Landing screen organized by use case."""
 
+    DEFAULT_CSS = """
+    HomeScreen {
+        overflow: hidden;
+    }
+    HomeScreen #tool-list {
+        height: 1fr;
+    }
+    """
+
     BINDINGS = [
         # Import & Tag
         Binding("1", "tool('import_workflow')", show=False),
@@ -64,6 +75,7 @@ class HomeScreen(Screen):
         Binding("s", "tool('stamp')", show=False),
         Binding("g", "tool('gps')", show=False),
         Binding("e", "tool('export')", show=False),
+        Binding("4", "tool('thumb411')", show=False),
         # Recovery
         Binding("r", "tool('recovery_workflow')", show=False),
         Binding("m", "tool('multipass')", show=False),
@@ -71,6 +83,7 @@ class HomeScreen(Screen):
         Binding("k", "tool('check')", show=False),
         Binding("p", "tool('repair')", show=False),
         # Diagnostic
+        Binding("x", "tool('diskcheck')", show=False),
         Binding("t", "tool('troubleshoot')", show=False),
         Binding("w", "tool('swaptest')", show=False),
         Binding("d", "tool('detect')", show=False),
@@ -129,7 +142,13 @@ class HomeScreen(Screen):
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
         screen_id = event.option.id
         if screen_id:
-            self.app.push_screen(screen_id)
+            self._open_screen(screen_id)
 
     def action_tool(self, screen_id: str) -> None:
-        self.app.push_screen(screen_id)
+        self._open_screen(screen_id)
+
+    def _open_screen(self, screen_id: str) -> None:
+        if screen_id in self.app.SCREENS:
+            self.app.push_screen(screen_id)
+        else:
+            self.app.notify(f"{screen_id} screen not yet implemented", severity="warning")

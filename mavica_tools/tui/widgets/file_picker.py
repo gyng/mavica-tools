@@ -1,5 +1,6 @@
 """File and directory picker modal widget."""
 
+import os
 from pathlib import Path
 
 from textual.app import ComposeResult
@@ -37,7 +38,7 @@ class FilePicker(ModalScreen[str]):
 
     #picker-container {
         width: 70;
-        height: 28;
+        height: 30;
         border: thick #33ff33;
         background: #0a0a0a;
         padding: 1 2;
@@ -46,22 +47,38 @@ class FilePicker(ModalScreen[str]):
     #picker-title {
         text-style: bold;
         color: #ffaa00;
+        height: 1;
         margin-bottom: 1;
     }
 
     #picker-tree {
-        height: 18;
+        height: 1fr;
         border: tall #333333;
         margin-bottom: 1;
     }
 
     #picker-path {
+        height: 3;
         margin-bottom: 1;
     }
 
+    #picker-new-folder-row {
+        height: auto;
+        margin-bottom: 1;
+    }
+
+    #picker-new-folder-name {
+        width: 1fr;
+    }
+
     #picker-buttons {
-        height: 3;
+        height: auto;
+        min-height: 3;
         align: right middle;
+    }
+
+    #picker-buttons Button {
+        min-width: 12;
     }
     """
 
@@ -73,12 +90,14 @@ class FilePicker(ModalScreen[str]):
         extensions: tuple[str, ...] = (),
         title: str = "Select file",
         select_directory: bool = False,
+        allow_new_folder: bool = False,
     ):
         super().__init__()
         self._start_path = start_path
         self._extensions = extensions
         self._title = title
         self._select_directory = select_directory
+        self._allow_new_folder = allow_new_folder
         self._selected_path = ""
 
     def compose(self) -> ComposeResult:
@@ -94,6 +113,13 @@ class FilePicker(ModalScreen[str]):
                 placeholder="Selected path",
                 id="picker-path",
             )
+            if self._allow_new_folder:
+                with Horizontal(id="picker-new-folder-row"):
+                    yield Input(
+                        placeholder="New folder name...",
+                        id="picker-new-folder-name",
+                    )
+                    yield Button("New Folder", variant="warning", id="picker-new-folder")
             with Horizontal(id="picker-buttons"):
                 yield Button("Cancel", variant="default", id="picker-cancel")
                 yield Button("Select", variant="success", id="picker-select")
@@ -113,6 +139,35 @@ class FilePicker(ModalScreen[str]):
             self.dismiss(path)
         elif event.button.id == "picker-cancel":
             self.dismiss("")
+        elif event.button.id == "picker-new-folder":
+            self._create_new_folder()
+
+    def _create_new_folder(self) -> None:
+        """Create a new folder inside the currently selected directory."""
+        name = self.query_one("#picker-new-folder-name", Input).value.strip()
+        if not name:
+            self.notify("Enter a folder name", severity="warning")
+            return
+
+        # Determine parent: use selected path if it's a dir, otherwise use start path
+        parent = self.query_one("#picker-path", Input).value.strip()
+        if parent and os.path.isfile(parent):
+            parent = os.path.dirname(parent)
+        if not parent or not os.path.isdir(parent):
+            parent = self._start_path
+
+        new_path = os.path.join(parent, name)
+        try:
+            os.makedirs(new_path, exist_ok=True)
+            self.query_one("#picker-path", Input).value = new_path
+            self._selected_path = new_path
+            # Refresh the tree to show the new folder
+            tree = self.query_one("#picker-tree", FilteredDirectoryTree)
+            tree.reload()
+            self.query_one("#picker-new-folder-name", Input).value = ""
+            self.notify(f"Created: {new_path}", timeout=2)
+        except OSError as e:
+            self.notify(f"Cannot create folder: {e}", severity="error")
 
     def action_cancel(self) -> None:
         self.dismiss("")

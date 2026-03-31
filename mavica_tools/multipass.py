@@ -50,44 +50,171 @@ def read_pass(device, pass_num, output_dir):
     return img_path, errors
 
 
-def read_pass_sectored(device, pass_num, output_dir, on_sector=None):
-    """Read a floppy sector-by-sector with per-sector callbacks.
+def identify_bad_sectors(image_path):
+    """Return set of sector indices that are blank (all zeros) in an image."""
+    data = read_image_file(image_path)
+    bad = set()
+    for i in range(TOTAL_SECTORS):
+        sector = data[i * SECTOR_SIZE : (i + 1) * SECTOR_SIZE]
+        if sector_is_blank(sector):
+            bad.add(i)
+    return bad
 
-    on_sector(sector_index, success) is called after each sector.
-    This is slower than dd but enables live progress visualization.
 
+def read_sectors(device, on_sector=None, on_metadata_ready=None,
+                 skip_sectors=None, only_sectors=None):
+    """Core sector-reading loop with track-level bulk reads.
+
+    Returns (data_bytearray, error_count).
+
+    on_sector(sector_index, state): called after each sector.
+    on_metadata_ready(data_bytes): called once after sector 32 is read.
+    skip_sectors: set of sectors to skip (already good).
+    only_sectors: if set, only read these sectors (for quick/spot checks).
+    """
+    if skip_sectors is None:
+        skip_sectors = set()
+
+    data = bytearray(DISK_SIZE)
+    errors = 0
+    metadata_fired = False
+
+    with open(device, "rb") as dev:
+        sector_idx = 0
+        while sector_idx < TOTAL_SECTORS:
+            track_start = (sector_idx // SECTORS_PER_TRACK) * SECTORS_PER_TRACK
+            track_end = track_start + SECTORS_PER_TRACK
+
+            # Check if entire track can be skipped
+            track_sectors = set(range(track_start, min(track_end, TOTAL_SECTORS)))
+            if track_sectors.issubset(skip_sectors):
+                for s in range(track_start, min(track_end, TOTAL_SECTORS)):
+                    if on_sector:
+                        on_sector(s, "good")
+                try:
+                    dev.seek(min(track_end, TOTAL_SECTORS) * SECTOR_SIZE)
+                except OSError:
+                    dev.read((min(track_end, TOTAL_SECTORS) - sector_idx) * SECTOR_SIZE)
+                sector_idx = min(track_end, TOTAL_SECTORS)
+                continue
+
+            # If only_sectors is set, skip tracks with no target sectors
+            if only_sectors is not None and not (track_sectors & only_sectors):
+                for s in track_sectors:
+                    if on_sector:
+                        on_sector(s, "waiting")
+                try:
+                    dev.seek(min(track_end, TOTAL_SECTORS) * SECTOR_SIZE)
+                except OSError:
+                    pass
+                sector_idx = min(track_end, TOTAL_SECTORS)
+                continue
+
+            # Try bulk track read if no sectors to skip in this track
+            track_has_skips = bool(track_sectors & skip_sectors)
+            if not track_has_skips and sector_idx == track_start:
+                remaining = min(SECTORS_PER_TRACK, TOTAL_SECTORS - track_start)
+                try:
+                    dev.seek(track_start * SECTOR_SIZE)
+                    chunk = dev.read(remaining * SECTOR_SIZE)
+                    if len(chunk) == remaining * SECTOR_SIZE:
+                        data[track_start * SECTOR_SIZE : track_start * SECTOR_SIZE + len(chunk)] = chunk
+                        for s in range(track_start, track_start + remaining):
+                            if on_sector:
+                                on_sector(s, "good")
+                        if not metadata_fired and track_start + remaining > 32 and on_metadata_ready:
+                            metadata_fired = True
+                            on_metadata_ready(bytes(data))
+                        sector_idx = track_start + remaining
+                        continue
+                except OSError:
+                    pass
+                try:
+                    dev.seek(track_start * SECTOR_SIZE)
+                except OSError:
+                    pass
+
+            # Sector-by-sector for this track
+            if sector_idx < track_start:
+                sector_idx = track_start
+            for s in range(sector_idx, min(track_end, TOTAL_SECTORS)):
+                if s in skip_sectors:
+                    if on_sector:
+                        on_sector(s, "good")
+                    try:
+                        dev.seek((s + 1) * SECTOR_SIZE)
+                    except OSError:
+                        try:
+                            dev.read(SECTOR_SIZE)
+                        except OSError:
+                            pass
+                    continue
+
+                if only_sectors is not None and s not in only_sectors:
+                    if on_sector:
+                        on_sector(s, "waiting")
+                    try:
+                        dev.seek((s + 1) * SECTOR_SIZE)
+                    except OSError:
+                        pass
+                    continue
+
+                if on_sector:
+                    on_sector(s, "reading")
+
+                try:
+                    dev.seek(s * SECTOR_SIZE)
+                except OSError:
+                    pass
+
+                try:
+                    chunk = dev.read(SECTOR_SIZE)
+                    if len(chunk) == SECTOR_SIZE:
+                        data[s * SECTOR_SIZE : (s + 1) * SECTOR_SIZE] = chunk
+                        if on_sector:
+                            on_sector(s, "good")
+                    else:
+                        data[s * SECTOR_SIZE : s * SECTOR_SIZE + len(chunk)] = chunk
+                        errors += 1
+                        if on_sector:
+                            on_sector(s, "bad")
+                except OSError:
+                    errors += 1
+                    if on_sector:
+                        on_sector(s, "bad")
+
+                if not metadata_fired and s >= 32 and on_metadata_ready:
+                    metadata_fired = True
+                    on_metadata_ready(bytes(data))
+
+            sector_idx = min(track_end, TOTAL_SECTORS)
+
+    return data, errors
+
+
+def read_pass_sectored(device, pass_num, output_dir, on_sector=None,
+                       on_metadata_ready=None, skip_sectors=None):
+    """Read a floppy pass and write the result to a .img file.
+
+    Thin wrapper around read_sectors() that persists the data.
     Falls back to bulk dd if the device can't be opened directly.
     """
     img_path = os.path.join(output_dir, f"pass_{pass_num:02d}.img")
 
     try:
-        data = bytearray(DISK_SIZE)
-        errors = 0
-
-        with open(device, "rb") as dev:
-            for sector_idx in range(TOTAL_SECTORS):
-                if on_sector:
-                    on_sector(sector_idx, "reading")
-
-                try:
-                    chunk = dev.read(SECTOR_SIZE)
-                    if len(chunk) == SECTOR_SIZE:
-                        data[sector_idx * SECTOR_SIZE : (sector_idx + 1) * SECTOR_SIZE] = chunk
-                        if on_sector:
-                            on_sector(sector_idx, "good")
-                    else:
-                        # Short read — pad with zeros
-                        data[sector_idx * SECTOR_SIZE : sector_idx * SECTOR_SIZE + len(chunk)] = chunk
-                        errors += 1
-                        if on_sector:
-                            on_sector(sector_idx, "bad")
-                except OSError:
-                    errors += 1
-                    if on_sector:
-                        on_sector(sector_idx, "bad")
-
-        with open(img_path, "wb") as f:
-            f.write(data)
+        try:
+            data, errors = read_sectors(
+                device, on_sector=on_sector,
+                on_metadata_ready=on_metadata_ready,
+                skip_sectors=skip_sectors,
+            )
+        finally:
+            # Always write whatever was read — even if interrupted mid-read
+            try:
+                with open(img_path, "wb") as f:
+                    f.write(data)
+            except UnboundLocalError:
+                pass  # read_sectors raised before data was assigned
 
         return img_path, errors
 
@@ -174,7 +301,7 @@ def print_sector_map(sector_status):
         print(f"  T{track:02d}H{head} [{line}]")
 
 
-def print_summary(sector_status):
+def print_summary(sector_status, pass_image_paths=None):
     """Print a summary of disk health."""
     total = len(sector_status)
     good = sector_status.count("good")
@@ -202,34 +329,82 @@ def print_summary(sector_status):
         for s in suggestions:
             print(f"  {s}")
 
+    # Drive vs disk diagnostics
+    if blank > 0:
+        try:
+            from mavica_tools.diagnose import diagnose_errors, format_diagnosis
+            diag = diagnose_errors(
+                pass_image_paths=pass_image_paths,
+                sector_status=sector_status,
+            )
+            if diag.evidence:
+                print(f"\nDiagnosis:")
+                print(format_diagnosis(diag, rich=False))
+        except Exception:
+            pass  # Diagnostics are best-effort
 
-def multipass_image(device, output_dir, passes=5, eject_between=True):
-    """Run the full multi-pass imaging workflow."""
+
+def multipass_image(device, output_dir, passes=5, eject_between=True,
+                    adaptive_stop=True):
+    """Run the full multi-pass imaging workflow.
+
+    With adaptive_stop=True, stops early if 2 consecutive passes
+    recover zero new sectors (diminishing returns).
+    """
     os.makedirs(output_dir, exist_ok=True)
 
     print(f"Multi-pass floppy imager")
     print(f"  Device: {device}")
     print(f"  Passes: {passes}")
-    print(f"  Output: {output_dir}\n")
+    print(f"  Output: {output_dir}")
+    if adaptive_stop:
+        print(f"  Adaptive stop: enabled (stops if no improvement)")
+    print()
 
     image_paths = []
+    good_sectors = set()  # Sectors known to be good from prior passes
+    stale_count = 0       # Consecutive passes with no new recovery
+
     for i in range(1, passes + 1):
-        path, errors = read_pass(device, i, output_dir)
+        skip = good_sectors if i > 1 else None
+        if skip:
+            print(f"  Pass {i}: reading {len(good_sectors)} good, {TOTAL_SECTORS - len(good_sectors)} to retry")
+
+        path, errors = read_pass_sectored(device, i, output_dir, skip_sectors=skip)
         image_paths.append(path)
         if errors:
-            print(f"    ({errors} error mentions in dd output)")
+            print(f"    ({errors} error(s))")
+        else:
+            print(f"    clean read")
+
+        # Update good sectors set
+        bad = identify_bad_sectors(path)
+        new_good = (set(range(TOTAL_SECTORS)) - bad) - good_sectors
+        good_sectors |= (set(range(TOTAL_SECTORS)) - bad)
+
+        if i > 1:
+            if new_good:
+                print(f"    +{len(new_good)} new sector(s) recovered")
+                stale_count = 0
+            else:
+                stale_count += 1
+                print(f"    no new sectors recovered")
+
+        # Adaptive stop
+        if adaptive_stop and stale_count >= 2 and i < passes:
+            print(f"\n  Stopping early: no improvement in last 2 passes.")
+            break
 
         if eject_between and i < passes:
             print("  Ejecting disk (re-insert when ready)...")
             subprocess.run(["eject", device], capture_output=True)
             time.sleep(1)
-            # Wait for device to reappear
             for _ in range(30):
                 if os.path.exists(device):
                     break
                 time.sleep(1)
 
-    print("\nMerging passes...")
+    print(f"\nMerging {len(image_paths)} passes...")
     merged, sector_status = merge_passes(image_paths)
 
     merged_path = os.path.join(output_dir, "merged.img")
@@ -238,7 +413,7 @@ def multipass_image(device, output_dir, passes=5, eject_between=True):
 
     print(f"Merged image written to: {merged_path}")
     print_sector_map(sector_status)
-    print_summary(sector_status)
+    print_summary(sector_status, pass_image_paths=image_paths)
 
     return merged_path, sector_status
 
@@ -253,7 +428,7 @@ def merge_existing_images(image_paths, output_path):
 
     print(f"Merged image written to: {output_path}")
     print_sector_map(sector_status)
-    print_summary(sector_status)
+    print_summary(sector_status, pass_image_paths=image_paths)
 
     return output_path, sector_status
 
@@ -268,7 +443,7 @@ def main():
     read_parser = subparsers.add_parser("read", help="Read from a floppy device")
     read_parser.add_argument("device", help="Floppy device (e.g. /dev/fd0)")
     read_parser.add_argument(
-        "-o", "--output", default="disk_recovery", help="Output directory"
+        "-o", "--output", default="mavica_out/disk_images", help="Output directory"
     )
     read_parser.add_argument(
         "-n", "--passes", type=int, default=5, help="Number of read passes (default: 5)"

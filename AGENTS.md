@@ -122,8 +122,8 @@ These are the integration points. The TUI calls these directly — no subprocess
 ```
 MavicaApp (app.py)
 ├── CSS theme (retro green/amber on black)
-├── Global bindings: q=quit, h=home, ?=help
-├── SCREENS dict: 11 screen classes
+├── Global bindings: q=quit, h=home, ?=help, s=screenshot
+├── SCREENS dict: 17 screen classes
 └── Screen navigation via push_screen/pop_screen
 
 Screen data flow (prefill attributes):
@@ -135,6 +135,246 @@ Screen data flow (prefill attributes):
 ```
 
 All long operations run in Textual `Worker` threads. Buttons disable during operations and show loading labels ("Checking...", "Carving...").
+
+### TUI Screen UX Patterns
+
+These patterns were established in the .411 viewer and should be replicated across all tool screens.
+
+**Screen structure** (top to bottom, budget for 24 rows):
+1. Header (1 row, docked)
+2. Title bar (1 row + 1 row margin-bottom)
+3. Input rows (1-2 rows) — keep minimal, combine where possible
+4. Action buttons (1 row)
+5. Main content area (`height: 1fr` — takes all remaining space)
+6. Log (2-3 rows, `border: none`)
+7. Footer (1 row, docked)
+
+**Input/Output rows**:
+- Label + Input + buttons on same row: `In [path...] Browse Open`
+- Use short labels: `In` / `Out`, not "Source Directory" / "Output Directory"
+- Browse and Open buttons next to the input they act on (proximity principle)
+- Default paths use `mavica_out/` convention (see Output Directory Convention)
+- Input for source should default to where previous tool's output goes (chaining)
+
+**Primary action placement**:
+- Convert/Run button goes on the output row (configure → act, left to right)
+- Use `variant="success"` for the primary action
+- Button label should reflect state: "Convert 9 files" not just "Convert"
+- Update label dynamically via `_update_convert_label()` pattern
+
+**File list with selection**:
+- Two-column layout: file list left (`width: 1fr`), preview right (`width: 40`)
+- DataTable with `cursor_type="row"`, columns: Sel / Filename / Size / Status
+- Selection markers: `●` (green, selected) / `○` (dim, deselected)
+- Selected rows: bold filename. Deselected: dim filename and size.
+- All selected by default on load. All/None buttons above the table.
+- Space/Enter toggles selection (via `on_key` with focus check, NOT screen-level BINDINGS)
+- `on_data_table_row_highlighted` for live preview on cursor movement
+- Empty state: "Browse for a directory with .411 files" / "No files found"
+
+**Preview pane**:
+- Use `set_pil_image(img, name)` for instant previews (no temp file race)
+- Show source filename as preview label, output path below with `→` arrow
+- Refresh preview when format dropdown changes (`on_select_changed`)
+- `content-align: center top` to center the image
+- `margin-bottom: 1` for breathing room
+
+**Keyboard shortcuts**:
+- Only use screen-level `BINDINGS` for keys that don't conflict with widget behavior
+- Safe for BINDINGS: `escape`, `b` (browse), `F2` (convert), `i` (open in), `o` (open out)
+- NOT safe for BINDINGS: `enter`, `space`, `c`, `a`, `n` — these conflict with buttons, inputs, selects
+- Use `on_key` with `table.has_focus` check for context-sensitive keys (space/enter toggle)
+- Footer shows all BINDINGS automatically. Add inline hints for context keys: "Space/Enter to toggle"
+
+**Select dropdown**:
+- Use `Select[str](..., value="default", allow_blank=False, compact=True)` in constructor
+- Do NOT set value on mount or via CSS — set in constructor
+- Do NOT apply global CSS to Select/SelectCurrent/OptionList — it breaks the overlay
+
+**Progressive disclosure**:
+- Files list immediately on valid path input (`on_input_changed` with `os.path.isdir` guard)
+- Also list on `on_input_submitted` (Enter) for paths typed manually
+- Auto-preview first file on load, auto-focus the table
+- Show conversion results in-place (update table status column, don't rebuild)
+
+**Open buttons**:
+- Use `explorer.exe` on Windows (not `os.startfile`) to bring window to foreground
+- `os.path.abspath()` for relative paths before opening
+- `os.makedirs(exist_ok=True)` before opening output dir
+
+**File picker**:
+- `allow_new_folder=True` for output directory browsing
+- No new folder for input browsing (read-only)
+
+### TUI Layout Guidelines
+
+- **Minimum width**: 80 columns
+- **Target width**: 100 columns
+- **Target/minimum height**: 24 rows
+- All screens must be usable at 80x24. Design for 100x24 as the comfortable default.
+
+**Textual layout fundamentals**:
+- Vertical layout (default): widgets auto-expand width but NOT height. Always set `height` explicitly.
+- Horizontal layout: inverse — height auto-expands, width does NOT. Set `width` on children.
+- `1fr` divides remaining space proportionally. Only works when parent has a fixed/known height.
+- `auto` sizes to content. Use `1fr` when you want stretch-to-fill.
+- **Do not** use `overflow-y: auto` on Screen — it makes the screen infinitely tall, breaking `1fr`.
+- Margins overlap (largest wins, they don't add). Padding does not overlap.
+- `box-sizing: border-box` is default — padding/border subtract from declared dimensions.
+
+**Control sizing** (global CSS in `app.py`):
+- Buttons: `height: 1`, no border — single-row compact controls
+- Inputs: `height: 1`, `border: none`, `padding: 0 0`. Padding > 0 can garble placeholder text at height 1.
+- Select: use `compact=True` constructor param for single-row. Do NOT force `height`/`border` via CSS — it breaks the dropdown overlay (SelectOverlay is an OptionList that needs space to render).
+- ProgressBar: `height: 1`
+- input-row / button-row: `height: 1`, `margin: 0 1 1 1` for side padding
+- Do NOT set global `max-height` on OptionList or DataTable — it constrains Select overlays and stretching tables.
+
+**Layout patterns**:
+- Main content area: `height: 1fr` — takes all remaining space after fixed-height controls
+- Two-column layouts: content on left (`width: 1fr`), preview on right (`width: 40`)
+- In horizontal layouts, children need explicit `height` (e.g. `height: 1fr` or `100%`)
+- RichLog panels: `max-height: 8`, `border: none`, `margin: 0`, always `wrap=True`
+- DataTable in a stretching pane: `height: 1fr` — no global max-height caps
+- Docked widgets (Header/Footer): removed from layout flow, fixed to edge, don't scroll
+
+**Textual CSS rules**:
+- `DEFAULT_CSS` on widgets has LOWER specificity than app-level `CSS` — app CSS always wins
+- Type selectors match base classes (e.g. `Static { }` applies to Button too)
+- CSS classes are mutable — change via `add_class()`/`remove_class()`, unlike `id`
+- Variables (`$var`) only work in values, never in selectors
+- Nesting without `&` creates descendant selectors. Use `&.class` to combine with parent.
+- `!important` locks in values — avoid unless resolving genuine conflicts
+- Specificity order: most IDs > most classes/pseudo > most types
+
+### Textual Bindings & Actions
+
+- Use `BINDINGS` for keyboard shortcuts — they auto-show in Footer with `show=True`
+- **Do not** use `BINDINGS` for context-sensitive keys like Enter/Space that conflict with widget behavior (buttons, inputs, selects). Use `on_key` with focus checks instead.
+- Resolution order: focused widget → parent widgets → screen → app
+- `priority=True` bypasses widget bindings — use sparingly (global hotkeys only)
+- Actions are `action_`-prefixed methods, can be async
+- Action string params must be **literals only** — no variables: `"set_bg('red')"` not `"set_bg(color)"`
+- Use `check_action(action, params) -> bool|None` to dynamically show/hide/disable keys
+- `refresh_bindings()` updates Footer after state changes
+- `reactive(value, bindings=True)` auto-refreshes Footer when the reactive changes
+
+### Textual Events & Messages
+
+- Handler naming: `on_` + namespace + message_name in snake_case (e.g. `on_input_changed`, `on_button_pressed`)
+- Events bubble up the DOM tree (child → parent) unless `event.stop()` called
+- `event.prevent_default()` blocks base class handlers
+- `widget.prevent(MessageType)` context manager suppresses messages during mutations
+- Use `@on(Button.Pressed, "#submit")` decorator to filter by CSS selector
+- Long-running sync code in handlers freezes UI — use workers instead
+
+### Textual Reactivity
+
+- `reactive(default)` triggers `render()` on change. `reactive(default, layout=True)` also recalculates layout. `reactive(default, recompose=True)` rebuilds children.
+- `var(default)` — reactive without auto-refresh (for internal state)
+- In `__init__`, use `self.set_reactive(MyWidget.attr, value)` — direct assignment triggers watchers before DOM is ready
+- Watch methods: `def watch_attr(self, value)` or `def watch_attr(self, old, new)` — Textual inspects the signature
+- Validate methods: `def validate_attr(self, value) -> type` — MUST return the (possibly modified) value
+- Mutable collections (lists/dicts): call `self.mutate_reactive(MyWidget.attr)` after mutation — Textual can't detect in-place changes
+- Data binding: one-way parent→child via `child.data_bind(ParentClass.attr)`. Reverse requires explicit watchers.
+
+### Textual Workers
+
+- `run_worker(coro, exclusive=True)` or `@work(exclusive=True)` for I/O operations
+- `exclusive=True` cancels previous worker before starting new one — prevents race conditions
+- **Never update UI from worker threads** — use `self.app.call_from_thread(widget.method, args)` or `self.post_message(msg)` (both thread-safe)
+- Threaded workers: check `worker.is_cancelled` periodically. Async workers: get `CancelledError` automatically.
+- Access results via `Worker.StateChanged` event, not `await worker.wait()` (blocks event loop)
+- Workers auto-cancel when their parent widget/screen is removed
+- Set `exit_on_error=False` for graceful failure handling
+
+### Textual Widgets Reference
+
+**Select**:
+- Use `Select[str]` with type annotation for type safety
+- `compact=True` for borderless single-row mode
+- Set `value=` in constructor with `allow_blank=False` — first option auto-selects if no value given
+- Do NOT set value on mount or via CSS height — set in constructor
+- Listen for `Select.Changed` event (has `event.value`)
+- `set_options()` resets current selection
+- Empty options + `allow_blank=False` raises `EmptySelectError`
+
+**DataTable**:
+- `cursor_type="row"` for row selection
+- `RowHighlighted` fires on cursor movement (arrow keys), `RowSelected` fires on Enter/click
+- Use `update_cell()` for in-place updates instead of clear+rebuild when possible
+- `zebra_stripes=True` for visual clarity
+- `fixed_rows`/`fixed_columns` for pinned header areas
+
+**Input**:
+- Single-line only. `height: 1` + `border: none` for compact mode
+- `Changed` fires on every keystroke, `Submitted` fires on Enter, `Blurred` on focus loss
+- `validate_on=["changed"|"submitted"|"blur"]` controls validation timing
+- `restrict=r"regex"` limits allowed characters
+- Text auto-selects on focus; disable with `select_on_focus=False`
+
+**Image preview** (`widgets/image_preview.py`):
+- Half-block Unicode chars (U+2580) — 2 vertical pixels per cell, fills widget width
+- `set_pil_image(img, name)` for small/decoded images (avoids temp file races)
+- `image_path` for file-based images (loads async in worker thread with spinner)
+- `self.size.width` is content area width (border/padding already subtracted — do not subtract again)
+
+### Textual Screens
+
+- At least one screen must always exist — popping the last one raises `ScreenStackError`
+- `push_screen(screen, callback)` for results — screen calls `dismiss(value)`
+- `switch_screen(screen)` replaces top screen (doesn't change stack depth)
+- Use `ModalScreen[ReturnType]` for dialogs — darkens background, blocks app bindings
+- Named screens in `SCREENS` dict persist across push/pop; unnamed screens are deleted on pop
+- `push_screen_wait()` blocks — only use inside workers, never in handlers
+- `on_screen_suspend` fires for overlays (command palette, modals) too — check `isinstance(top, ModalScreen)` before cancelling workers
+- Modes (`MODES` dict) maintain separate screen stacks per mode
+
+### Textual Command Palette
+
+- Ctrl+P opens the command palette. Override with `COMMAND_PALETTE_BINDING`.
+- `get_system_commands(screen)` yields `SystemCommand(title, help_text, callback)` — callback is a callable, not an action string
+- Always `yield from super().get_system_commands(screen)` to preserve built-in commands
+- Advanced: `Provider` subclass with `async search(query) -> Hits` for dynamic results
+- `COMMANDS = App.COMMANDS | {MyProvider}` to register providers
+
+### Textual Testing
+
+- `async with app.run_test(size=(80, 24)) as pilot:` — headless testing
+- `await pilot.press("r", "enter")` for key sequences
+- `await pilot.click("#submit")` for button clicks
+- `await pilot.pause()` to process pending messages before assertions
+- Snapshot testing: `assert snap_compare("app.py", press=["1"])` compares rendered output
+- All tests must be `async def` and `await` pilot methods
+
+**Floppy I/O in TUI**:
+- All reads via `asyncio.to_thread()` — never block the event loop
+- `on_sector(idx, state)` callback for live DefragMap updates via `call_from_thread`
+- `_StopRequested` exception pattern for cancellation
+
+**Quit behavior**:
+- Home screen with no workers: exit immediately, no confirmation
+- Sub-screen or workers running: show quit dialog (y/n)
+- `self.exit()` for graceful terminal restore, 1s daemon timer `os._exit(0)` fallback
+
+### Output Directory Convention
+
+All tool outputs go under `mavica_out/` by default. Constants are in `utils.py`.
+
+```
+mavica_out/
+├── photos/       Import destination (JPEGs + .411 from floppy)
+├── thumbnails/   Converted .411 thumbnails
+├── disk_images/  Multipass .img files (pass_01.img, merged.img)
+├── recovery/     Recovery workflow (merged.img, extracted/, carved/)
+├── extracted/    FAT12-extracted files with original names
+├── repaired/     Repaired JPEGs
+└── exported/     Export output (organized, contact sheets)
+```
+
+- `mavica_out/photos` is the default input source for .411 converter (thumbnails live alongside JPEGs)
+- Tools that chain together share paths: recovery workflow writes to `mavica_out/recovery/`, check/repair reads from there
+- Users can override per-tool via CLI `-o` flag or TUI input fields
 
 ### Cross-Platform Floppy Access
 

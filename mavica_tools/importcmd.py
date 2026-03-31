@@ -13,7 +13,7 @@ import os
 import shutil
 import sys
 
-from mavica_tools.utils import gather_jpegs, get_photo_date
+from mavica_tools.utils import gather_jpegs, gather_mavica_files, get_photo_date
 
 
 def quick_import(
@@ -31,9 +31,14 @@ def quick_import(
     imported = []
 
     if os.path.isdir(source):
-        # Mounted floppy / directory — copy JPEGs
-        files = gather_jpegs(source)
-        for src in files:
+        # Mounted floppy / directory — copy JPEGs and .411 thumbnails
+        files = gather_mavica_files(source)
+        failed = 0
+        import time
+        from mavica_tools.utils import print_progress
+        total = len(files)
+        start = time.time()
+        for file_idx, src in enumerate(files):
             name = os.path.basename(src)
             dest = os.path.join(output_dir, name)
             # Avoid clobbering
@@ -43,8 +48,17 @@ def quick_import(
                 while os.path.exists(dest):
                     dest = os.path.join(output_dir, f"{base}_{i}{ext}")
                     i += 1
-            shutil.copy2(src, dest)
+            try:
+                shutil.copy2(src, dest)
+            except OSError as e:
+                failed += 1
+                print(f"  Failed to read {name}: {e}", file=sys.stderr)
+                continue
             imported.append(dest)
+            if total > 3:
+                print_progress(file_idx + 1, total, start, "Copying")
+        if failed:
+            print(f"  {failed} file(s) could not be read (damaged sectors)", file=sys.stderr)
 
     elif source.lower().endswith(".img"):
         # Disk image — try FAT12, fall back to carve
@@ -96,9 +110,12 @@ def main():
     )
     parser.add_argument(
         "source",
-        help="Floppy path (E:\\, /mnt/floppy), folder, or disk image (.img)",
+        nargs="?",
+        default=None,
+        help="Floppy path (E:\\, /mnt/floppy), folder, or disk image (.img). "
+             "Omit to auto-detect a connected floppy drive.",
     )
-    parser.add_argument("-o", "--output", default="photos", help="Output directory")
+    parser.add_argument("-o", "--output", default="mavica_out/photos", help="Output directory")
     parser.add_argument("-m", "--model", help="Camera model (e.g., fd7, fd88)")
     parser.add_argument(
         "--contact-sheet", action="store_true",
@@ -111,10 +128,30 @@ def main():
 
     args = parser.parse_args()
 
-    print(f"Importing from {args.source}...\n")
+    source = args.source
+    if source is None:
+        from mavica_tools.detect import detect_floppy_mount_points
+        mounts = detect_floppy_mount_points()
+        if not mounts:
+            print(
+                "No mounted floppy drives detected.\n"
+                "Specify a path manually:  mavica import E:\\ -m fd7",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        if len(mounts) > 1:
+            print("Multiple floppy drives detected:")
+            for i, m in enumerate(mounts, 1):
+                print(f"  {i}. {m}")
+            print("\nSpecify one explicitly:  mavica import <path>", file=sys.stderr)
+            sys.exit(1)
+        source = mounts[0]
+        print(f"Auto-detected floppy: {source}")
+
+    print(f"Importing from {source}...\n")
 
     result = quick_import(
-        args.source,
+        source,
         output_dir=args.output,
         model=args.model,
         contact_sheet=args.contact_sheet,

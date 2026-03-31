@@ -36,21 +36,24 @@ class StampScreen(Screen):
             "[dim]Add EXIF to bare Mavica JPEGs[/]\n",
             id="title-bar",
         )
+        yield Static("  [bold]Source[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Source path (directory or file)...", id="source-path")
             yield Button("Browse", id="btn-browse")
+        yield Static("  [bold]Camera Model[/]  /  [bold]Date[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Camera model (e.g., fd7, fd88)", id="model-input")
             yield Input(placeholder="Date (auto, YYYY-MM-DD, or full)", value="auto", id="date-input")
         yield Static(MODELS_HINT)
+        yield Static("  [bold]Description[/]  /  [bold]Output Dir[/]")
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Description / notes (optional)", id="desc-input")
             yield Input(placeholder="Output directory (blank = alongside)", id="output-dir")
         with Horizontal(classes="button-row"):
             yield Button("Stamp All", variant="success", id="btn-stamp")
-        yield ProgressBar(total=100, show_percentage=True, show_eta=False, id="progress")
+        yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
         yield DataTable(id="results-table")
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:

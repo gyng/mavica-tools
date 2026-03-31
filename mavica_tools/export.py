@@ -249,7 +249,15 @@ def export_images(
     # Also check for repaired PNGs
     for ext in ("*.png", "*.PNG"):
         files.extend(globmod.glob(os.path.join(input_dir, ext)))
-    files.sort()
+    # Deduplicate (Windows is case-insensitive, so *.jpg and *.JPG match the same files)
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for f in files:
+        key = os.path.normcase(f)
+        if key not in seen:
+            seen.add(key)
+            deduped.append(f)
+    files = sorted(deduped)
 
     summary = {
         "total": len(files),
@@ -325,7 +333,7 @@ def main():
         description="Export recovered Mavica images with organization, renaming, and effects"
     )
     parser.add_argument("input_dir", help="Directory containing recovered images")
-    parser.add_argument("-o", "--output", default="export", help="Output directory")
+    parser.add_argument("-o", "--output", default="mavica_out/exported", help="Output directory")
     parser.add_argument(
         "--organize", choices=["flat", "date", "year"], default="flat",
         help="Folder structure (default: flat)",

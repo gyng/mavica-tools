@@ -28,11 +28,13 @@ class SwapTestScreen(Screen):
         yield Static(
             "  [dim]Test each camera+disk combo to find the culprit.[/]\n"
         )
+        yield Static("  [bold]Cameras[/]")
         with Horizontal(classes="input-row"):
             yield Input(
                 placeholder="Cameras (comma-separated): FD7-A, FD7-B, FD88",
                 id="cameras-input",
             )
+        yield Static("  [bold]Disks[/]")
         with Horizontal(classes="input-row"):
             yield Input(
                 placeholder="Disks (comma-separated): Disk-1, Disk-2, Disk-3",
@@ -54,7 +56,7 @@ class SwapTestScreen(Screen):
             yield Button("Partial", variant="warning", id="btn-partial")
             yield Button("Fail", variant="error", id="btn-fail")
         yield Static("", id="analysis")
-        yield RichLog(id="log", markup=True)
+        yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
     def on_mount(self) -> None:

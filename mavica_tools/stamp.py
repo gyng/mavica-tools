@@ -475,10 +475,15 @@ def stamp_files(
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
+    from mavica_tools.utils import print_progress
+    import time
+
     success = 0
     fail = 0
+    start = time.time()
+    total = len(paths)
 
-    for path in paths:
+    for i, path in enumerate(paths):
         name = os.path.basename(path)
 
         if output_dir:
@@ -498,6 +503,8 @@ def stamp_files(
         else:
             fail += 1
             print(f"  FAIL {name}: {msg}")
+        if total > 3:
+            print_progress(i + 1, total, start, "Stamping")
 
     print(f"\nResults: {success} stamped, {fail} failed")
 

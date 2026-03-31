@@ -7,3 +7,4 @@ build/
 .venv/
 uv.lock
 swaptest_results.json
+mavica_out/
