@@ -2,7 +2,24 @@
 name = "mavica-tools"
 version = "0.1.0"
 description = "Floppy disk recovery and troubleshooting toolkit for Sony Mavica cameras"
+readme = "README.md"
+license = {text = "MIT"}
 requires-python = ">=3.10"
+keywords = ["mavica", "floppy", "recovery", "jpeg", "sony", "camera", "retro"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Graphics",
+    "Topic :: System :: Recovery Tools",
+    "Topic :: Utilities",
+]
 dependencies = [
     "Pillow>=9.0",
     "textual>=0.50",
@@ -17,6 +34,11 @@ dev = [
     "pytest-asyncio>=0.23",
     "piexif>=1.1.3",
 ]
+
+[project.urls]
+Homepage = "https://github.com/gyng/mavica-tools"
+Repository = "https://github.com/gyng/mavica-tools"
+Issues = "https://github.com/gyng/mavica-tools/issues"
 
 [project.scripts]
 mavica = "mavica_tools.cli:main"

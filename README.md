@@ -8,15 +8,27 @@ Works on **Windows**, **macOS**, and **Linux**.
 
 ## Install
 
+**Download (no Python needed):**
+
+Grab the latest binary from [Releases](https://github.com/gyng/mavica-tools/releases):
+- **Windows**: download `mavica-tools-windows.zip`, unzip, run `mavica.exe tui`
+- **macOS**: download `mavica-tools-mac.tar.gz`, extract, run `./mavica tui`
+- **Linux**: download `mavica-tools-linux.tar.gz`, extract, run `./mavica tui`
+
+**Install via pip/uv (Python 3.10+):**
+
 ```bash
-# Using uv (recommended)
-uv sync
+# One-line install
+pip install mavica-tools
 
-# Or with pip
-pip install -e .
+# Or with uv (faster)
+uv tool install mavica-tools
 
-# Optional: GPS track merging (adds piexif dependency)
-pip install -e ".[gps]"
+# Optional: GPS track merging
+pip install "mavica-tools[gps]"
+
+# Development
+uv sync && uv sync --extra dev
 ```
 
 ## Quick Start
