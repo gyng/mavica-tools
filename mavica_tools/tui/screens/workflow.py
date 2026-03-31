@@ -1,4 +1,4 @@
-"""Guided workflow screen — step-by-step recovery."""
+"""Guided workflow screen — full recovery journey."""
 
 import os
 
@@ -10,11 +10,14 @@ from textual.containers import Horizontal
 
 
 STEPS = [
-    ("1. Image the Floppy", "Multi-pass read to capture every readable sector."),
-    ("2. Extract JPEGs", "Try FAT12 first (preserves names), fall back to carving."),
-    ("3. Check Files", "Scan extracted images for corruption."),
-    ("4. Repair", "Salvage pixels from corrupt images."),
-    ("5. Stamp Metadata", "Add camera model and date to recovered JPEGs."),
+    ("1. Read Floppy", "Create a multi-pass disk image for best recovery."),
+    ("2. Extract", "Recover files — tries original names first, falls back to carving."),
+    ("3. Check", "Scan extracted images for corruption."),
+    ("4. Repair", "Salvage pixels from any corrupt images."),
+    ("5. Add Info", "Stamp camera model, date, and lens data into EXIF."),
+    ("6. Add GPS", "Match photos to a GPS track (optional, if you have GPX data)."),
+    ("7. Export", "Organize, create contact sheets, add watermarks."),
+    ("8. Report", "Generate an HTML summary of the recovery."),
 ]
 
 
@@ -33,27 +36,29 @@ class WorkflowScreen(Screen):
             id="title-bar",
         )
 
-        # Step indicators
-        step_text = "  >  ".join(
-            f"[bold #ffaa00]{name.split('.')[0]}[/]" for name, _ in STEPS
-        )
-        yield Static(f"  {step_text}\n")
-
         yield Static(
-            "  Each step feeds into the next. Complete them in order\n"
-            "  for best results. Paths auto-fill between steps.\n"
+            "  [bold]Step 1[/] > 2 > 3 > 4 > 5 > 6 > 7 > 8\n\n"
+            "  Complete each step in order. Paths auto-fill between steps.\n"
+            "  Steps 6 (GPS) and 8 (Report) are optional.\n"
         )
 
         yield Static("  [bold]Output Directory[/]", classes="section-title")
         with Horizontal(classes="input-row"):
             yield Input(value="recovery", placeholder="Base directory for this session", id="base-dir")
 
+        yield Static("\n  [bold #33ff33]--- Recovery ---[/]")
         with Horizontal(classes="button-row"):
             yield Button("1. Read Floppy", variant="success", id="btn-step1")
             yield Button("2. Extract", variant="success", id="btn-step2")
             yield Button("3. Check", variant="default", id="btn-step3", disabled=True)
             yield Button("4. Repair", variant="default", id="btn-step4", disabled=True)
-            yield Button("5. Stamp", variant="default", id="btn-step5", disabled=True)
+
+        yield Static("\n  [bold #33ff33]--- Post-Processing ---[/]")
+        with Horizontal(classes="button-row"):
+            yield Button("5. Add Info", variant="default", id="btn-step5", disabled=True)
+            yield Button("6. Add GPS", variant="default", id="btn-step6", disabled=True)
+            yield Button("7. Export", variant="default", id="btn-step7", disabled=True)
+            yield Button("8. Report", variant="default", id="btn-step8", disabled=True)
 
         yield Static("", id="workflow-status")
         yield RichLog(id="log", markup=True)
@@ -63,7 +68,6 @@ class WorkflowScreen(Screen):
         self._check_existing_state()
 
     def _check_existing_state(self) -> None:
-        """Enable step buttons based on what files already exist."""
         base = self.query_one("#base-dir", Input).value.strip()
         log = self.query_one("#log", RichLog)
 
@@ -76,49 +80,74 @@ class WorkflowScreen(Screen):
         if os.path.isdir(extracted) or os.path.isdir(carved):
             img_dir = extracted if os.path.isdir(extracted) else carved
             log.write(f"[dim]Found: {img_dir}/[/]")
-            self.query_one("#btn-step3", Button).disabled = False
+            self._enable_from_step(3)
+
+    def _enable_from_step(self, step: int) -> None:
+        """Enable all steps from the given step number onwards."""
+        for i in range(step, 9):
+            try:
+                btn = self.query_one(f"#btn-step{i}", Button)
+                btn.disabled = False
+            except Exception:
+                pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         base = self.query_one("#base-dir", Input).value.strip() or "recovery"
         log = self.query_one("#log", RichLog)
 
         if event.button.id == "btn-step1":
-            log.write("[bold]Step 1:[/] Opening Multipass Read...")
-            log.write(f"  Output directory: [bold]{base}/[/]")
+            log.write("[bold]Step 1:[/] Opening Read Floppy...")
+            log.write(f"  Output: [bold]{base}/[/]")
+            log.write("[dim]Tip: After reading, come back here for step 2.[/]")
             self.app.push_screen("multipass")
+            self._enable_from_step(2)
 
         elif event.button.id == "btn-step2":
-            log.write("[bold]Step 2:[/] Opening Batch Recover...")
-            log.write(f"  Will look for images in [bold]{base}/[/]")
-            # Push recover screen which does FAT12 + carve + check
+            log.write("[bold]Step 2:[/] Opening Batch Recover (extract + check + repair)...")
             self.app.push_screen("recover")
+            self._enable_from_step(3)
 
         elif event.button.id == "btn-step3":
-            extracted = os.path.join(base, "extracted")
-            carved = os.path.join(base, "carved_images")
-            target = extracted if os.path.isdir(extracted) else carved
-            if os.path.isdir(target):
-                log.write(f"[bold]Step 3:[/] Checking files in {target}/")
+            target = self._find_images_dir(base)
+            if target:
+                log.write(f"[bold]Step 3:[/] Checking {target}/")
                 screen = self.app.SCREENS["check"]()
                 screen._prefill_path = target
                 self.app.push_screen(screen)
             else:
-                log.write("[#ffaa00]Step 3:[/] No extracted files found. Run step 2 first.")
                 self.notify("Run step 2 first to extract images", severity="warning")
+            self._enable_from_step(4)
 
         elif event.button.id == "btn-step4":
             log.write("[bold]Step 4:[/] Opening Repair...")
             self.app.push_screen("repair")
+            self._enable_from_step(5)
 
         elif event.button.id == "btn-step5":
-            log.write("[bold]Step 5:[/] Opening Stamp Metadata...")
+            log.write("[bold]Step 5:[/] Opening Add Photo Info...")
+            log.write("[dim]Tip: Enter your camera model (e.g., fd7) to add accurate lens data.[/]")
             self.app.push_screen("stamp")
+            self._enable_from_step(6)
 
-        # Enable subsequent steps
-        if event.button.id == "btn-step1":
-            self.query_one("#btn-step2", Button).disabled = False
-        elif event.button.id == "btn-step2":
-            self.query_one("#btn-step3", Button).disabled = False
-        elif event.button.id == "btn-step3":
-            self.query_one("#btn-step4", Button).disabled = False
-            self.query_one("#btn-step5", Button).disabled = False
+        elif event.button.id == "btn-step6":
+            log.write("[bold]Step 6:[/] Opening GPS Merge...")
+            log.write("[dim]Tip: You need a GPX file from a GPS logger or phone.[/]")
+            self.app.push_screen("gps")
+            self._enable_from_step(7)
+
+        elif event.button.id == "btn-step7":
+            log.write("[bold]Step 7:[/] Opening Export...")
+            log.write("[dim]Tip: Try a contact sheet — great for sharing a whole disk's worth of photos.[/]")
+            self.app.push_screen("export")
+            self._enable_from_step(8)
+
+        elif event.button.id == "btn-step8":
+            log.write("[bold]Step 8:[/] Generating recovery report...")
+            self.app.push_screen("report") if "report" in self.app.SCREENS else None
+
+    def _find_images_dir(self, base: str) -> str | None:
+        for subdir in ("extracted", "carved_images", "repaired"):
+            d = os.path.join(base, subdir)
+            if os.path.isdir(d):
+                return d
+        return None

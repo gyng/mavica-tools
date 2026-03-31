@@ -56,7 +56,7 @@ async def test_home_screen_has_all_tool_options():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
-        assert option_list.option_count == 12
+        assert option_list.option_count == 16  # 12 tools + 4 section headers
 
 
 # ---------------------------------------------------------------------------
@@ -346,52 +346,38 @@ async def test_swaptest_empty_inputs_shows_notification():
 
 
 @pytest.mark.asyncio
-async def test_option_list_selection_navigates_to_workflow():
-    """Selecting the first option (Guided Workflow) should navigate to WorkflowScreen."""
+async def test_key_binding_navigates_to_workflow():
+    """Pressing 'w' should navigate to WorkflowScreen."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        option_list = app.screen.query_one("#tool-list", OptionList)
-        option_list.focus()
-        await pilot.pause()
-        # First item (index 0) is Workflow
-        await pilot.press("enter")
+        await pilot.press("w")
         await pilot.pause()
         assert isinstance(app.screen, WorkflowScreen)
 
 
 @pytest.mark.asyncio
-async def test_option_list_selection_navigates_to_multipass():
-    """Selecting Multipass (index 1) via OptionList navigates to MultipassScreen."""
+async def test_key_binding_navigates_to_export():
+    """Pressing 'e' should navigate to ExportScreen."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        option_list = app.screen.query_one("#tool-list", OptionList)
-        option_list.focus()
+        await pilot.press("e")
         await pilot.pause()
-        await pilot.press("down")
-        await pilot.pause()
-        await pilot.press("enter")
-        await pilot.pause()
-        assert isinstance(app.screen, MultipassScreen)
+        from mavica_tools.tui.screens.export_screen import ExportScreen
+        assert isinstance(app.screen, ExportScreen)
 
 
 @pytest.mark.asyncio
-async def test_option_list_selection_navigates_to_check():
-    """Selecting 'Check Files' (index 3) via OptionList navigates to CheckScreen."""
+async def test_key_binding_navigates_to_gps():
+    """Pressing 'g' should navigate to GpsScreen."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        option_list = app.screen.query_one("#tool-list", OptionList)
-        option_list.focus()
+        await pilot.press("g")
         await pilot.pause()
-        # Move down 3 times: workflow(0) -> multipass(1) -> carve(2) -> check(3)
-        for _ in range(3):
-            await pilot.press("down")
-        await pilot.pause()
-        await pilot.press("enter")
-        await pilot.pause()
-        assert isinstance(app.screen, CheckScreen)
+        from mavica_tools.tui.screens.gps_screen import GpsScreen
+        assert isinstance(app.screen, GpsScreen)
 
 
 # ---------------------------------------------------------------------------
