@@ -80,7 +80,12 @@ Button:disabled {
 DataTable {
     margin: 1 0;
     height: auto;
-    max-height: 20;
+    max-height: 40%;
+}
+
+OptionList {
+    height: auto;
+    max-height: 70%;
 }
 
 DataTable > .datatable--header {
@@ -106,11 +111,17 @@ Input:focus {
 .input-row {
     height: 3;
     margin: 0 0 1 0;
+    width: 100%;
+}
+
+.input-row Input {
+    width: 1fr;
 }
 
 .button-row {
     height: 3;
     margin: 0 0 1 0;
+    width: 100%;
 }
 
 .results-summary {

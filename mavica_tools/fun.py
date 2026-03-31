@@ -308,3 +308,110 @@ def sector_sparkline_rich(sector_status: list[str], width: int = 60) -> str:
         parts.append(f"[{color}]{char}[/]")
 
     return "  " + "".join(parts)
+
+
+# ─── Skeuomorphic extras ─────────────────────────────────────────────────
+
+EJECT_FRAMES = [
+    r"""
+  ┌──────────┐
+  │ ┌──────┐ │
+  │ │{label}│ │
+  │ └──────┘ │
+  │  ┌────┐  │
+  │  │ ◉  │  │
+  │  └────┘  │
+  └──────────┘""",
+    r"""
+  ┌──────────┐
+  │ ┌──────┐ │
+  │ │{label}│ │
+  │ └──────┘ │
+  │  ┌────┐  │
+  │  │ ◉  │  │
+  └──┤    ├──┘
+     └────┘""",
+    r"""
+  ┌──────────┐
+  │ ┌──────┐ │
+  │ │{label}│ │
+  │ └──────┘ │
+  └──────────┘
+     ┌────┐
+     │ ◉  │
+     └────┘""",
+    r"""
+  ┌──────────┐
+  │          │
+  │          │
+  │          │
+  └──────────┘
+
+     ┌──────┐
+     │{label}│
+     │  ◉   │
+     └──────┘""",
+]
+
+
+def eject_frames(label: str = "MAVICA") -> list[str]:
+    """Return animation frames for a floppy eject sequence."""
+    padded = label[:6].center(6)
+    return [f.format(label=padded) for f in EJECT_FRAMES]
+
+
+def read_head_indicator(sector_idx: int) -> str:
+    """Show which track/head the read head is currently on.
+
+    Returns a string like "T14H0 ▸▸▸" showing seek position.
+    """
+    sectors_per_track = 18
+    track = sector_idx // (sectors_per_track * 2)
+    head = (sector_idx // sectors_per_track) % 2
+    sector_in_track = sector_idx % sectors_per_track
+
+    # Visual seek bar (0-79 tracks)
+    bar_width = 40
+    pos = int(bar_width * track / 80)
+    bar = "─" * pos + "▸" + "─" * (bar_width - pos - 1)
+
+    return f"  T{track:02d}H{head} S{sector_in_track:02d}  [{bar}]"
+
+
+def read_head_indicator_rich(sector_idx: int) -> str:
+    """Rich-markup version for TUI."""
+    sectors_per_track = 18
+    track = sector_idx // (sectors_per_track * 2)
+    head = (sector_idx // sectors_per_track) % 2
+    sector_in_track = sector_idx % sectors_per_track
+
+    bar_width = 40
+    pos = int(bar_width * track / 80)
+    bar_before = "─" * pos
+    bar_after = "─" * (bar_width - pos - 1)
+
+    return (
+        f"  [bold]T{track:02d}H{head}[/] S{sector_in_track:02d}  "
+        f"[dim]{bar_before}[/][bold #33ff33]▸[/][dim]{bar_after}[/]"
+    )
+
+
+def film_strip_border(text: str, width: int = 60) -> str:
+    """Wrap text in a film-strip-style border with sprocket holes."""
+    holes = "◻ " * (width // 4)
+    top = f"  {holes}"
+    bottom = top
+    lines = text.split("\n")
+    framed = [f"  ◻ {line:<{width - 6}} ◻" for line in lines]
+    return "\n".join([top] + framed + [bottom])
+
+
+def disk_sleeve_header(label: str, file_count: int, total_kb: float) -> str:
+    """Format a disk sleeve / case label for contact sheets."""
+    return (
+        f"┌{'─' * 30}┐\n"
+        f"│ {label:<28} │\n"
+        f"│ {file_count} photos  {total_kb:.0f}KB{' ' * (18 - len(str(file_count)) - len(f'{total_kb:.0f}'))}│\n"
+        f"│ Sony Mavica  3.5\" HD{' ' * 8}│\n"
+        f"└{'─' * 30}┘"
+    )

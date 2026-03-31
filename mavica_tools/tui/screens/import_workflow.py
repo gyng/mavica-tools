@@ -287,10 +287,14 @@ class ImportWorkflowScreen(Screen):
         self.query_one("#preview", ImagePreview).image_path = path
 
     def _next_disk(self) -> None:
-        """Reset for the next floppy disk."""
+        """Reset for the next floppy disk with eject animation."""
         log = self.query_one("#log", RichLog)
+
+        # Eject animation in the log
+        from mavica_tools.fun import floppy_art
         log.write(f"\n{'─' * 40}")
-        log.write("[bold]Ready for next disk.[/] Insert floppy and click Import.")
+        log.write(floppy_art("EJECT", small=True))
+        log.write("\n[bold]Ready for next disk.[/] Insert floppy and click Import.")
 
         # Clear results but keep settings
         self.query_one("#results-table", DataTable).clear()

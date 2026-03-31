@@ -18,8 +18,7 @@ from textual.reactive import reactive
 from rich.text import Text
 
 TOTAL_SECTORS = 2880
-COLS = 60  # sectors per row in the grid
-ROWS = (TOTAL_SECTORS + COLS - 1) // COLS  # 48 rows
+DEFAULT_COLS = 60
 
 # Block characters and colors for each state
 STATE_STYLE = {
@@ -100,6 +99,10 @@ class DefragMap(Widget):
     def render(self) -> Text:
         text = Text()
 
+        # Dynamic columns based on widget width
+        cols = max(20, self.size.width - 4) if self.size.width > 10 else DEFAULT_COLS
+        rows = (TOTAL_SECTORS + cols - 1) // cols
+
         # Header
         if self._pass_num > 0:
             text.append(f"  Pass {self._pass_num}  ", style="bold")
@@ -112,10 +115,10 @@ class DefragMap(Widget):
         text.append("▓ bad\n\n", style="#ff3333")
 
         # Grid
-        for row in range(ROWS):
+        for row in range(rows):
             text.append("  ")
-            for col in range(COLS):
-                idx = row * COLS + col
+            for col in range(cols):
+                idx = row * cols + col
                 if idx >= TOTAL_SECTORS:
                     text.append(" ")
                     continue
@@ -123,6 +126,12 @@ class DefragMap(Widget):
                 state = self._cells[idx] if idx < len(self._cells) else "waiting"
                 char, color = STATE_STYLE.get(state, ("?", "#666666"))
                 text.append(char, style=color)
+            text.append("\n")
+
+        # Read head indicator (during live reads)
+        if self._current_sector >= 0:
+            from mavica_tools.fun import read_head_indicator_rich
+            text.append(read_head_indicator_rich(self._current_sector))
             text.append("\n")
 
         # Stats
@@ -134,8 +143,9 @@ class DefragMap(Widget):
         done = TOTAL_SECTORS - waiting - reading
 
         if done > 0:
+            pct = 100 * done / TOTAL_SECTORS
             text.append(
-                f"\n  {done}/{TOTAL_SECTORS} sectors processed  "
+                f"\n  {done}/{TOTAL_SECTORS} sectors ({pct:.0f}%)  "
                 f"[{good} good, {recovered} recovered, {bad} bad]",
                 style="dim"
             )

@@ -47,39 +47,45 @@ def repair_jpeg(input_path, output_path=None):
     except Exception as e:
         pass  # Try next strategy
 
-    # Strategy 2: Find valid JPEG portion by looking for last valid EOI
-    # or truncate at the point where zeros start (sector failure)
-    zero_run_start = None
+    # Strategy 2: Find zero-byte runs (sector failures) and try to
+    # salvage the data before the first one. Scans for ALL zero runs,
+    # not just the first.
+    zero_runs = []
+    run_start = None
     run_length = 0
     for i in range(len(data)):
         if data[i] == 0:
             if run_length == 0:
-                zero_run_start = i
+                run_start = i
             run_length += 1
         else:
+            if run_length >= 512 and run_start is not None:
+                zero_runs.append(run_start)
             run_length = 0
-            zero_run_start = None
+            run_start = None
+    if run_length >= 512 and run_start is not None:
+        zero_runs.append(run_start)
 
-        # A run of 512+ zeros is almost certainly a failed sector
-        if run_length >= 512 and zero_run_start is not None:
-            # Truncate just before the zero run
-            truncated = data[:zero_run_start]
-            # Append EOI marker to make it a valid (truncated) JPEG
-            if truncated[-2:] != b"\xff\xd9":
-                truncated += b"\xff\xd9"
+    # Try truncating at each zero run (earliest first = most data preserved)
+    for zero_run_start in zero_runs:
+        if zero_run_start < 100:
+            continue  # Too early to be useful
 
-            try:
-                img = Image.open(BytesIO(truncated))
-                img.load()
-                img.save(output_path, "PNG")
-                pct = 100 * zero_run_start / len(data)
-                return True, output_path, (
-                    f"Repaired ({img.width}x{img.height}) — "
-                    f"truncated at {pct:.0f}% (sector failure at byte {zero_run_start})"
-                )
-            except Exception:
-                pass
-            break
+        truncated = data[:zero_run_start]
+        if truncated[-2:] != b"\xff\xd9":
+            truncated += b"\xff\xd9"
+
+        try:
+            img = Image.open(BytesIO(truncated))
+            img.load()
+            img.save(output_path, "PNG")
+            pct = 100 * zero_run_start / len(data)
+            return True, output_path, (
+                f"Repaired ({img.width}x{img.height}) — "
+                f"truncated at {pct:.0f}% (sector failure at byte {zero_run_start})"
+            )
+        except Exception:
+            continue
 
     # Strategy 3: Try progressively truncating from the end
     # (works when corruption is at the tail)

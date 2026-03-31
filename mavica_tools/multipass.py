@@ -7,9 +7,9 @@ picking the first good read for each sector.
 """
 
 import argparse
-import hashlib
 import os
 import struct
+import zlib
 import subprocess
 import sys
 import time
@@ -140,7 +140,7 @@ def merge_passes(image_paths):
             # Multiple non-blank reads — use majority vote
             counts = {}
             for r in non_blank:
-                h = hashlib.md5(r).hexdigest()
+                h = zlib.crc32(r)
                 counts[h] = counts.get(h, 0) + 1
 
             if len(counts) == 1:
@@ -151,7 +151,7 @@ def merge_passes(image_paths):
                 # Conflict — pick the most common read
                 best_hash = max(counts, key=counts.get)
                 for r in non_blank:
-                    if hashlib.md5(r).hexdigest() == best_hash:
+                    if zlib.crc32(r) == best_hash:
                         merged[offset : offset + SECTOR_SIZE] = r
                         break
                 sector_status.append("conflict")
