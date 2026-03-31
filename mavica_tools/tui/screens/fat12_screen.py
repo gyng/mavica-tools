@@ -21,6 +21,8 @@ class Fat12Screen(Screen):
         Binding("b", "browse", "Browse", show=True),
     ]
 
+    _prefill_image: str | None = None
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
@@ -46,6 +48,10 @@ class Fat12Screen(Screen):
         table.cursor_type = "row"
         self._include_deleted = False
         self._files_data = []
+
+        if self._prefill_image:
+            self.query_one("#image-path", Input).value = self._prefill_image
+            self._prefill_image = None
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-browse":

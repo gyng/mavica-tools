@@ -36,11 +36,18 @@ class RecoverScreen(Screen):
             yield Button("Browse", id="btn-browse")
         with Horizontal(classes="input-row"):
             yield Input(value="recovery", placeholder="Output directory", id="output-dir")
+        yield Static(
+            "  [dim][bold]FAT12 first[/] — recovers original Mavica filenames (MVC-001.JPG).\n"
+            "  [bold]Carve only[/] — scans raw data for JPEGs. Use if FAT12 fails or disk is very damaged.[/]\n"
+        )
         with Horizontal(classes="button-row"):
             yield Button("Recover (FAT12 first)", variant="success", id="btn-recover")
             yield Button("Recover (carve only)", variant="warning", id="btn-recover-carve")
         yield ProgressBar(total=4, show_percentage=True, show_eta=False, id="progress")
         yield Static("", id="step-status")
+        with Horizontal(classes="button-row"):
+            yield Button("Next: Add Photo Info", variant="default", id="btn-next-stamp", disabled=True)
+            yield Button("Next: Export & Share", variant="default", id="btn-next-export", disabled=True)
         yield RichLog(id="log", markup=True)
         yield Footer()
 
@@ -51,6 +58,10 @@ class RecoverScreen(Screen):
             self._start_recover(use_fat=True)
         elif event.button.id == "btn-recover-carve":
             self._start_recover(use_fat=False)
+        elif event.button.id == "btn-next-stamp":
+            self.app.push_screen("stamp")
+        elif event.button.id == "btn-next-export":
+            self.app.push_screen("export")
 
     def action_browse(self) -> None:
         def on_selected(path: str) -> None:
@@ -120,10 +131,17 @@ class RecoverScreen(Screen):
         log.write(f"  [red]Failed:   {summary['failed']}[/]")
         log.write(f"  Method:   {summary['extraction_method']}")
 
-        status.update(
-            f"  Done — {summary['total_files']} files, "
-            f"{summary['good']} good, {summary['repaired']} repaired"
-        )
+        if summary['total_files'] > 0:
+            status.update(
+                f"  Done — {summary['total_files']} files, "
+                f"{summary['good']} good, {summary['repaired']} repaired\n\n"
+                f"  [bold #33ff33]What next?[/] Add camera/date info, or export for sharing."
+            )
+            self.query_one("#btn-next-stamp", Button).disabled = False
+            self.query_one("#btn-next-export", Button).disabled = False
+        else:
+            status.update("  No files recovered.")
+
         self._reset_buttons()
 
     def _reset_buttons(self) -> None:

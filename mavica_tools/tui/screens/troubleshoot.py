@@ -161,7 +161,8 @@ class TroubleshootScreen(Screen):
         yield Static("", id="result-text")
         with Horizontal(classes="button-row"):
             yield Button("Start Over", variant="default", id="btn-restart")
-            yield Button("Open Swap Test", variant="warning", id="btn-swaptest", disabled=True)
+            yield Button("Re-test After Cleaning", variant="warning", id="btn-retest", disabled=True)
+            yield Button("Open Swap Test", variant="default", id="btn-swaptest", disabled=True)
             yield Button("Open Multi-Pass Read", variant="success", id="btn-multipass", disabled=True)
         yield RichLog(id="log", markup=True)
         yield Footer()
@@ -186,6 +187,7 @@ class TroubleshootScreen(Screen):
             # Show result
             question_widget.update("")
             result_widget.update(f"\n{node['result']}")
+            self.query_one("#btn-retest", Button).disabled = False
             self.query_one("#btn-swaptest", Button).disabled = False
             self.query_one("#btn-multipass", Button).disabled = False
         elif "question" in node:
@@ -202,8 +204,15 @@ class TroubleshootScreen(Screen):
         if event.button.id == "btn-restart":
             self._history = []
             self._show_node("start")
+            self.query_one("#btn-retest", Button).disabled = True
             self.query_one("#btn-swaptest", Button).disabled = True
             self.query_one("#btn-multipass", Button).disabled = True
+        elif event.button.id == "btn-retest":
+            # Go back to beginning but with a note
+            log = self.query_one("#log", RichLog)
+            log.write("\n[bold #33ff33]Re-testing after cleaning...[/]")
+            self._show_node("start")
+            self.query_one("#btn-retest", Button).disabled = True
         elif event.button.id == "btn-swaptest":
             self.app.push_screen("swaptest")
         elif event.button.id == "btn-multipass":
