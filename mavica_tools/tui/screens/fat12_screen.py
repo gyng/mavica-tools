@@ -96,8 +96,8 @@ class Fat12Screen(Screen):
         try:
             files = list_files(path, include_deleted=self._include_deleted)
         except Exception as e:
-            log.write(f"[red]FAT12 parse error: {e}[/]")
-            log.write("[dim]The filesystem may be damaged. Try 'Carve JPEGs' instead.[/]")
+            log.write(f"[red]Filesystem damaged:[/] {e}")
+            log.write("[bold #33ff33]Next:[/] Go back and use [bold]Carve from Raw[/] (key [bold]c[/]) — it extracts JPEGs without needing a working filesystem.")
             return
 
         self._files_data = files

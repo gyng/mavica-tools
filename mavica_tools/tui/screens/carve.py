@@ -142,6 +142,7 @@ class CarveScreen(Screen):
 
         log.write(f"[green]{len(jpegs)} image(s) extracted to {output_dir}/[/]")
         log.write("[dim]Select a row to preview the image.[/]")
+        log.write(f"[bold #33ff33]Next:[/] Click [bold]Check All[/] to scan for corruption.")
         self.query_one("#btn-check", Button).disabled = False
         self._reset_button()
 

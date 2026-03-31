@@ -136,7 +136,7 @@ ProgressBar > .bar--complete {
 RichLog {
     margin: 1 0;
     height: auto;
-    max-height: 8;
+    max-height: 12;
     border: tall #333333;
     background: #0a0a0a;
 }

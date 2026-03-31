@@ -161,7 +161,17 @@ class MultipassScreen(Screen):
 
                 image_paths.append(img_path)
             except FileNotFoundError:
+                import platform
+                system = platform.system()
                 log.write(f"  [red]Device not found: {device}[/]")
+                if system == "Windows":
+                    log.write("  [dim]Check that the floppy drive is connected and disk is inserted.[/]")
+                    log.write(r"  [dim]Windows device path should be \\.\A: — run as Administrator.[/]")
+                elif system == "Darwin":
+                    log.write("  [dim]Check 'diskutil list' for the correct device path.[/]")
+                else:
+                    log.write("  [dim]Check that /dev/fd0 exists and you have read permission.[/]")
+                    log.write("  [dim]USB floppy drives may appear as /dev/sdX instead.[/]")
                 self.notify(f"Device not found: {device}", severity="error", timeout=5)
                 self._reset_read_button()
                 return

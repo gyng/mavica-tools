@@ -33,6 +33,15 @@ class GpsScreen(Screen):
             "  phone GPX export, or Google Timeline.\n"
             "  Uses EXIF DateTimeOriginal (from 'Add Photo Info') or file modification time.[/]\n"
         )
+        # Show piexif status
+        try:
+            import piexif  # noqa: F401
+            yield Static("  [green]piexif installed[/] — GPS coordinates will be written to EXIF.\n")
+        except ImportError:
+            yield Static(
+                "  [#ffaa00]piexif not installed[/] — preview works, but GPS won't be saved to files.\n"
+                "  [dim]Install with:[/] [bold]pip install mavica-tools\\[gps][/]\n"
+            )
         with Horizontal(classes="input-row"):
             yield Input(placeholder="Photos directory...", id="photos-path")
             yield Button("Browse Photos", id="btn-browse-photos")
@@ -53,17 +62,6 @@ class GpsScreen(Screen):
     def on_mount(self) -> None:
         table = self.query_one("#results-table", DataTable)
         table.add_columns("Status", "Filename", "Location", "Offset")
-
-        # Check for piexif
-        try:
-            import piexif  # noqa: F401
-        except ImportError:
-            log = self.query_one("#log", RichLog)
-            log.write(
-                "[#ffaa00]Note:[/] GPS writing requires piexif.\n"
-                "  Install with: [bold]pip install mavica-tools\\[gps][/]\n"
-                "  GPX parsing and preview still work without it."
-            )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-browse-photos":

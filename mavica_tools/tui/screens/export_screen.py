@@ -107,7 +107,8 @@ class ExportScreen(Screen):
         )
 
         progress.update(progress=100)
-        log.write(f"[green]Exported {summary['exported']}/{summary['total']} images[/]")
+        output = self.query_one("#output-dir", Input).value.strip() or "export"
+        log.write(f"[bold #33ff33]Done![/] {summary['exported']}/{summary['total']} images exported to [bold]{output}/[/]")
         if summary["errors"]:
             log.write(f"[red]{summary['errors']} error(s)[/]")
         if summary["contact_sheet_path"]:
