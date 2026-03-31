@@ -164,6 +164,8 @@ class StampScreen(Screen):
             progress.update(progress=i + 1)
 
         log.write(f"\n[bold]Results:[/] [green]{success} stamped[/], [red]{fail} failed[/]")
+        if success:
+            log.write("[bold #33ff33]Next:[/] Use [bold]Export & Share[/] (key [bold]e[/]) to organize and create contact sheets.")
         self._reset_button()
 
     def _reset_button(self) -> None:

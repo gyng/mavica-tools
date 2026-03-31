@@ -158,10 +158,12 @@ class CheckScreen(Screen):
 
         if self._bad_files:
             self.query_one("#btn-repair", Button).disabled = False
+            log.write(f"[bold #33ff33]Next:[/] Click [bold]Repair Bad Files[/] to salvage corrupt images.")
+        elif self._good_files:
+            log.write("[bold #33ff33]All photos OK![/] Click [bold]Stamp Metadata[/] to add camera info.")
         if self._good_files:
             self.query_one("#btn-stamp", Button).disabled = False
 
-        log.write("Done.\n")
         self._reset_button()
 
     def _reset_button(self) -> None:

@@ -99,9 +99,9 @@ class HomeScreen(Screen):
             for tool in uc["tools"]:
                 options.append(self._make_option(tool))
 
-        options.append(Option("[bold #33ff33]--- Other Tools ---[/]", disabled=True))
+        options.append(Option("[dim]--- Other Tools ---[/]", disabled=True))
         for tool in UTILITY_TOOLS:
-            options.append(self._make_option(tool))
+            options.append(self._make_option(tool, dim=True))
 
         yield OptionList(*options, id="tool-list")
         yield Static(
@@ -112,9 +112,14 @@ class HomeScreen(Screen):
     # Longest tool name across all sections (for alignment)
     _NAME_WIDTH = 22
 
-    def _make_option(self, item):
+    def _make_option(self, item, dim=False):
         key, screen_id, name, desc = item
         padded = name.ljust(self._NAME_WIDTH)
+        if dim:
+            return Option(
+                f"[dim][{key}]  {padded}  {desc}[/]",
+                id=screen_id,
+            )
         return Option(
             f"[bold #ffaa00][{key}][/]  [bold]{padded}[/]  [dim]{desc}[/]",
             id=screen_id,

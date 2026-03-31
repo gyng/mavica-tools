@@ -103,7 +103,8 @@ class RecoverScreen(Screen):
             img_files = [f for f in img_files if "merged" not in os.path.basename(f)]
 
         if not img_files:
-            log.write("[red]No .img files found in directory.[/]")
+            log.write("[red]No disk images found.[/] Need .img files in that directory.")
+            log.write("[bold #33ff33]Tip:[/] Use [bold]Multi-Pass Read[/] (key [bold]m[/]) to create disk images from your floppy first.")
             self._reset_buttons()
             return
 
