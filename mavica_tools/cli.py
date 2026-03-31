@@ -16,11 +16,16 @@ def main():
     subparsers.add_parser("check", help="Check JPEG files for corruption")
     subparsers.add_parser("repair", help="Repair corrupt/truncated JPEGs")
     subparsers.add_parser("swaptest", help="Cross-camera swap test tracker")
+    subparsers.add_parser("tui", help="Launch interactive terminal UI")
 
     # Parse only the first argument to determine which tool to run
     args, remaining = parser.parse_known_args()
 
-    if args.tool == "multipass":
+    if args.tool == "tui":
+        from mavica_tools.tui.app import run
+        run()
+        return
+    elif args.tool == "multipass":
         from mavica_tools.multipass import main as tool_main
     elif args.tool == "carve":
         from mavica_tools.carve import main as tool_main
@@ -38,6 +43,7 @@ def main():
         print("  mavica check      — Batch-check JPEGs for corruption")
         print("  mavica repair     — Salvage pixels from corrupt JPEGs")
         print("  mavica swaptest   — Track cross-camera swap tests")
+        print("  mavica tui        — Launch interactive terminal UI")
         print("\nQuick start:")
         print("  mavica multipass read /dev/fd0 -n 5 -o my_disk")
         print("  mavica carve my_disk/merged.img -o recovered/")

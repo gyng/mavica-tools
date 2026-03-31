@@ -2,23 +2,39 @@
 
 Floppy disk recovery and troubleshooting toolkit for Sony Mavica cameras (FD5, FD7, FD73, FD88, FD91, etc).
 
+Works on **Windows**, **macOS**, and **Linux**.
+
 ## Install
 
 ```bash
+# Using uv (recommended)
+uv sync
+
+# Or with pip
 pip install -e .
 ```
 
-Or run tools directly:
+## Interactive TUI
+
+Launch the full terminal UI with guided workflow, image preview, and live sector maps:
 
 ```bash
-python -m mavica_tools.check my_images/
+mavica tui
 ```
 
-## Tools
+The TUI includes:
+- **Guided Workflow** — step-by-step recovery walkthrough
+- **Multipass Read** — multi-pass floppy imager with visual sector map
+- **JPEG Carver** — extract images from raw disk images with preview
+- **Health Check** — batch corruption scanner with color-coded results
+- **Repair** — before/after image preview for recovered files
+- **Swap Test** — interactive camera/disk test matrix
+
+## CLI Tools
+
+All tools also work standalone from the command line.
 
 ### `mavica check` — JPEG health checker
-
-Batch-checks JPEGs for corruption: truncation, zero-byte runs (sector failures), missing markers.
 
 ```bash
 mavica check /mnt/floppy/          # check all JPEGs on a mounted floppy
@@ -26,8 +42,6 @@ mavica check *.jpg -v              # verbose — show OK files too
 ```
 
 ### `mavica repair` — JPEG repair
-
-Salvages readable pixels from corrupt/truncated JPEGs. Outputs PNG files.
 
 ```bash
 mavica repair corrupt_image.jpg                 # repair one file
@@ -44,15 +58,15 @@ Repair strategies (tried in order):
 Reads a floppy multiple times and merges the best sectors. Floppy reads are non-deterministic — a sector that fails on pass 1 may succeed on pass 3.
 
 ```bash
-mavica multipass read /dev/fd0 -n 5 -o my_disk  # 5 passes from device
-mavica multipass merge pass*.img -o merged.img   # merge existing images
-```
+# Linux/macOS
+mavica multipass read /dev/fd0 -n 5 -o my_disk
 
-Outputs:
-- Individual pass images
-- Merged best-of image
-- Visual sector health map
-- Summary statistics
+# Windows (run as Administrator)
+mavica multipass read \\.\A: -n 5 -o my_disk
+
+# Merge existing images (any platform)
+mavica multipass merge pass*.img -o merged.img
+```
 
 ### `mavica carve` — JPEG carver
 
@@ -70,7 +84,6 @@ Systematically test multiple cameras and disks to isolate which component is fau
 mavica swaptest setup --cameras "FD7-A,FD7-B,FD88" --disks "Disk-1,Disk-2,Disk-3"
 mavica swaptest log --camera FD7-A --disk Disk-1 --result ok
 mavica swaptest log --camera FD7-A --disk Disk-2 --result fail
-mavica swaptest status                     # see what's left to test
 mavica swaptest report                     # analyze and find the culprit
 ```
 
@@ -95,23 +108,29 @@ mavica check recovered/
 mavica repair recovered/ -o repaired/
 ```
 
-## TUI (Planned)
+Or just run `mavica tui` and use the guided workflow.
 
-An interactive terminal UI is planned using Python Textual. See [TUI_PLAN.md](TUI_PLAN.md) for the full design.
+## Platform Notes
 
-Features: guided recovery workflow, live sector map, image preview, interactive swap test matrix.
-
-## Requirements
-
-- Python 3.7+
-- Pillow (for check/repair)
-- Linux with `dd` (for multipass device reads — merge works anywhere)
+| Feature | Windows | macOS | Linux |
+|---------|---------|-------|-------|
+| TUI | Yes | Yes | Yes |
+| Check/Repair/Carve | Yes | Yes | Yes |
+| Multipass merge | Yes | Yes | Yes |
+| Multipass device read | `\\.\A:` (as Admin) | `/dev/diskN` | `/dev/fd0` |
+| Swap test | Yes | Yes | Yes |
 
 ## Development
 
-See [AGENTS.md](AGENTS.md) for architecture details, function signatures, and contribution guidelines.
-
 ```bash
-pip install -e .
-python -m pytest tests/ -v
+uv sync
+uv run --extra dev pytest -v
 ```
+
+See [AGENTS.md](AGENTS.md) for architecture details and [TUI_PLAN.md](TUI_PLAN.md) for TUI design.
+
+## Requirements
+
+- Python 3.10+
+- Pillow (image decoding)
+- Textual (terminal UI)
