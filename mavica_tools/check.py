@@ -176,7 +176,7 @@ def main():
     )
     parser.add_argument(
         "--preview", action="store_true",
-        help="Show thumbnails of bad/warning files in the terminal",
+        help="Show thumbnails of bad/warning files (from local disk only)",
     )
     args = parser.parse_args()
 
