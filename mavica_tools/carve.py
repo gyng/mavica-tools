@@ -140,9 +140,18 @@ def main():
     parser.add_argument(
         "-o", "--output", default="carved_images", help="Output directory"
     )
+    parser.add_argument(
+        "--preview", action="store_true",
+        help="Show carved images in the terminal",
+    )
     args = parser.parse_args()
 
-    carve_jpegs(args.image, args.output)
+    extracted = carve_jpegs(args.image, args.output)
+
+    if args.preview and extracted:
+        print()
+        from mavica_tools.terminal_image import show_images
+        show_images(extracted, max_images=8)
 
 
 if __name__ == "__main__":
