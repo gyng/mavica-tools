@@ -4,6 +4,8 @@ Floppy disk recovery and troubleshooting toolkit for Sony Mavica cameras (FD5, F
 
 Works on **Windows**, **macOS**, and **Linux**.
 
+![mavica-tools home screen](screenshots/home.svg)
+
 ## Install
 
 ```bash
@@ -29,6 +31,23 @@ The TUI includes:
 - **Health Check** — batch corruption scanner with color-coded results
 - **Repair** — before/after image preview for recovered files
 - **Swap Test** — interactive camera/disk test matrix
+
+<details>
+<summary>More screenshots</summary>
+
+**Multipass Read** — sector map and progress
+![multipass screen](screenshots/multipass.svg)
+
+**JPEG Health Check** — corruption scanner
+![check screen](screenshots/check.svg)
+
+**Swap Test** — camera/disk test matrix
+![swaptest screen](screenshots/swaptest.svg)
+
+**Guided Workflow** — step-by-step recovery
+![workflow screen](screenshots/workflow.svg)
+
+</details>
 
 ## CLI Tools
 
