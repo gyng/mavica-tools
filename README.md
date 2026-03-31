@@ -95,8 +95,23 @@ mavica check recovered/
 mavica repair recovered/ -o repaired/
 ```
 
+## TUI (Planned)
+
+An interactive terminal UI is planned using Python Textual. See [TUI_PLAN.md](TUI_PLAN.md) for the full design.
+
+Features: guided recovery workflow, live sector map, image preview, interactive swap test matrix.
+
 ## Requirements
 
 - Python 3.7+
 - Pillow (for check/repair)
 - Linux with `dd` (for multipass device reads — merge works anywhere)
+
+## Development
+
+See [AGENTS.md](AGENTS.md) for architecture details, function signatures, and contribution guidelines.
+
+```bash
+pip install -e .
+python -m pytest tests/ -v
+```
