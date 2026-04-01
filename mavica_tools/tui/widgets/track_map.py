@@ -7,8 +7,6 @@ higher density than half-block characters.
 
 from __future__ import annotations
 
-import math
-
 from rich.text import Text
 from textual.reactive import reactive
 from textual.widget import Widget

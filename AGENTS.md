@@ -4,7 +4,7 @@
 
 Floppy disk recovery and troubleshooting toolkit for Sony Mavica cameras (FD5, FD7, FD73, FD88, FD91, etc). Helps diagnose whether issues are caused by the camera, the floppy disk, or the PC floppy drive, and recovers images from damaged disks.
 
-Cross-platform: Windows, macOS, Linux. Managed with `uv`. 369 tests.
+Cross-platform: Windows, macOS, Linux. Managed with `uv`. 337 tests.
 
 ## Repository Structure
 
@@ -39,13 +39,12 @@ mavica-tools/
 │       │   ├── stamp_screen.py   # EXIF metadata stamper
 │       │   ├── format_screen.py  # Floppy formatter (image + device)
 │       │   ├── gps_screen.py    # GPS track merge (two-pane, braille track map, auto-preview)
-│       │   └── troubleshoot.py  # Interactive troubleshooting wizard
 │       └── widgets/
 │           ├── sector_map.py     # Colored sector health grid
 │           ├── image_preview.py  # Half-block Unicode image renderer
 │           ├── track_map.py      # Braille scatter plot for GPS tracks
 │           └── file_picker.py    # DirectoryTree-based file/folder modal
-├── tests/                        # pytest test suite (369 tests)
+├── tests/                        # pytest test suite (337 tests)
 │   ├── test_multipass.py         # Sector merge, blank detection, image padding (10)
 │   ├── test_carve.py             # JPEG finding, carving, boundary detection (8)
 │   ├── test_check.py             # Structural checks, zero-byte detection (10)
@@ -397,7 +396,7 @@ uv sync --extra dev  # include pytest + pytest-asyncio
 ### Running Tests
 
 ```bash
-uv run --extra dev pytest -v           # all 369 tests
+uv run --extra dev pytest -v           # all 337 tests
 uv run --extra dev pytest tests/test_tui.py -v  # TUI tests only (~13s)
 uv run --extra dev pytest -k "not tui" -v       # fast unit tests only (~1s)
 ```
@@ -415,7 +414,7 @@ All tests run without hardware. Synthetic disk images and JPEG data are created 
 README screenshots are generated from headless TUI sessions using Textual's `run_test` API.
 
 - **Script**: `scripts/generate_screenshots.py`
-- **Output**: `screenshots/*.svg` (12 screens)
+- **Output**: `screenshots/*.svg` (11 screens)
 - **Run**: `uv run python scripts/generate_screenshots.py` (all) or `uv run python scripts/generate_screenshots.py home check` (specific)
 - **How it works**: For each screen, the script creates a headless `MavicaApp`, navigates to the screen, populates widgets with sample data via per-screen setup functions, then calls `app.save_screenshot()`.
 - **Adding a screenshot for a new screen**: Add an entry to the `_build_screen_list()` function and write a `setup_<name>()` function to populate the screen with representative sample data.

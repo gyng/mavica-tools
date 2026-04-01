@@ -10,11 +10,12 @@ import os
 import random
 import sys
 
-from textual.widgets import Input, DataTable, Button, ProgressBar, RichLog, Static
+from textual.widgets import Button, DataTable, Input, ProgressBar, RichLog, Static
 
 # Fixed size for consistent screenshots
 SCREENSHOT_SIZE = (120, 36)
 SCREENSHOTS_DIR = os.path.join(os.path.dirname(__file__), "..", "screenshots")
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "..", "tests", "fixtures")
 
 
 # ── Per-screen setup functions ──────────────────────────────────────────────
@@ -27,16 +28,39 @@ async def setup_home(app, pilot):
 
 
 async def setup_import_workflow(app, pilot):
+    from mavica_tools.tui.widgets.defrag_map import DefragMap
     from mavica_tools.tui.widgets.drive_input import DriveInput
-    src = app.screen.query_one("#drive-input", DriveInput)
+    from mavica_tools.tui.widgets.image_preview import ImagePreview
+
+    screen = app.screen
+    src = screen.query_one("#drive-input", DriveInput)
     src.value = "A:\\"
-    app.screen.query_one("#output-dir", Input).value = "mavica_out/import_2025-03-15_143022"
-    table = app.screen.query_one("#results-table", DataTable)
+    screen.query_one("#output-dir", Input).value = "mavica_out/import_2025-03-15_143022"
+    table = screen.query_one("#results-table", DataTable)
     table.add_row("OK", "MVC-001.JPG", "94.2 KB", "2001-07-04")
     table.add_row("OK", "MVC-002.JPG", "87.6 KB", "2001-07-04")
     table.add_row("OK", "MVC-003.JPG", "91.1 KB", "2001-07-04")
     table.add_row("OK", "MVC-004.JPG", "88.3 KB", "2001-07-04")
     table.add_row("OK", "MVC-005.JPG", "93.7 KB", "2001-07-04")
+
+    # Show a real photo in the preview
+    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-004F.JPG")
+    if os.path.exists(fixture_jpg):
+        screen.query_one("#preview", ImagePreview).image_path = fixture_jpg
+
+    # Populate defrag map showing completed read
+    defrag = screen.query_one("#defrag-map", DefragMap)
+    for i in range(2880):
+        defrag.update_sector(i, "good")
+
+    screen.query_one("#status", Static).update(
+        "  [bold #33ff33]Done![/] 5 photos imported (2 JPEGs, 3 thumbnails)"
+    )
+
+    # Enable post-import buttons
+    for btn_id in ("#btn-next-disk", "#btn-stamp", "#btn-gps"):
+        screen.query_one(btn_id, Button).disabled = False
+
     await pilot.pause()
 
 
@@ -72,13 +96,22 @@ async def setup_repair(app, pilot):
 
 
 async def setup_recover_image(app, pilot):
-    app.screen.query_one("#image-path", Input).value = "mavica_out/disk_images/merged.img"
-    app.screen.query_one("#output-dir", Input).value = "mavica_out/recovered/"
-    table = app.screen.query_one("#results-table", DataTable)
+    from mavica_tools.tui.widgets.image_preview import ImagePreview
+
+    screen = app.screen
+    screen.query_one("#image-path", Input).value = "mavica_out/disk_images/merged.img"
+    screen.query_one("#output-dir", Input).value = "mavica_out/recovered/"
+    table = screen.query_one("#results-table", DataTable)
     table.add_row("[green]\u25cf[/]", "[green]OK[/]", "MVC-001.JPG", "94,208", "0x008400", "2001-07-04")
     table.add_row("[green]\u25cf[/]", "[green]OK[/]", "MVC-002.JPG", "87,552", "0x01DA00", "2001-07-04")
     table.add_row("[green]\u25cf[/]", "[green]OK[/]", "MVC-003.JPG", "91,136", "0x033200", "2001-07-04")
     table.add_row("[dim]\u25cb[/]", "[red]DEL[/]", "[dim]MVC-004.JPG[/]", "[dim]88,320[/]", "[dim]0x049200[/]", "[dim]2001-07-04[/]")
+
+    # Show a real photo in the preview
+    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-006F.JPG")
+    if os.path.exists(fixture_jpg):
+        screen.query_one("#preview", ImagePreview).image_path = fixture_jpg
+
     await pilot.pause()
 
 
@@ -120,6 +153,13 @@ async def setup_stamp(app, pilot):
         pass
 
     screen.query_one("#btn-stamp", Button).label = "Tag 5 (F2)"
+
+    # Show a real photo in the preview
+    from mavica_tools.tui.widgets.image_preview import ImagePreview
+    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-002F.JPG")
+    if os.path.exists(fixture_jpg):
+        screen.query_one("#preview", ImagePreview).image_path = fixture_jpg
+
     await pilot.pause()
 
 
@@ -246,7 +286,6 @@ async def setup_diskcheck(app, pilot):
 
 
 async def setup_thumb411(app, pilot):
-    from textual.widgets import Select
 
     screen = app.screen
     with screen.prevent(Input.Changed):
@@ -263,6 +302,20 @@ async def setup_thumb411(app, pilot):
     table.add_row("[green]\u25cf[/]", "MVC-006F.411", "5.1KB", "")
 
     screen.query_one("#btn-convert", Button).label = "Convert 6 files"
+
+    # Show a real .411 thumbnail preview
+    from mavica_tools.tui.widgets.image_preview import ImagePreview
+    fixture_411 = os.path.join(FIXTURES_DIR, "MVC-004F.411")
+    if os.path.exists(fixture_411):
+        try:
+            from mavica_tools.thumb411 import decode_411
+            img = decode_411(fixture_411)
+            if img:
+                screen.query_one("#preview-original", ImagePreview).set_pil_image(
+                    img, "MVC-004F.411"
+                )
+        except Exception:
+            pass
 
     log = screen.query_one("#log", RichLog)
     log.write("[dim]6 .411 file(s) found[/]")
@@ -299,18 +352,12 @@ async def setup_swaptest(app, pilot):
     await pilot.pause()
 
 
-async def setup_troubleshoot(app, pilot):
-    # Default first question state is fine
-    await pilot.pause()
-
-
 # ── Screen registry ─────────────────────────────────────────────────────────
 # (filename, screen_id_or_class, setup_function)
 
 def _build_screen_list():
     """Build the list of screens to screenshot."""
     from mavica_tools.tui.screens.swaptest import SwapTestScreen
-    from mavica_tools.tui.screens.troubleshoot import TroubleshootScreen
 
     return [
         # (filename, screen_id or class instance, setup_fn)
@@ -325,7 +372,6 @@ def _build_screen_list():
         ("diskcheck.svg", "diskcheck", setup_diskcheck),
         ("thumb411.svg", "thumb411", setup_thumb411),
         ("swaptest.svg", SwapTestScreen, setup_swaptest),
-        ("troubleshoot.svg", TroubleshootScreen, setup_troubleshoot),
     ]
 
 
@@ -377,7 +423,7 @@ async def main():
 
     for filename, screen_id, setup_fn in screens:
         try:
-            path = await capture_screen(filename, screen_id, setup_fn, SCREENSHOTS_DIR)
+            await capture_screen(filename, screen_id, setup_fn, SCREENSHOTS_DIR)
             print(f"  {filename}")
         except Exception as e:
             print(f"  {filename} FAILED: {e}")

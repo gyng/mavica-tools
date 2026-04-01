@@ -45,7 +45,6 @@ class TestModuleImports:
         "mavica_tools.tui.screens.stamp_screen",
         "mavica_tools.tui.screens.format_screen",
         "mavica_tools.tui.screens.gps_screen",
-        "mavica_tools.tui.screens.troubleshoot",
         "mavica_tools.tui.widgets.defrag_map",
         "mavica_tools.tui.widgets.image_preview",
         "mavica_tools.tui.widgets.file_picker",
