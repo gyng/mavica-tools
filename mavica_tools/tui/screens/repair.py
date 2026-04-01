@@ -73,9 +73,6 @@ class RepairScreen(Screen):
             yield ImagePreview(id="preview-repaired", classes="preview-pane")
         with Horizontal(classes="button-row"):
             yield Button("Next: Tag Photos", variant="success", id="btn-next-stamp", disabled=True)
-            yield Button(
-                "Next: Export & Share", variant="default", id="btn-next-export", disabled=True
-            )
             yield Button("Open Folder", variant="default", id="btn-open-folder", disabled=True)
         yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
@@ -106,8 +103,6 @@ class RepairScreen(Screen):
             self.action_browse()
         elif event.button.id == "btn-next-stamp":
             self.app.push_screen("stamp")
-        elif event.button.id == "btn-next-export":
-            self.app.push_screen("export")
         elif event.button.id == "btn-open-folder":
             output_dir = self.query_one("#output-dir", Input).value.strip()
             if output_dir and os.path.isdir(output_dir):
@@ -242,7 +237,6 @@ class RepairScreen(Screen):
         elif self._good_files:
             log.write("[bold #33ff33]All photos OK![/] No repair needed.")
             self.query_one("#btn-next-stamp", Button).disabled = False
-            self.query_one("#btn-next-export", Button).disabled = False
 
         self._reset_check_button()
 

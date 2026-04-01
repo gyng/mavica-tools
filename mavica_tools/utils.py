@@ -17,7 +17,6 @@ OUTPUT_PHOTOS = os.path.join(OUTPUT_DIR, "photos")
 OUTPUT_RECOVERY = os.path.join(OUTPUT_DIR, "recovery")
 OUTPUT_DISK_IMAGES = os.path.join(OUTPUT_DIR, "disk_images")
 OUTPUT_REPAIRED = os.path.join(OUTPUT_DIR, "repaired")
-OUTPUT_EXPORTED = os.path.join(OUTPUT_DIR, "exported")
 OUTPUT_EXTRACTED = os.path.join(OUTPUT_DIR, "extracted")
 
 
@@ -169,3 +168,73 @@ def print_progress(current: int, total: int, start_time: float, label: str = "")
 JPEG_SOI = b"\xff\xd8\xff"  # Start of Image (3-byte form, includes marker byte)
 JPEG_SOI_SHORT = b"\xff\xd8"  # 2-byte SOI (for checking file headers)
 JPEG_EOI = b"\xff\xd9"  # End of Image
+
+
+def make_contact_sheet(
+    image_paths: list[str],
+    output_path: str,
+    columns: int = 4,
+    thumb_size: tuple[int, int] = (160, 120),
+    show_names: bool = True,
+    title: str | None = None,
+) -> str:
+    """Generate a contact sheet (grid of thumbnails). Returns the output path."""
+    import math
+
+    from PIL import Image, ImageDraw, ImageFont
+
+    if not image_paths:
+        return output_path
+
+    rows = math.ceil(len(image_paths) / columns)
+    name_h = 16 if show_names else 0
+    cell_w = thumb_size[0]
+    cell_h = thumb_size[1] + name_h
+    margin = 4
+    title_h = 30 if title else 0
+
+    sheet_w = columns * (cell_w + margin) + margin
+    sheet_h = rows * (cell_h + margin) + margin + title_h
+    sheet = Image.new("RGB", (sheet_w, sheet_h), (10, 10, 10))
+    draw = ImageDraw.Draw(sheet)
+
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 10)
+        title_font = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 14
+        )
+    except OSError:
+        try:
+            font = ImageFont.truetype("C:\\Windows\\Fonts\\consola.ttf", 10)
+            title_font = ImageFont.truetype("C:\\Windows\\Fonts\\consolab.ttf", 14)
+        except OSError:
+            font = ImageFont.load_default()
+            title_font = font
+
+    if title:
+        draw.text((margin, margin), title, fill=(51, 255, 51), font=title_font)
+
+    for i, path in enumerate(image_paths):
+        col = i % columns
+        row = i // columns
+        x = margin + col * (cell_w + margin)
+        y = title_h + margin + row * (cell_h + margin)
+
+        try:
+            img = Image.open(path)
+            img.thumbnail(thumb_size, Image.Resampling.LANCZOS)
+            paste_x = x + (cell_w - img.width) // 2
+            paste_y = y + (thumb_size[1] - img.height) // 2
+            sheet.paste(img, (paste_x, paste_y))
+        except Exception:
+            draw.rectangle([x, y, x + cell_w, y + thumb_size[1]], fill=(40, 0, 0))
+            draw.text((x + 4, y + thumb_size[1] // 2), "ERROR", fill=(255, 0, 0), font=font)
+
+        if show_names:
+            name = os.path.basename(path)
+            if len(name) > 20:
+                name = name[:17] + "..."
+            draw.text((x, y + thumb_size[1] + 2), name, fill=(150, 150, 150), font=font)
+
+    sheet.save(output_path, "JPEG", quality=90)
+    return output_path

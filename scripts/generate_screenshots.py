@@ -147,20 +147,6 @@ async def setup_format(app, pilot):
     await pilot.pause()
 
 
-async def setup_export(app, pilot):
-    screen = app.screen
-    screen.query_one("#source-path", Input).value = "mavica_out/import_2001-07-04/"
-    screen.query_one("#output-dir", Input).value = "mavica_out/exported/"
-    screen.query_one("#watermark", Input).value = "Shot on Mavica FD7"
-
-    screen.query_one("#progress", ProgressBar).update(total=10, progress=10)
-
-    log = screen.query_one("#log", RichLog)
-    log.write("[bold #33ff33]Done![/] 10/10 images exported to [bold]mavica_out/exported/[/]")
-    log.write("Contact sheet: mavica_out/exported/contact_sheet.jpg")
-
-    await pilot.pause()
-
 
 async def setup_gps(app, pilot):
     from mavica_tools.tui.widgets.track_map import TrackMap
@@ -335,7 +321,6 @@ def _build_screen_list():
         ("repair.svg", "repair", setup_repair),
         ("stamp.svg", "stamp", setup_stamp),
         ("format.svg", "format", setup_format),
-        ("export.svg", "export", setup_export),
         ("gps.svg", "gps", setup_gps),
         ("diskcheck.svg", "diskcheck", setup_diskcheck),
         ("thumb411.svg", "thumb411", setup_thumb411),

@@ -302,32 +302,6 @@ class TestFormatCLI:
         assert "MYmavica" in r.stdout
 
 
-# ─── mavica export ───────────────────────────────────────────────────────
-
-
-class TestExportCLI:
-    def test_export_flat(self, tmp_dir):
-        src = os.path.join(tmp_dir, "src")
-        os.makedirs(src)
-        make_jpeg(src, "a.jpg")
-        make_jpeg(src, "b.jpg")
-        out = os.path.join(tmp_dir, "export")
-
-        r = run(["export", src, "-o", out])
-        assert r.returncode == 0
-        assert "2" in r.stdout
-        assert os.path.exists(os.path.join(out, "a.jpg"))
-
-    def test_export_with_contact_sheet(self, tmp_dir):
-        src = os.path.join(tmp_dir, "src")
-        os.makedirs(src)
-        for i in range(4):
-            make_jpeg(src, f"img{i}.jpg")
-        out = os.path.join(tmp_dir, "export")
-
-        r = run(["export", src, "-o", out, "--contact-sheet", "--columns", "2"])
-        assert r.returncode == 0
-        assert os.path.exists(os.path.join(out, "contact_sheet.jpg"))
 
 
 # ─── mavica detect ───────────────────────────────────────────────────────
@@ -388,7 +362,7 @@ class TestHistoryCLI:
         assert r.returncode == 0
 
 
-# ─── Full pipeline: import → check → stamp → export ─────────────────────
+# ─── Full pipeline: import → check → stamp ───────────────────────────────
 
 
 class TestFullPipeline:
@@ -412,26 +386,7 @@ class TestFullPipeline:
         assert r.returncode == 0
         assert "6 files checked" in r.stdout
 
-        # 4. Export with watermark
-        export_dir = os.path.join(tmp_dir, "export")
-        r = run(
-            [
-                "export",
-                photos,
-                "-o",
-                export_dir,
-                "--watermark",
-                "Shot on Mavica FD7",
-                "--contact-sheet",
-            ]
-        )
-        assert r.returncode == 0
-
-        # 5. Verify everything exists
-        assert len(os.listdir(photos)) >= 5  # photos + contact sheet
-        assert os.path.exists(os.path.join(export_dir, "contact_sheet.jpg"))
-
-        # 6. Verify EXIF on a photo
+        # 4. Verify EXIF on a photo
         img = Image.open(os.path.join(photos, "MVC-001.JPG"))
         exif = img.getexif()
         assert exif.get(0x010F) == "SONY"
@@ -458,13 +413,9 @@ class TestFullPipeline:
         r = run(["stamp", carved_dir, "-m", "fd88", "-d", "auto", "--overwrite"])
         assert r.returncode == 0
 
-        # 5. Export
-        export_dir = os.path.join(tmp_dir, "export")
-        r = run(["export", carved_dir, "-o", export_dir, "--contact-sheet"])
-        assert r.returncode == 0
 
     def test_fat12_pipeline(self, tmp_dir):
-        """Disk image → FAT12 ls → FAT12 extract → stamp → export."""
+        """Disk image → FAT12 ls → FAT12 extract → stamp."""
         img_path = make_disk_image(tmp_dir)
 
         # List
@@ -480,20 +431,3 @@ class TestFullPipeline:
         # Stamp
         r = run(["stamp", extract_dir, "-m", "fd7", "-d", "2001-07-15", "--overwrite"])
         assert r.returncode == 0
-
-        # Export with rename
-        export_dir = os.path.join(tmp_dir, "export")
-        r = run(
-            [
-                "export",
-                extract_dir,
-                "-o",
-                export_dir,
-                "--rename",
-                "template",
-                "--template",
-                "mavica-{n:03d}",
-            ]
-        )
-        assert r.returncode == 0
-        assert os.path.exists(os.path.join(export_dir, "mavica-001.JPG"))

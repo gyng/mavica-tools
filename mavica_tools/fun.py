@@ -187,7 +187,7 @@ def recovery_suggestions(
     if good_files > 0 and bad_files == 0:
         suggestions.append("All photos recovered successfully!")
         suggestions.append(
-            "  Next: 'mavica stamp' to add camera info, then 'mavica export' to organize."
+            "  Next: 'mavica stamp' to add camera info, then 'mavica gps' for GPS tracks."
         )
 
     return suggestions

@@ -24,7 +24,6 @@ def main():
     subparsers.add_parser("detect", help="Auto-detect floppy drives")
     subparsers.add_parser("history", help="Disk health history tracking")
     subparsers.add_parser("report", help="Generate HTML recovery report")
-    subparsers.add_parser("export", help="Export images with organization and effects")
     subparsers.add_parser("gps", help="Merge GPS track data into photos")
     subparsers.add_parser("thumb411", help="Decode .411 Mavica thumbnails")
     subparsers.add_parser("diskcheck", help="Check if a floppy disk is safe for camera use")
@@ -73,8 +72,6 @@ def main():
         from mavica_tools.history import main as tool_main
     elif args.tool == "report":
         from mavica_tools.report import main as tool_main
-    elif args.tool == "export":
-        from mavica_tools.export import main as tool_main
     elif args.tool == "gps":
         from mavica_tools.gps import main as tool_main
     elif args.tool == "thumb411":
@@ -96,7 +93,6 @@ def main():
         print("  mavica stamp      — Add EXIF metadata to recovered JPEGs")
         print("  mavica detect     — Auto-detect floppy drives")
         print("  mavica history    — Disk health history tracking")
-        print("  mavica export     — Export images (organize, contact sheets, watermarks)")
         print("  mavica gps        — Merge GPS track data into photos (requires piexif)")
         print("  mavica thumb411   — Decode .411 Mavica thumbnails to PNG/JPG")
         print("  mavica diskcheck  — Check if a floppy disk is safe for camera use")

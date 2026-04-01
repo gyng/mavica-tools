@@ -26,7 +26,6 @@ mavica-tools/
 │   ├── detect.py                 # Floppy drive auto-detection (Linux/Win/Mac)
 │   ├── history.py                # Disk health history tracking + degradation detection
 │   ├── report.py                 # HTML recovery report generator
-│   ├── export.py                 # Photo export (organize, rename, contact sheets, watermark)
 │   ├── gps.py                    # GPS track merge (GPX parser, timestamp matching, piexif)
 │   ├── utils.py                  # Shared utilities (gather_jpegs, get_photo_timestamp, JPEG constants)
 │   └── tui/                      # Textual terminal UI
@@ -39,7 +38,6 @@ mavica-tools/
 │       │   ├── swaptest.py       # Interactive test matrix
 │       │   ├── stamp_screen.py   # EXIF metadata stamper
 │       │   ├── format_screen.py  # Floppy formatter (image + device)
-│       │   ├── export_screen.py # Photo export with contact sheets
 │       │   ├── gps_screen.py    # GPS track merge (two-pane, braille track map, auto-preview)
 │       │   └── troubleshoot.py  # Interactive troubleshooting wizard
 │       └── widgets/
@@ -60,7 +58,6 @@ mavica-tools/
 │   ├── test_detect.py            # Drive detection mocking (4)
 │   ├── test_history.py           # Snapshots, comparison, persistence (12)
 │   ├── test_report.py            # HTML generation, XSS escaping (8)
-│   ├── test_export.py            # Contact sheets, watermark, rename, organize (18)
 │   ├── test_gps.py               # GPX parsing, matching, interpolation, tolerance, fixtures (20)
 │   └── test_tui.py               # Headless screen navigation + widget tests (31)
 ├── screenshots/                  # SVG screenshots for README
@@ -373,8 +370,7 @@ mavica_out/
 ├── disk_images/  Multipass .img files (pass_01.img, merged.img)
 ├── recovery/     Recovery workflow (merged.img, extracted/, carved/)
 ├── extracted/    FAT12-extracted files with original names
-├── repaired/     Repaired JPEGs
-└── exported/     Export output (organized, contact sheets)
+└── repaired/     Repaired JPEGs
 ```
 
 - `mavica_out/photos` is the default input source for .411 converter (thumbnails live alongside JPEGs)
@@ -419,7 +415,7 @@ All tests run without hardware. Synthetic disk images and JPEG data are created 
 README screenshots are generated from headless TUI sessions using Textual's `run_test` API.
 
 - **Script**: `scripts/generate_screenshots.py`
-- **Output**: `screenshots/*.svg` (13 screens)
+- **Output**: `screenshots/*.svg` (12 screens)
 - **Run**: `uv run python scripts/generate_screenshots.py` (all) or `uv run python scripts/generate_screenshots.py home check` (specific)
 - **How it works**: For each screen, the script creates a headless `MavicaApp`, navigates to the screen, populates widgets with sample data via per-screen setup functions, then calls `app.save_screenshot()`.
 - **Adding a screenshot for a new screen**: Add an entry to the `_build_screen_list()` function and write a `setup_<name>()` function to populate the screen with representative sample data.

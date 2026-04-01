@@ -1,6 +1,6 @@
 # mavica-tools
 
-Recover photos from Sony Mavica floppy disks. Import, repair, and export — via TUI or CLI.
+Recover photos from Sony Mavica floppy disks. Import, repair, and geotag — via TUI or CLI.
 
 Works on **Windows**, **macOS**, and **Linux**.
 
@@ -45,7 +45,7 @@ mavica tui
 
 ![import workflow](screenshots/import_workflow.svg)
 
-**Photos** — Import from Floppy, Tag Photos (EXIF), Add GPS Location, Export & Share, .411 Thumbnails
+**Photos** — Import from Floppy, Tag Photos (EXIF), Add GPS Location, .411 Thumbnails
 
 **Disk** — Test Disk, Format Disk
 

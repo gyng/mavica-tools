@@ -6,7 +6,6 @@ from textual.app import App
 from textual.binding import Binding
 
 from mavica_tools.tui.screens.diskcheck_screen import DiskCheckScreen
-from mavica_tools.tui.screens.export_screen import ExportScreen
 from mavica_tools.tui.screens.format_screen import FormatScreen
 from mavica_tools.tui.screens.gps_screen import GpsScreen
 from mavica_tools.tui.screens.home import HomeScreen
@@ -200,7 +199,6 @@ class MavicaApp(App):
         "multipass": MultipassScreen,
         "stamp": StampScreen,
         "format": FormatScreen,
-        "export": ExportScreen,
         "gps": GpsScreen,
         "diskcheck": DiskCheckScreen,
         "thumb411": Thumb411Screen,

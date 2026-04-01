@@ -97,7 +97,7 @@ def quick_import(
     # Contact sheet
     sheet_path = None
     if contact_sheet and imported:
-        from mavica_tools.export import make_contact_sheet
+        from mavica_tools.utils import make_contact_sheet
 
         sheet_path = os.path.join(output_dir, "contact_sheet.jpg")
         title = f"Mavica {model.upper()}" if model else "Mavica Photos"

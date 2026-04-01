@@ -7,7 +7,8 @@ from textual.widgets import Footer, Header, OptionList, Static
 from textual.widgets.option_list import Option
 
 # Organized by frequency of use and workflow order.
-# Primary: the main import→tag→export pipeline (what most users do every time)
+# Organized by frequency of use and workflow order.
+# Primary: the main import→tag→GPS pipeline (what most users do every time)
 # Recovery: for when things go wrong (less frequent but critical)
 # Disk: hardware-level tools (least frequent)
 SECTIONS = [
@@ -17,7 +18,6 @@ SECTIONS = [
             ("i", "import_workflow", "Import Floppy", "Copy photos off a floppy disk"),
             ("s", "stamp", "Tag Photos", "Add camera model, date, and EXIF tags"),
             ("g", "gps", "Add GPS Location", "Match photos to a GPX track file"),
-            ("e", "export", "Export & Share", "Organize, contact sheets, resize"),
             ("t", "thumb411", ".411 Thumbnails", "View and convert Mavica camera thumbnails"),
         ],
     },

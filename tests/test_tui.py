@@ -51,8 +51,8 @@ async def test_home_screen_has_all_tool_options():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
-        # 3 section headers + 10 enabled tools + 1 disabled (flux) = 14
-        assert option_list.option_count == 14
+        # 3 section headers + 9 enabled tools + 1 disabled (flux) = 13
+        assert option_list.option_count == 13
 
 
 # ---------------------------------------------------------------------------
@@ -256,18 +256,6 @@ async def test_key_binding_navigates_to_import():
         await pilot.pause()
         assert isinstance(app.screen, ImportWorkflowScreen)
 
-
-@pytest.mark.asyncio
-async def test_key_binding_navigates_to_export():
-    """Pressing 'e' should navigate to ExportScreen."""
-    app = MavicaApp()
-    async with app.run_test(size=(100, 32)) as pilot:
-        await pilot.pause()
-        await pilot.press("e")
-        await pilot.pause()
-        from mavica_tools.tui.screens.export_screen import ExportScreen
-
-        assert isinstance(app.screen, ExportScreen)
 
 
 @pytest.mark.asyncio

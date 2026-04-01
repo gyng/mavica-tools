@@ -123,9 +123,6 @@ class ImportWorkflowScreen(Screen):
             # Post-import actions
             with Horizontal(classes="button-row"):
                 yield Button("Stamp Photos", variant="warning", id="btn-stamp", disabled=True)
-                yield Button(
-                    "Open in Export", variant="default", id="btn-open-export", disabled=True
-                )
                 yield Button("Add GPS Track", variant="default", id="btn-gps", disabled=True)
                 yield Button("Contact Sheet", variant="default", id="btn-contact", disabled=True)
 
@@ -221,10 +218,6 @@ class ImportWorkflowScreen(Screen):
             self._next_disk()
         elif event.button.id == "btn-stamp":
             self._open_stamp()
-        elif event.button.id == "btn-open-export":
-            screen = self.app.SCREENS["export"]()
-            screen._prefill_path = self.query_one("#output-dir", Input).value.strip()
-            self.app.push_screen(screen)
         elif event.button.id == "btn-gps":
             screen = self.app.SCREENS["gps"]()
             screen._prefill_photos = self.query_one("#output-dir", Input).value.strip()
@@ -489,7 +482,6 @@ class ImportWorkflowScreen(Screen):
         # Enable post-import actions
         self.query_one("#btn-next-disk", Button).disabled = False
         self.query_one("#btn-stamp", Button).disabled = False
-        self.query_one("#btn-open-export", Button).disabled = False
         self.query_one("#btn-gps", Button).disabled = False
         self.query_one("#btn-contact", Button).disabled = False
 
@@ -514,7 +506,7 @@ class ImportWorkflowScreen(Screen):
         output_dir = self.query_one("#output-dir", Input).value.strip() or "photos"
         log = self.query_one("#log", RichLog)
 
-        from mavica_tools.export import make_contact_sheet
+        from mavica_tools.utils import make_contact_sheet
 
         path = os.path.join(output_dir, "contact_sheet.jpg")
         make_contact_sheet(
@@ -552,7 +544,6 @@ class ImportWorkflowScreen(Screen):
         for btn_id in (
             "#btn-next-disk",
             "#btn-stamp",
-            "#btn-open-export",
             "#btn-gps",
             "#btn-contact",
         ):
