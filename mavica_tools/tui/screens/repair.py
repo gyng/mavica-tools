@@ -1,4 +1,4 @@
-"""Repair screen — salvage pixels from corrupt JPEGs."""
+"""Repair screen — check JPEGs for damage, then repair bad ones."""
 
 import glob as globmod
 import os
@@ -20,13 +20,14 @@ from textual.widgets import (
 )
 from textual.worker import get_current_worker
 
+from mavica_tools.check import check_jpeg_structure
 from mavica_tools.repair import repair_jpeg
 from mavica_tools.tui.widgets.file_picker import FilePicker
 from mavica_tools.tui.widgets.image_preview import ImagePreview
 
 
 class RepairScreen(Screen):
-    """Repair corrupt/truncated JPEG files."""
+    """Check JPEGs for corruption, then repair bad files."""
 
     BINDINGS = [
         Binding("escape", "app.pop_screen", "Back", show=True),
@@ -38,7 +39,7 @@ class RepairScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
-            "[bold #ffaa00]JPEG Repair[/]  [dim]Salvage pixels from corrupt files[/]\n",
+            "[bold #ffaa00]Check & Repair[/]  [dim]Scan photos for damage, then fix what's broken[/]\n",
             id="title-bar",
         )
         yield Static("  [bold]Source[/]")
@@ -55,23 +56,23 @@ class RepairScreen(Screen):
                 value="mavica_out/repaired",
                 id="output-dir",
             )
-            yield Button("Repair", variant="success", id="btn-repair")
-        with Horizontal(classes="input-row"):
-            yield Static("  ", classes="row-label")
+        with Horizontal(classes="button-row"):
+            yield Button("Check", variant="success", id="btn-check")
+            yield Button("Repair Bad Files", variant="warning", id="btn-repair", disabled=True)
             yield Switch(value=False, id="use-411")
-            yield Static("  Use .411 thumbnails to fill missing areas", id="label-411")
+            yield Static("  Use .411 thumbnails", id="label-411")
         yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
+        yield Static("", id="summary")
         yield DataTable(id="results-table")
         yield Static(
-            "  [dim]Select a row to preview original vs repaired side-by-side[/]", id="preview-hint"
+            "  [dim]Select a row to preview original vs repaired side-by-side[/]",
+            id="preview-hint",
         )
         with Horizontal():
             yield ImagePreview(id="preview-original", classes="preview-pane")
             yield ImagePreview(id="preview-repaired", classes="preview-pane")
         with Horizontal(classes="button-row"):
-            yield Button(
-                "Next: Add Photo Info", variant="success", id="btn-next-stamp", disabled=True
-            )
+            yield Button("Next: Tag Photos", variant="success", id="btn-next-stamp", disabled=True)
             yield Button(
                 "Next: Export & Share", variant="default", id="btn-next-export", disabled=True
             )
@@ -81,20 +82,23 @@ class RepairScreen(Screen):
 
     def on_mount(self) -> None:
         table = self.query_one("#results-table", DataTable)
-        table.add_columns("Status", "Filename", "Strategy", "Details")
+        table.add_columns("Status", "Filename", "Size", "Issues")
         table.cursor_type = "row"
-        self._repair_results = []
+        self._check_results: list[tuple[str, dict]] = []  # (filepath, check_result)
+        self._bad_files: list[str] = []
+        self._good_files: list[str] = []
+        self._repair_results: list[tuple[str, str | None]] = []  # (original, repaired)
 
-        # Handle pre-filled files from check screen
         if self._prefill_files:
             log = self.query_one("#log", RichLog)
-            log.write(f"[dim]{len(self._prefill_files)} file(s) received from Check screen[/]")
-            # Use the directory of the first file
+            log.write(f"[dim]{len(self._prefill_files)} file(s) pre-loaded[/]")
             first_dir = os.path.dirname(self._prefill_files[0])
             self.query_one("#source-path", Input).value = first_dir
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "btn-repair":
+        if event.button.id == "btn-check":
+            self._start_check()
+        elif event.button.id == "btn-repair":
             self._start_repair()
         elif event.button.id == "btn-browse":
             self.action_browse()
@@ -123,6 +127,10 @@ class RepairScreen(Screen):
             on_selected,
         )
 
+    def action_run_check(self) -> None:
+        """Public action for test compatibility."""
+        self._start_check()
+
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         if self._repair_results and event.cursor_row < len(self._repair_results):
             original, repaired = self._repair_results[event.cursor_row]
@@ -132,26 +140,38 @@ class RepairScreen(Screen):
             else:
                 self.query_one("#preview-repaired", ImagePreview).image_path = ""
 
-    def _start_repair(self) -> None:
+    # ── Check phase ──────────────────────────────────────────────
+
+    def _start_check(self) -> None:
         source = self.query_one("#source-path", Input).value.strip()
-        output_dir = self.query_one("#output-dir", Input).value.strip()
         if not source and not self._prefill_files:
             self.notify("Enter a source path", severity="warning")
             return
-        btn = self.query_one("#btn-repair", Button)
+        btn = self.query_one("#btn-check", Button)
         btn.disabled = True
-        btn.label = "Repairing..."
-        self.run_worker(self._repair_files(source, output_dir), exclusive=True)
+        btn.label = "Checking..."
+        self.query_one("#btn-repair", Button).disabled = True
+        self.run_worker(self._check_files(source), exclusive=True)
 
-    async def _repair_files(self, source: str, output_dir: str) -> None:
+    async def _check_files(self, source: str) -> None:
         worker = get_current_worker()
         table = self.query_one("#results-table", DataTable)
         log = self.query_one("#log", RichLog)
+        summary_widget = self.query_one("#summary", Static)
         progress = self.query_one("#progress", ProgressBar)
+
         table.clear()
+        # Reset columns to check mode
+        for col_key in list(table.columns.keys()):
+            table.remove_column(col_key)
+        table.add_columns("Status", "Filename", "Size", "Issues")
+
+        self._check_results = []
+        self._bad_files = []
+        self._good_files = []
         self._repair_results = []
 
-        # Use pre-filled files if available, otherwise gather from source
+        # Gather files
         if self._prefill_files:
             files = list(self._prefill_files)
             self._prefill_files = None
@@ -164,15 +184,100 @@ class RepairScreen(Screen):
                 files.append(source)
             else:
                 files.extend(globmod.glob(source))
+        files = [f for f in files if f.lower().endswith((".jpg", ".jpeg"))]
         files.sort()
 
         if not files:
             log.write("[red]No JPEG files found.[/]")
-            self._reset_button()
+            self._reset_check_button()
             return
 
+        log.write(f"Checking {len(files)} file(s)...\n")
+        progress.update(total=len(files), progress=0)
+
+        good = warn = bad = 0
+
+        for i, filepath in enumerate(files):
+            if worker.is_cancelled:
+                log.write("[yellow]Cancelled.[/]")
+                self._reset_check_button()
+                return
+
+            result = check_jpeg_structure(filepath)
+            name = os.path.basename(filepath)
+            size_kb = f"{result['size'] / 1024:.0f}KB"
+            issues = "; ".join(result["issues"]) if result["issues"] else ""
+
+            if not result["issues"]:
+                status = "[green]OK[/]"
+                good += 1
+                self._good_files.append(filepath)
+            elif result["valid"]:
+                status = "[#ffaa00]WARN[/]"
+                warn += 1
+                self._bad_files.append(filepath)
+            else:
+                status = "[red]BAD[/]"
+                bad += 1
+                self._bad_files.append(filepath)
+
+            self._check_results.append((filepath, result))
+            table.add_row(status, name, size_kb, issues)
+            progress.update(progress=i + 1)
+
+        summary_widget.update(
+            f"\n  [bold]Results:[/] {len(files)} checked — "
+            f"[green]{good} OK[/]  "
+            f"[#ffaa00]{warn} Warning[/]  "
+            f"[red]{bad} Bad[/]"
+        )
+
+        if self._bad_files:
+            self.query_one("#btn-repair", Button).disabled = False
+            log.write(
+                f"[bold #33ff33]Next:[/] Click [bold]Repair Bad Files[/] to fix {len(self._bad_files)} damaged photo(s)."
+            )
+        elif self._good_files:
+            log.write("[bold #33ff33]All photos OK![/] No repair needed.")
+            self.query_one("#btn-next-stamp", Button).disabled = False
+            self.query_one("#btn-next-export", Button).disabled = False
+
+        self._reset_check_button()
+
+    def _reset_check_button(self) -> None:
+        btn = self.query_one("#btn-check", Button)
+        btn.disabled = False
+        btn.label = "Check"
+
+    # ── Repair phase ─────────────────────────────────────────────
+
+    def _start_repair(self) -> None:
+        if not self._bad_files:
+            self.notify("No bad files to repair", severity="warning")
+            return
+        output_dir = self.query_one("#output-dir", Input).value.strip()
+        btn = self.query_one("#btn-repair", Button)
+        btn.disabled = True
+        btn.label = "Repairing..."
+        self.run_worker(self._repair_files(output_dir), exclusive=True)
+
+    async def _repair_files(self, output_dir: str) -> None:
+        worker = get_current_worker()
+        table = self.query_one("#results-table", DataTable)
+        log = self.query_one("#log", RichLog)
+        progress = self.query_one("#progress", ProgressBar)
+
+        # Switch table to repair-results columns
+        table.clear()
+        for col_key in list(table.columns.keys()):
+            table.remove_column(col_key)
+        table.add_columns("Status", "Filename", "Strategy", "Details")
+
+        self._repair_results = []
+        files = list(self._bad_files)
+
         os.makedirs(output_dir, exist_ok=True)
-        log.write(f"Repairing {len(files)} file(s)...\n")
+        log.write(f"\nRepairing {len(files)} file(s)...\n")
         progress.update(total=len(files), progress=0)
 
         success = fail = 0
@@ -180,7 +285,7 @@ class RepairScreen(Screen):
         for i, filepath in enumerate(files):
             if worker.is_cancelled:
                 log.write("[yellow]Cancelled.[/]")
-                self._reset_button()
+                self._reset_repair_button()
                 return
 
             name = os.path.basename(filepath)
@@ -208,15 +313,15 @@ class RepairScreen(Screen):
 
             progress.update(progress=i + 1)
 
-        log.write(f"\n[bold]Results:[/] [green]{success} fixed[/], [red]{fail} failed[/]")
+        log.write(f"\n[bold]Repair results:[/] [green]{success} fixed[/], [red]{fail} failed[/]")
         if success:
             log.write("[dim]Select a row to preview original vs repaired.[/]")
-            self.query_one("#btn-next-stamp", Button).disabled = False
-            self.query_one("#btn-next-export", Button).disabled = False
-            self.query_one("#btn-open-folder", Button).disabled = False
-        self._reset_button()
+        self.query_one("#btn-next-stamp", Button).disabled = False
+        self.query_one("#btn-next-export", Button).disabled = False
+        self.query_one("#btn-open-folder", Button).disabled = False
+        self._reset_repair_button()
 
-    def _reset_button(self) -> None:
+    def _reset_repair_button(self) -> None:
         btn = self.query_one("#btn-repair", Button)
-        btn.disabled = False
-        btn.label = "Repair"
+        btn.disabled = not self._bad_files
+        btn.label = "Repair Bad Files"

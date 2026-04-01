@@ -7,11 +7,10 @@ import pytest
 from textual.widgets import Button, DataTable, Input, OptionList
 
 from mavica_tools.tui.app import MavicaApp
-from mavica_tools.tui.screens.carve import CarveScreen
-from mavica_tools.tui.screens.check import CheckScreen
 from mavica_tools.tui.screens.home import HomeScreen
 from mavica_tools.tui.screens.import_workflow import ImportWorkflowScreen
 from mavica_tools.tui.screens.multipass import MultipassScreen
+from mavica_tools.tui.screens.recover_image_screen import RecoverImageScreen
 from mavica_tools.tui.screens.repair import RepairScreen
 from mavica_tools.tui.widgets.defrag_map import DefragMap
 
@@ -52,8 +51,8 @@ async def test_home_screen_has_all_tool_options():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         option_list = app.screen.query_one("#tool-list", OptionList)
-        # 3 section headers + 12 enabled tools + 1 disabled (flux) = 16
-        assert option_list.option_count == 16
+        # 3 section headers + 10 enabled tools + 1 disabled (flux) = 14
+        assert option_list.option_count == 14
 
 
 # ---------------------------------------------------------------------------
@@ -64,8 +63,7 @@ async def test_home_screen_has_all_tool_options():
 _KEY_SCREEN_MAP = [
     ("i", ImportWorkflowScreen),
     ("m", MultipassScreen),
-    ("c", CarveScreen),
-    ("k", CheckScreen),
+    ("b", RecoverImageScreen),
     ("r", RepairScreen),
 ]
 
@@ -90,40 +88,31 @@ async def test_key_navigates_to_correct_screen(key, expected_screen_cls):
 
 
 @pytest.mark.asyncio
-async def test_check_screen_has_expected_widgets():
-    """CheckScreen should contain #source-path Input, #btn-check Button, #results-table DataTable."""
-    app = MavicaApp()
-    async with app.run_test(size=(100, 32)) as pilot:
-        await pilot.pause()
-        await _push_and_wait(app, pilot, "check")
-        assert isinstance(app.screen, CheckScreen)
-        assert isinstance(app.screen.query_one("#source-path"), Input)
-        assert isinstance(app.screen.query_one("#btn-check"), Button)
-        assert isinstance(app.screen.query_one("#results-table"), DataTable)
-
-
-@pytest.mark.asyncio
-async def test_carve_screen_has_expected_widgets():
-    """CarveScreen should contain #image-path Input and #btn-carve Button."""
-    app = MavicaApp()
-    async with app.run_test(size=(100, 32)) as pilot:
-        await pilot.pause()
-        await _push_and_wait(app, pilot, "carve")
-        assert isinstance(app.screen, CarveScreen)
-        assert isinstance(app.screen.query_one("#image-path"), Input)
-        assert isinstance(app.screen.query_one("#btn-carve"), Button)
-
-
-@pytest.mark.asyncio
 async def test_repair_screen_has_expected_widgets():
-    """RepairScreen should contain #source-path Input and #btn-repair Button."""
+    """RepairScreen should contain check and repair buttons, results table."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         await _push_and_wait(app, pilot, "repair")
         assert isinstance(app.screen, RepairScreen)
         assert isinstance(app.screen.query_one("#source-path"), Input)
+        assert isinstance(app.screen.query_one("#btn-check"), Button)
         assert isinstance(app.screen.query_one("#btn-repair"), Button)
+        assert isinstance(app.screen.query_one("#results-table"), DataTable)
+
+
+@pytest.mark.asyncio
+async def test_recover_image_screen_has_expected_widgets():
+    """RecoverImageScreen should contain #image-path Input, #btn-extract Button, DataTable."""
+    app = MavicaApp()
+    async with app.run_test(size=(100, 32)) as pilot:
+        await pilot.pause()
+        await _push_and_wait(app, pilot, "recover_image")
+        assert isinstance(app.screen, RecoverImageScreen)
+        assert isinstance(app.screen.query_one("#image-path"), Input)
+        assert isinstance(app.screen.query_one("#btn-extract"), Button)
+        assert isinstance(app.screen.query_one("#results-table"), DataTable)
+        assert isinstance(app.screen.query_one("#defrag-map"), DefragMap)
 
 
 @pytest.mark.asyncio
@@ -163,11 +152,9 @@ async def test_escape_returns_to_previous_screen():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        # Navigate to check screen
-        await pilot.press("k")
+        await pilot.press("r")
         await pilot.pause()
-        assert isinstance(app.screen, CheckScreen)
-        # Press Escape
+        assert isinstance(app.screen, RepairScreen)
         await pilot.press("escape")
         await pilot.pause()
         assert isinstance(app.screen, HomeScreen)
@@ -179,76 +166,66 @@ async def test_escape_from_multiple_screens():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        # Navigate to carve screen via key
-        await pilot.press("c")
+        await pilot.press("b")
         await pilot.pause()
-        assert isinstance(app.screen, CarveScreen)
+        assert isinstance(app.screen, RecoverImageScreen)
         await pilot.press("escape")
         await pilot.pause()
         assert isinstance(app.screen, HomeScreen)
 
 
 # ---------------------------------------------------------------------------
-# 6. Check screen: entering a path and clicking Check runs the check workflow
+# 6. Repair screen: check + repair workflow
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.asyncio
-async def test_check_screen_run_check_with_valid_path():
-    """Entering a path and pressing the Check button should invoke the check worker."""
+async def test_repair_screen_check_with_valid_path():
+    """Entering a path and clicking Check should populate the results table."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        # Navigate via key to ensure proper focus/layout
-        await pilot.press("k")
+        await pilot.press("r")
         await pilot.pause()
 
-        # Create a temporary JPEG file
         with tempfile.TemporaryDirectory() as tmp_dir:
             jpeg_path = os.path.join(tmp_dir, "test.jpg")
-            # Minimal JPEG: SOI + some data + EOI
             with open(jpeg_path, "wb") as f:
                 f.write(b"\xff\xd8\xff\xe0" + b"\x00" * 200 + b"\xff\xd9")
 
-            # Set the path into the input
             source_input = app.screen.query_one("#source-path", Input)
             source_input.value = jpeg_path
 
-            # Trigger the check via the action (avoids click coordinate issues)
             app.screen.action_run_check()
-            # Allow the worker to run
             await pilot.pause()
             await pilot.pause()
             await pilot.pause()
 
-            # Verify the results table has at least one row
             table = app.screen.query_one("#results-table", DataTable)
             assert table.row_count >= 1
 
 
 @pytest.mark.asyncio
-async def test_check_screen_empty_path_shows_notification():
+async def test_repair_screen_empty_path_shows_notification():
     """Clicking Check without entering a path should not crash."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32), notifications=True) as pilot:
         await pilot.pause()
-        await pilot.press("k")
+        await pilot.press("r")
         await pilot.pause()
 
-        # Trigger check with empty path via action
         app.screen.action_run_check()
         await pilot.pause()
-        # Should not crash; the screen should still be CheckScreen
-        assert isinstance(app.screen, CheckScreen)
+        assert isinstance(app.screen, RepairScreen)
 
 
 @pytest.mark.asyncio
-async def test_check_screen_no_files_found():
-    """Checking a path with no JPEGs should log a message without crashing."""
+async def test_repair_screen_no_files_found():
+    """Checking a path with no JPEGs should not crash."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("k")
+        await pilot.press("r")
         await pilot.pause()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -260,7 +237,6 @@ async def test_check_screen_no_files_found():
             await pilot.pause()
             await pilot.pause()
 
-            # Table should still be empty
             table = app.screen.query_one("#results-table", DataTable)
             assert table.row_count == 0
 
@@ -318,28 +294,24 @@ async def test_home_key_binding_returns_home():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        # Navigate to check screen
-        await pilot.press("k")
+        await pilot.press("r")
         await pilot.pause()
-        assert isinstance(app.screen, CheckScreen)
-        # Press 'h' to go home — need to ensure focus is not on an Input
-        # Move focus away from input first by pressing tab until we leave inputs
-        # Actually, use the app action directly
+        assert isinstance(app.screen, RepairScreen)
         app.action_go_home()
         await pilot.pause()
         assert isinstance(app.screen, HomeScreen)
 
 
 @pytest.mark.asyncio
-async def test_check_screen_results_table_has_correct_columns():
-    """The results DataTable in CheckScreen should have the expected columns."""
+async def test_repair_screen_results_table_has_correct_columns():
+    """The results DataTable in RepairScreen should have the check-mode columns."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await _push_and_wait(app, pilot, "check")
+        await _push_and_wait(app, pilot, "repair")
         table = app.screen.query_one("#results-table", DataTable)
         column_labels = [col.label.plain for col in table.columns.values()]
-        assert column_labels == ["Status", "Filename", "Size", "Dims", "Issues"]
+        assert column_labels == ["Status", "Filename", "Size", "Issues"]
 
 
 @pytest.mark.asyncio
@@ -348,11 +320,9 @@ async def test_screen_stack_depth():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        # Stack: [default, home]
         assert len(app.screen_stack) == 2
         await pilot.press("i")
         await pilot.pause()
-        # Stack: [default, home, import_workflow]
         assert len(app.screen_stack) == 3
 
 
@@ -369,15 +339,15 @@ async def test_multipass_screen_has_default_device_path():
 
 
 @pytest.mark.asyncio
-async def test_carve_screen_has_output_dir_default():
-    """The carve screen should have a default output directory value."""
+async def test_recover_image_screen_has_output_dir_default():
+    """The recover image screen should have a default output directory value."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("c")
+        await pilot.press("b")
         await pilot.pause()
         output_input = app.screen.query_one("#output-dir", Input)
-        assert output_input.value == "carved_images"
+        assert output_input.value == "mavica_out/recovered"
 
 
 @pytest.mark.asyncio

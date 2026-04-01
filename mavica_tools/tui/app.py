@@ -5,16 +5,14 @@ import os
 from textual.app import App
 from textual.binding import Binding
 
-from mavica_tools.tui.screens.carve import CarveScreen
-from mavica_tools.tui.screens.check import CheckScreen
 from mavica_tools.tui.screens.diskcheck_screen import DiskCheckScreen
 from mavica_tools.tui.screens.export_screen import ExportScreen
-from mavica_tools.tui.screens.fat12_screen import Fat12Screen
 from mavica_tools.tui.screens.format_screen import FormatScreen
 from mavica_tools.tui.screens.gps_screen import GpsScreen
 from mavica_tools.tui.screens.home import HomeScreen
 from mavica_tools.tui.screens.import_workflow import ImportWorkflowScreen
 from mavica_tools.tui.screens.multipass import MultipassScreen
+from mavica_tools.tui.screens.recover_image_screen import RecoverImageScreen
 from mavica_tools.tui.screens.repair import RepairScreen
 from mavica_tools.tui.screens.stamp_screen import StampScreen
 from mavica_tools.tui.screens.thumb411_screen import Thumb411Screen
@@ -197,11 +195,9 @@ class MavicaApp(App):
     SCREENS = {
         "home": HomeScreen,
         "import_workflow": ImportWorkflowScreen,
-        "check": CheckScreen,
-        "carve": CarveScreen,
+        "recover_image": RecoverImageScreen,
         "repair": RepairScreen,
         "multipass": MultipassScreen,
-        "fat12": Fat12Screen,
         "stamp": StampScreen,
         "format": FormatScreen,
         "export": ExportScreen,

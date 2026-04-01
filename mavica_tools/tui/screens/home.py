@@ -14,7 +14,7 @@ SECTIONS = [
     {
         "header": "Photos",
         "tools": [
-            ("i", "import_workflow", "Import from Floppy", "Copy photos off a floppy disk"),
+            ("i", "import_workflow", "Import Floppy", "Copy photos off a floppy disk"),
             ("s", "stamp", "Tag Photos", "Add camera model, date, and EXIF tags"),
             ("g", "gps", "Add GPS Location", "Match photos to a GPX track file"),
             ("e", "export", "Export & Share", "Organize, contact sheets, resize"),
@@ -37,11 +37,9 @@ SECTIONS = [
                 "Image Disk",
                 "Read a damaged floppy multiple times, keep best data",
             ),
-            ("b", "fat12", "Browse Image", "View files in a disk image with original Mavica names"),
-            ("c", "carve", "Recover Image", "Scan raw disk data for recoverable photos"),
-            ("k", "check", "Check Photos", "Scan photos for corruption or damage"),
-            ("r", "repair", "Repair Photos", "Recover pixels from damaged photo files"),
-            (None, "flux", "Flux Recovery", "Greaseweazle / KryoFlux raw flux capture"),
+            ("b", "recover_image", "Recover Image", "Extract photos from a disk image (FAT12 + carve)"),
+            ("r", "repair", "Check & Repair", "Scan photos for damage, then fix what's broken"),
+            (None, "flux", "Flux Recovery", "Greaseweazle/KryoFlux raw flux capture"),
         ],
     },
 ]
