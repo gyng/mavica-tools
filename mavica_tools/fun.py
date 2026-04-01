@@ -5,7 +5,6 @@ photos from a floppy disk should feel like archaeology, not dentistry.
 """
 
 import random
-from datetime import datetime
 
 # ─── Floppy disk ASCII art ───────────────────────────────────────────────
 
@@ -45,7 +44,7 @@ def floppy_art(label: str = "MAVICA", small: bool = False) -> str:
 
 
 def health_bar(percent: float, width: int = 30) -> str:
-    """Render a colored health bar.
+    """Render a colored health bar (ANSI terminal).
 
     100% = all green
     80-99% = mostly green with yellow
@@ -94,32 +93,7 @@ def health_bar_rich(percent: float, width: int = 30) -> str:
     return f"  [{color}]{'█' * filled}{'░' * empty}[/] {percent:.1f}% — {label}"
 
 
-# ─── Disk age and fun stats ──────────────────────────────────────────────
-
-
-def disk_age_text(date_str: str) -> str:
-    """Generate a fun message about how old this disk is.
-
-    date_str: "YYYY-MM-DD" format
-    """
-    try:
-        disk_date = datetime.strptime(date_str[:10], "%Y-%m-%d")
-        now = datetime.now()
-        delta = now - disk_date
-        years = delta.days / 365.25
-
-        if years < 1:
-            return f"From {date_str[:10]} — less than a year old. Fresh!"
-        elif years < 5:
-            return f"From {date_str[:10]} — {years:.0f} years old."
-        elif years < 15:
-            return f"From {date_str[:10]} — {years:.0f} years old. A teenager!"
-        elif years < 25:
-            return f"From {date_str[:10]} — {years:.0f} years old. These photos are old enough to drink."
-        else:
-            return f"From {date_str[:10]} — {years:.0f} years old! Digital archaeology."
-    except (ValueError, TypeError):
-        return ""
+# ─── Disk stats ─────────────────────────────────────────────────────────
 
 
 def disk_stats_text(
@@ -222,21 +196,49 @@ def recovery_suggestions(
 # ─── Mavica trivia ───────────────────────────────────────────────────────
 
 TRIVIA = [
+    # History & models
     "The Mavica FD7 was Sony's first consumer floppy-disk camera (1997).",
     "Mavica stands for 'Magnetic Video Camera' — coined by Sony in 1981.",
-    "A 1.44MB floppy holds about 15-40 Mavica photos depending on quality.",
+    "The last floppy Mavica (FD200) was released in 2002 with a 2MP sensor.",
+    "The Mavica line sold over 3 million units worldwide.",
+    "The original 1981 Mavica prototype recorded analog stills to 2\" floppies.",
+    "The FD5 was the entry-level Mavica — VGA resolution, no flash, no zoom.",
+    "The FD88 and FD83 could record short MPEG video clips onto floppies.",
+    "Sony made CD Mavicas too — the CD300 burned 156MB mini CD-Rs in-camera.",
+    "The Mavica MVC-FD100 was the first model with a 1280x960 mode.",
+    # Lenses & specs
     "The FD91 had a 14x optical zoom — unusual for a floppy camera.",
-    "Mavica floppies use standard FAT12 — the same filesystem as DOS.",
     "The FD73 used a Carl Zeiss Vario-Sonnar lens — premium optics on a floppy camera.",
     "At 640x480, Mavica photos have the same resolution as standard-definition TV.",
-    "The last floppy Mavica (FD200) was released in 2002 with a 2MP sensor.",
-    "Mavica cameras were popular with real estate agents and insurance adjusters.",
-    "A Mavica floppy read at ~50KB/s — about 30 seconds for a full disk.",
+    "The FD95 had a swivelling lens body — selfies before front cameras existed.",
+    "Most floppy Mavicas used 1/4\" CCDs — tiny sensors even by late-90s standards.",
+    # Floppy tech
+    "A 1.44MB floppy holds about 15-40 Mavica photos depending on quality.",
+    "Mavica floppies use standard FAT12 — the same filesystem as DOS.",
+    "A Mavica floppy reads at ~50KB/s — about 30 seconds for a full disk.",
     'The 3.5" floppy disk was invented by Sony in 1980.',
     "Floppy disks store data magnetically — keep them away from speakers.",
+    "A 3.5\" HD floppy has 80 tracks, 2 sides, 18 sectors per track = 2880 sectors.",
+    "The metal slider on a 3.5\" floppy is spring-loaded — the drive pushes it open.",
+    "Floppies spin at 300 RPM. A full rotation takes exactly 200ms.",
+    "The write-protect tab on a 3.5\" floppy is optical — the drive shines light through it.",
+    "HD floppies are coated with cobalt-doped iron oxide — basically rust with superpowers.",
+    "Sector interleaving was used on early PCs to give the CPU time to process between reads.",
+    # Culture & usage
+    "Mavica cameras were popular with real estate agents and insurance adjusters.",
+    "eBay sellers in the late 90s loved the Mavica — shoot, eject, upload. No cable needed.",
+    "Some Mavica users kept shoeboxes of labelled floppies — the original photo library.",
+    "The Mavica's floppy drive sound became a nostalgic ASMR subgenre.",
+    "Mavica photos have a distinct look — soft, warm, slightly purple. The CCD's signature.",
+    "The .411 thumbnail format is unique to Sony Mavica — 64x48 pixels in YCbCr 4:1:1.",
+    # Practical tips
     "99% isopropyl alcohol is the recommended head cleaner — never use 70%.",
-    "The Mavica line sold over 3 million units worldwide.",
     "USB floppy drives vary wildly in read quality — try multiple drives.",
+    "Store floppies upright like books, not stacked flat — reduces pressure on the media.",
+    "A floppy that fails on one drive may read perfectly on another. Alignment varies.",
+    "Multi-pass reading can recover sectors that fail on the first try — persistence pays off.",
+    "Room temperature and low humidity are ideal for floppy storage. Avoid attics and garages.",
+    "If a floppy smells musty, the oxide coating may be degrading. Handle with extra care.",
 ]
 
 
@@ -245,31 +247,11 @@ def random_trivia() -> str:
     return random.choice(TRIVIA)
 
 
-def trivia_for_context(context: str = "") -> str:
-    """Return a contextually relevant trivia fact."""
-    context_lower = context.lower()
-
-    if "clean" in context_lower or "head" in context_lower:
-        return "99% isopropyl alcohol is the recommended head cleaner — never use 70%."
-    elif "zoom" in context_lower:
-        return "The FD91 had a 14x optical zoom — unusual for a floppy camera."
-    elif "zeiss" in context_lower or "lens" in context_lower:
-        return "The FD73 used a Carl Zeiss Vario-Sonnar lens — premium optics on a floppy camera."
-    elif "fd7" in context_lower or "first" in context_lower:
-        return "The Mavica FD7 was Sony's first consumer floppy-disk camera (1997)."
-    elif "fat12" in context_lower or "filesystem" in context_lower:
-        return "Mavica floppies use standard FAT12 — the same filesystem as DOS."
-    elif "slow" in context_lower or "speed" in context_lower:
-        return "A Mavica floppy reads at ~50KB/s — about 30 seconds for a full disk."
-
-    return random_trivia()
-
-
 # ─── Sector map sparkline ────────────────────────────────────────────────
 
 
 def sector_sparkline(sector_status: list[str], width: int = 60) -> str:
-    """Compact single-line sector health visualization.
+    """Compact single-line sector health visualization (ANSI terminal).
 
     Groups sectors into buckets and shows the worst status per bucket.
     """
@@ -319,110 +301,3 @@ def sector_sparkline_rich(sector_status: list[str], width: int = 60) -> str:
         parts.append(f"[{color}]{char}[/]")
 
     return "  " + "".join(parts)
-
-
-# ─── Skeuomorphic extras ─────────────────────────────────────────────────
-
-EJECT_FRAMES = [
-    r"""
-  ┌──────────┐
-  │ ┌──────┐ │
-  │ │{label}│ │
-  │ └──────┘ │
-  │  ┌────┐  │
-  │  │ ◉  │  │
-  │  └────┘  │
-  └──────────┘""",
-    r"""
-  ┌──────────┐
-  │ ┌──────┐ │
-  │ │{label}│ │
-  │ └──────┘ │
-  │  ┌────┐  │
-  │  │ ◉  │  │
-  └──┤    ├──┘
-     └────┘""",
-    r"""
-  ┌──────────┐
-  │ ┌──────┐ │
-  │ │{label}│ │
-  │ └──────┘ │
-  └──────────┘
-     ┌────┐
-     │ ◉  │
-     └────┘""",
-    r"""
-  ┌──────────┐
-  │          │
-  │          │
-  │          │
-  └──────────┘
-
-     ┌──────┐
-     │{label}│
-     │  ◉   │
-     └──────┘""",
-]
-
-
-def eject_frames(label: str = "MAVICA") -> list[str]:
-    """Return animation frames for a floppy eject sequence."""
-    padded = label[:6].center(6)
-    return [f.format(label=padded) for f in EJECT_FRAMES]
-
-
-def read_head_indicator(sector_idx: int) -> str:
-    """Show which track/head the read head is currently on.
-
-    Returns a string like "T14H0 ▸▸▸" showing seek position.
-    """
-    sectors_per_track = 18
-    track = sector_idx // (sectors_per_track * 2)
-    head = (sector_idx // sectors_per_track) % 2
-    sector_in_track = sector_idx % sectors_per_track
-
-    # Visual seek bar (0-79 tracks)
-    bar_width = 40
-    pos = int(bar_width * track / 80)
-    bar = "─" * pos + "▸" + "─" * (bar_width - pos - 1)
-
-    return f"  T{track:02d}H{head} S{sector_in_track:02d}  [{bar}]"
-
-
-def read_head_indicator_rich(sector_idx: int) -> str:
-    """Rich-markup version for TUI."""
-    sectors_per_track = 18
-    track = sector_idx // (sectors_per_track * 2)
-    head = (sector_idx // sectors_per_track) % 2
-    sector_in_track = sector_idx % sectors_per_track
-
-    bar_width = 40
-    pos = int(bar_width * track / 80)
-    bar_before = "─" * pos
-    bar_after = "─" * (bar_width - pos - 1)
-
-    return (
-        f"  [bold]T{track:02d}H{head}[/] S{sector_in_track:02d}  "
-        f"[dim]{bar_before}[/][bold #33ff33]▸[/][dim]{bar_after}[/]"
-    )
-
-
-def film_strip_border(text: str, width: int = 60) -> str:
-    """Wrap text in a film-strip-style border with sprocket holes."""
-    holes = "◻ " * (width // 4)
-    top = f"  {holes}"
-    bottom = top
-    lines = text.split("\n")
-    framed = [f"  ◻ {line:<{width - 6}} ◻" for line in lines]
-    return "\n".join([top, *framed, bottom])
-
-
-def disk_sleeve_header(label: str, file_count: int, total_kb: float) -> str:
-    """Format a disk sleeve / case label for contact sheets."""
-    return (
-        f"┌{'─' * 30}┐\n"
-        f"│ {label:<28} │\n"
-        f"│ {file_count} photos  {total_kb:.0f}KB{' ' * (18 - len(str(file_count)) - len(f'{total_kb:.0f}'))}│\n"
-        f'│ Sony Mavica  3.5" HD{" " * 8}│\n'
-        f"└{'─' * 30}┘"
-    )

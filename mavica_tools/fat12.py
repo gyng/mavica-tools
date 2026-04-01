@@ -239,16 +239,21 @@ def extract_file(data: bytes, fat: list[int], entry: FileEntry) -> bytes:
     return bytes(file_data[: entry.size])
 
 
-def parse_disk_image(image_path: str) -> tuple[list[FileEntry], list[int]]:
-    """Parse a FAT12 disk image and return (files, fat_table)."""
+def parse_disk_image(image_path: str) -> tuple[list[FileEntry], list[int], bytes]:
+    """Parse a FAT12 disk image and return (files, fat_table, raw_data)."""
     with open(image_path, "rb") as f:
         data = f.read()
 
+    files, fat = parse_disk_data(data)
+    return files, fat, data
+
+
+def parse_disk_data(data: bytes) -> tuple[list[FileEntry], list[int]]:
+    """Parse FAT12 structures from raw disk bytes. Returns (files, fat_table)."""
     fat = read_fat12(data)
     root_dir_offset = (FAT_OFFSET + FATS_COUNT * SECTORS_PER_FAT) * SECTOR_SIZE
     files = read_directory(data, root_dir_offset, ROOT_DIR_ENTRIES)
-
-    return files, fat, data
+    return files, fat
 
 
 def file_sector_map(image_path: str) -> list[tuple[str, list[int]]]:
@@ -266,9 +271,7 @@ def file_sector_map_from_data(data: bytes) -> list[tuple[str, list[int]]]:
     Can be called mid-read as soon as the first 33 sectors (FAT12 metadata)
     are available — the data area can be incomplete/zeroed.
     """
-    fat = read_fat12(data)
-    root_dir_offset = (FAT_OFFSET + FATS_COUNT * SECTORS_PER_FAT) * SECTOR_SIZE
-    files = read_directory(data, root_dir_offset, ROOT_DIR_ENTRIES)
+    files, fat = parse_disk_data(data)
     return _build_sector_map(files, fat)
 
 

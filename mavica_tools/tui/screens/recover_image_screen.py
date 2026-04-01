@@ -438,8 +438,18 @@ class RecoverImageScreen(Screen):
         if self._extracted_paths and display_idx < len(self._extracted_paths):
             path = self._extracted_paths[display_idx]
             if path and os.path.isfile(path):
-                preview.image_path = path
-                return
+                if path.upper().endswith(".411"):
+                    try:
+                        with open(path, "rb") as fh:
+                            img = _decode_preview(os.path.basename(path), fh.read())
+                        if img:
+                            preview.set_pil_image(img, os.path.basename(path))
+                            return
+                    except Exception:
+                        pass
+                else:
+                    preview.image_path = path
+                    return
 
         # In-memory preview from disk image
         if self._data and self._fat:

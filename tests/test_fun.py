@@ -2,7 +2,6 @@
 
 from mavica_tools.fun import (
     TRIVIA,
-    disk_age_text,
     disk_stats_text,
     floppy_art,
     health_bar,
@@ -11,7 +10,6 @@ from mavica_tools.fun import (
     recovery_suggestions,
     sector_sparkline,
     sector_sparkline_rich,
-    trivia_for_context,
 )
 
 
@@ -52,23 +50,6 @@ class TestHealthBar:
         result = health_bar_rich(95)
         assert "excellent" in result
         assert "[green]" in result
-
-
-class TestDiskAge:
-    def test_recent(self):
-        from datetime import datetime
-
-        today = datetime.now().strftime("%Y-%m-%d")
-        result = disk_age_text(today)
-        assert "Fresh" in result or "less than" in result
-
-    def test_old_disk(self):
-        result = disk_age_text("1999-07-04")
-        assert "years old" in result
-
-    def test_invalid_date(self):
-        result = disk_age_text("not-a-date")
-        assert result == ""
 
 
 class TestDiskStats:
@@ -122,12 +103,8 @@ class TestTrivia:
         assert isinstance(result, str)
         assert len(result) > 10
 
-    def test_context_cleaning(self):
-        result = trivia_for_context("clean head")
-        assert "isopropyl" in result.lower() or "IPA" in result
-
-    def test_context_default(self):
-        result = trivia_for_context("something random")
+    def test_result_is_from_list(self):
+        result = random_trivia()
         assert result in TRIVIA
 
 

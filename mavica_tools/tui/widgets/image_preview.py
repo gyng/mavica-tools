@@ -106,8 +106,9 @@ class ImagePreview(Widget):
         self._pil_image_name = name
         self._last_path = ""
         self._loading = False
-        self._rendered = self._render_pil(img, name)
-        self.image_path = ""
+        rendered = self._render_pil(img, name)
+        self.image_path = ""  # clear path first (watcher may reset _rendered)
+        self._rendered = rendered
         self.refresh(layout=True)
 
     def watch_image_path(self, new_path: str) -> None:
