@@ -333,6 +333,7 @@ class Thumb411Screen(Screen):
         """Decode a .411 file and show it directly in the preview pane."""
         try:
             img = decode_411_to_image(path)
+            # Nearest neighbor for upscaling — preserves the blocky pixel art look of 64x48 thumbnails
             upscaled = img.resize((256, 192), resample=0)
             source_name = os.path.basename(path)
             fmt = self.query_one("#output-format", Select).value or "png"

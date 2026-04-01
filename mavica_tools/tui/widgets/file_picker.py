@@ -38,7 +38,8 @@ class FilePicker(ModalScreen[str]):
 
     #picker-container {
         width: 70;
-        height: 30;
+        height: auto;
+        max-height: 80%;
         border: thick #33ff33;
         background: #0a0a0a;
         padding: 1 2;

@@ -27,6 +27,8 @@ STATE_STYLE = {
     "good":      ("▓", "#33ff33"),
     "recovered": ("▓", "#33aaff"),
     "bad":       ("▓", "#ff3333"),
+    "marked":    ("▓", "#ff8800"),   # marked bad in FAT but readable
+    "marked_bad": ("▓", "#ff3333"),  # marked bad AND failed to read
     "conflict":  ("▓", "#ff33ff"),
     "blank":     ("▓", "#ff3333"),   # alias for bad
 }
@@ -135,7 +137,8 @@ class DefragMap(Widget):
         text.append("▓ reading  ", style="#ffffff")
         text.append("▓ good  ", style="#33ff33")
         text.append("▓ recovered  ", style="#33aaff")
-        text.append("▓ bad", style="#ff3333")
+        text.append("▓ bad  ", style="#ff3333")
+        text.append("▓ marked", style="#ff8800")
         text.append("\n\n")
 
         # File colors — cycle for visual distinction between files
@@ -146,13 +149,15 @@ class DefragMap(Widget):
 
         # Sector state as background color — shows progress under filename text
         _STATE_BG = {
-            "good":      "#1a6b1a",
-            "recovered": "#1a4a6b",
-            "reading":   "#666666",
-            "waiting":   "#1a1a1a",
-            "bad":       "#6b1a1a",
-            "blank":     "#6b1a1a",
-            "conflict":  "#6b1a6b",
+            "good":       "#1a6b1a",
+            "recovered":  "#1a4a6b",
+            "reading":    "#666666",
+            "waiting":    "#1a1a1a",
+            "bad":        "#6b1a1a",
+            "marked":     "#6b4400",
+            "marked_bad": "#6b1a1a",
+            "blank":      "#6b1a1a",
+            "conflict":   "#6b1a6b",
         }
 
         # Build sector -> overlay info for filename text on grid
@@ -224,16 +229,23 @@ class DefragMap(Widget):
         # Stats
         good = self._cells.count("good")
         recovered = self._cells.count("recovered")
-        bad = self._cells.count("bad") + self._cells.count("blank")
+        bad = self._cells.count("bad") + self._cells.count("blank") + self._cells.count("marked_bad")
+        marked = self._cells.count("marked")
         waiting = self._cells.count("waiting")
         reading = self._cells.count("reading")
         done = TOTAL_SECTORS - waiting - reading
 
         if done > 0:
             pct = 100 * done / TOTAL_SECTORS
+            parts = f"{good} good"
+            if recovered:
+                parts += f", {recovered} recovered"
+            if bad:
+                parts += f", {bad} bad"
+            if marked:
+                parts += f", {marked} marked"
             text.append(
-                f"\n  {done}/{TOTAL_SECTORS} sectors ({pct:.0f}%)  "
-                f"[{good} good, {recovered} recovered, {bad} bad]",
+                f"\n  {done}/{TOTAL_SECTORS} sectors ({pct:.0f}%)  [{parts}]",
                 style="dim"
             )
 

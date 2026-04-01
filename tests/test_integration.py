@@ -111,7 +111,7 @@ class TestEndToEndRecovery:
         # Verify EXIF
         img = Image.open(path)
         exif = img.getexif()
-        assert exif[0x0110] == "Sony Mavica MVC-FD7"
+        assert exif[0x0110] == "SONY MAVICA MVC-FD7"
 
     def test_carve_check_repair_pipeline(self, tmp_dir):
         """Carve from raw → check → repair truncated."""
@@ -198,7 +198,7 @@ class TestEndToEndRecovery:
         # Verify EXIF on an imported file
         img = Image.open(result["files"][0])
         exif = img.getexif()
-        assert "Sony" in exif.get(0x010F, "")
+        assert "SONY" in exif.get(0x010F, "")
 
 
 class TestEdgeCases:
@@ -272,7 +272,7 @@ class TestEdgeCases:
         assert ok is True
 
         exif = Image.open(path).getexif()
-        assert exif[0x0110] == "Custom Camera 3000"
+        assert exif[0x0110] == "CUSTOM CAMERA 3000"
 
 
 class TestFuzzLike:

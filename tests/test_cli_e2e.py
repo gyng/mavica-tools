@@ -150,7 +150,7 @@ class TestImportCLI:
         # Verify EXIF
         img = Image.open(os.path.join(out, "MVC-001.JPG"))
         exif = img.getexif()
-        assert exif.get(0x0110) == "Sony Mavica MVC-FD7"
+        assert exif.get(0x0110) == "SONY MAVICA MVC-FD7"
 
     def test_import_with_contact_sheet(self, tmp_dir):
         src = os.path.join(tmp_dir, "floppy")
@@ -396,8 +396,8 @@ class TestFullPipeline:
         # 6. Verify EXIF on a photo
         img = Image.open(os.path.join(photos, "MVC-001.JPG"))
         exif = img.getexif()
-        assert exif.get(0x010F) == "Sony"
-        assert exif.get(0x0110) == "Sony Mavica MVC-FD7"
+        assert exif.get(0x010F) == "SONY"
+        assert exif.get(0x0110) == "SONY MAVICA MVC-FD7"
 
     def test_recovery_workflow(self, tmp_dir):
         """Simulate the recovery workflow: disk image → carve → check → repair."""

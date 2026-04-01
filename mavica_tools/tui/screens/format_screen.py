@@ -1,8 +1,6 @@
 """Format screen — create Mavica-compatible FAT12 disk images."""
 
 import os
-import platform
-
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
@@ -11,10 +9,11 @@ from textual.containers import Horizontal
 from textual.worker import get_current_worker
 
 from mavica_tools.format import (
-    create_disk_image, format_floppy, format_floppy_full, TOTAL_SECTORS,
+    format_floppy, format_floppy_full, TOTAL_SECTORS,
     get_blocking_processes, force_dismount_volume,
 )
 from mavica_tools.tui.widgets.defrag_map import DefragMap
+from mavica_tools.tui.widgets.drive_input import DriveInput
 
 
 class _StopRequested(Exception):
@@ -47,27 +46,15 @@ class FormatScreen(Screen):
             id="title-bar",
         )
         yield Static(
-            "  Create a blank 1.44MB FAT12 disk image, or format\n"
-            "  a physical floppy for use with Mavica cameras.\n"
+            "  Format a physical floppy for use with Mavica cameras.\n"
         )
-
-        yield Static("  [bold]Create Image File[/]", classes="section-title")
-        with Horizontal(classes="input-row"):
-            yield Input(value="mavica_blank.img", placeholder="Output filename", id="image-output")
-            yield Input(value="MAVICA", placeholder="Volume label", id="label")
-            yield Button("Create Image", variant="success", id="btn-create")
-
-        yield Static("")
-
-        system = platform.system()
-        device_hint = {
-            "Windows": r"\\.\A:",
-            "Darwin": "/dev/diskN",
-        }.get(system, "/dev/fd0")
-
-        yield Static("  [bold]Format Physical Floppy[/]  [red](erases all data!)[/]", classes="section-title")
-        with Horizontal(classes="input-row"):
-            yield Input(value=device_hint, placeholder="Device path", id="device-path")
+        yield DriveInput(
+            label="Device",
+            default="auto",
+            show_mounts=False,
+            autodetect_on_mount=False,
+            id="drive-input",
+        )
         yield Static(
             "  [dim][bold]Quick[/] — writes FAT12 structures only (~1 sec)\n"
             "  [bold]Full[/] — zeros + verifies every sector, then writes FAT12 (~2 min)[/]\n"
@@ -88,9 +75,7 @@ class FormatScreen(Screen):
     _pending_full: bool = False  # Which format mode to retry after force dismount
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "btn-create":
-            self._create_image()
-        elif event.button.id == "btn-confirm":
+        if event.button.id == "btn-confirm":
             self.query_one("#btn-format", Button).disabled = False
             self.query_one("#btn-format-full", Button).disabled = False
             self.query_one("#btn-confirm", Button).disabled = True
@@ -105,28 +90,9 @@ class FormatScreen(Screen):
         elif event.button.id == "btn-force-dismount":
             self._do_force_dismount()
 
-    def _create_image(self) -> None:
-        output = self.query_one("#image-output", Input).value.strip()
-        label = self.query_one("#label", Input).value.strip() or "MAVICA"
-        log = self.query_one("#log", RichLog)
-
-        if not output:
-            self.notify("Enter an output filename", severity="warning")
-            return
-
-        try:
-            image = create_disk_image(label)
-            with open(output, "wb") as f:
-                f.write(image)
-            log.write(f"[green]Created {output} ({len(image):,} bytes)[/]")
-            log.write(f"  Volume label: {label}")
-            log.write(f"  Format: FAT12, 1.44MB, Mavica-compatible")
-        except Exception as e:
-            log.write(f"[red]Error: {e}[/]")
-
     def _start_format(self, full: bool) -> None:
-        device = self.query_one("#device-path", Input).value.strip()
-        label = self.query_one("#label", Input).value.strip() or "MAVICA"
+        device = self.query_one("#drive-input", DriveInput).value
+        label = "MAVICA"
 
         if not device:
             self.notify("Enter a device path", severity="warning")
@@ -230,7 +196,7 @@ class FormatScreen(Screen):
         self._pending_full = full
 
         if "lock volume" in msg.lower():
-            device = self.query_one("#device-path", Input).value.strip()
+            device = self.query_one("#drive-input", DriveInput).value
             log.write("\n[bold]Checking what's using the drive...[/]")
 
             blockers = get_blocking_processes(device)
@@ -252,8 +218,8 @@ class FormatScreen(Screen):
 
     def _do_force_dismount(self) -> None:
         """Force-dismount the volume and retry the format."""
-        device = self.query_one("#device-path", Input).value.strip()
-        label = self.query_one("#label", Input).value.strip() or "MAVICA"
+        device = self.query_one("#drive-input", DriveInput).value
+        label = "MAVICA"
         log = self.query_one("#log", RichLog)
 
         log.write("\n[bold]Force dismounting volume...[/]")

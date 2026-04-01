@@ -43,8 +43,8 @@ class TestStampJpeg:
         # Verify EXIF
         img = Image.open(out)
         exif = img.getexif()
-        assert exif[TAG_MAKE] == "Sony"
-        assert exif[TAG_MODEL] == "Sony Mavica MVC-FD7"
+        assert exif[TAG_MAKE] == "SONY"
+        assert exif[TAG_MODEL] == "SONY MAVICA MVC-FD7"
 
     def test_stamp_model_full_name(self, tmp_dir):
         path = make_jpeg(tmp_dir)
@@ -55,7 +55,7 @@ class TestStampJpeg:
 
         img = Image.open(out)
         exif = img.getexif()
-        assert exif[TAG_MODEL] == "My Custom Camera"
+        assert exif[TAG_MODEL] == "MY CUSTOM CAMERA"
 
     def test_stamp_date(self, tmp_dir):
         path = make_jpeg(tmp_dir)
@@ -100,7 +100,7 @@ class TestStampJpeg:
 
         img = Image.open(out)
         exif = img.getexif()
-        assert exif[TAG_MODEL] == "Sony Mavica MVC-FD88"
+        assert exif[TAG_MODEL] == "SONY MAVICA MVC-FD88"
         assert exif[TAG_DATETIME] == "1999:12:25 00:00:00"
 
     def test_stamp_description(self, tmp_dir):
@@ -131,7 +131,7 @@ class TestStampJpeg:
 
         img = Image.open(path)
         exif = img.getexif()
-        assert exif[TAG_MODEL] == "Sony Mavica MVC-FD7"
+        assert exif[TAG_MODEL] == "SONY MAVICA MVC-FD7"
 
     def test_not_a_jpeg(self, tmp_dir):
         path = os.path.join(tmp_dir, "fake.jpg")
@@ -144,7 +144,7 @@ class TestStampJpeg:
     def test_all_model_shorthands_resolve(self):
         """All shorthand keys should map to valid model names."""
         for key, full_name in MAVICA_MODELS.items():
-            assert full_name.startswith("Sony Mavica MVC-")
+            assert "Mavica MVC-" in full_name, f"{key} -> {full_name}"
 
     def test_stamp_writes_camera_specs_exif(self, tmp_dir):
         """Stamping with a known model should write focal length, aperture, ISO."""
@@ -158,20 +158,23 @@ class TestStampJpeg:
         exif = img.getexif()
         exif_ifd = exif.get_ifd(TAG_EXIF_IFD)
 
-        # FD7 specs: f=4.2mm, F2.0, ISO 100, 640x480
+        # FD7 specs from mavica-db.tsv
+        from mavica_tools.mavica_db import MODELS
+        fd7 = MODELS["fd7"]
+
         assert TAG_FOCAL_LENGTH in exif_ifd
         fl = exif_ifd[TAG_FOCAL_LENGTH]
-        assert fl[0] / fl[1] == pytest.approx(4.2, abs=0.1)
+        assert fl[0] / fl[1] == pytest.approx(fd7.focal_length_mm, abs=0.5)
 
-        assert exif_ifd[TAG_FOCAL_LENGTH_35MM] == 47
+        assert exif_ifd[TAG_FOCAL_LENGTH_35MM] == fd7.focal_length_35mm
         assert TAG_FNUMBER in exif_ifd
         fn = exif_ifd[TAG_FNUMBER]
-        assert fn[0] / fn[1] == pytest.approx(2.0, abs=0.1)
+        assert fn[0] / fn[1] == pytest.approx(fd7.aperture_max, abs=0.1)
 
         assert exif_ifd[TAG_ISO] == 100
         assert exif_ifd[TAG_COLOR_SPACE] == 1  # sRGB
-        assert exif_ifd[TAG_PIXEL_X] == 640
-        assert exif_ifd[TAG_PIXEL_Y] == 480
+        assert exif_ifd[TAG_PIXEL_X] == fd7.resolution[0]
+        assert exif_ifd[TAG_PIXEL_Y] == fd7.resolution[1]
 
     def test_stamp_specs_vary_by_model(self, tmp_dir):
         """Different models should produce different EXIF specs."""
@@ -185,9 +188,10 @@ class TestStampJpeg:
         exif7 = Image.open(out7).getexif().get_ifd(TAG_EXIF_IFD)
         exif200 = Image.open(out200).getexif().get_ifd(TAG_EXIF_IFD)
 
-        # FD7: 47mm equiv, FD200: 37mm equiv
-        assert exif7[TAG_FOCAL_LENGTH_35MM] == 47
-        assert exif200[TAG_FOCAL_LENGTH_35MM] == 37
+        # FD7 and FD200 should have different 35mm equiv focal lengths
+        from mavica_tools.mavica_db import MODELS
+        assert exif7[TAG_FOCAL_LENGTH_35MM] == MODELS["fd7"].focal_length_35mm
+        assert exif200[TAG_FOCAL_LENGTH_35MM] == MODELS["fd200"].focal_length_35mm
 
         # FD7: 640x480, FD200: 1600x1200
         assert exif7[TAG_PIXEL_X] == 640

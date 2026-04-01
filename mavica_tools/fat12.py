@@ -116,6 +116,22 @@ def read_fat12(data: bytes) -> list[int]:
     return entries
 
 
+def bad_sectors_from_fat(data: bytes) -> set[int]:
+    """Return set of absolute sector indices marked as bad (0xFF7) in the FAT.
+
+    Works on raw disk data — only needs the first 10 sectors (boot + FAT1).
+    """
+    fat = read_fat12(data)
+    bad = set()
+    for cluster_idx, entry in enumerate(fat):
+        if cluster_idx < 2:
+            continue  # reserved entries
+        if entry == 0xFF7:
+            sector = DATA_START_SECTOR + (cluster_idx - 2)
+            bad.add(sector)
+    return bad
+
+
 def read_directory(data: bytes, dir_offset: int, max_entries: int) -> list[FileEntry]:
     """Read directory entries from a FAT12 directory region."""
     entries = []
@@ -309,6 +325,20 @@ def extract_with_names(
 
         with open(out_path, "wb") as f:
             f.write(file_data)
+
+        # Preserve FAT12 timestamp as file mtime
+        if entry.date_str:
+            try:
+                from datetime import datetime as _dt
+                ts_str = entry.date_str
+                if entry.time_str:
+                    ts_str += f" {entry.time_str}"
+                else:
+                    ts_str += " 00:00:00"
+                ts = _dt.strptime(ts_str, "%Y-%m-%d %H:%M:%S").timestamp()
+                os.utime(out_path, (ts, ts))
+            except (ValueError, OSError):
+                pass
 
         # Auto-stamp EXIF from FAT12 timestamps
         if auto_stamp and name.upper().endswith((".JPG", ".JPEG")):

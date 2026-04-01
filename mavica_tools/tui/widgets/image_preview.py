@@ -32,6 +32,51 @@ def _render_half_blocks(img, text, target_w, target_h, pad_left: int = 0):
         text.append("\n")
 
 
+def _is_slow_device(path: str) -> bool:
+    """Heuristic: skip inline thumbnails for files on floppy/removable drives."""
+    p = path.replace("\\", "/").upper()
+    # Windows floppy drive letters
+    if len(p) >= 2 and p[1] == ":" and p[0] in ("A", "B"):
+        return True
+    # Linux/macOS floppy mounts
+    for prefix in ("/MNT/FLOPPY", "/MEDIA/FLOPPY", "/DEV/FD"):
+        if p.startswith(prefix):
+            return True
+    return False
+
+
+def inline_thumbnail(path: str, width: int = 2) -> str:
+    """Render a tiny inline thumbnail as Rich markup for use in DataTable cells.
+
+    Returns a string of `width` half-block characters (each showing 2 vertical
+    pixels), giving a tiny color swatch of the image. Returns empty string on
+    failure. Skips files on slow devices (floppy drives).
+
+    Args:
+        path: Path to a JPEG or image file.
+        width: Number of characters wide (each char = 1 pixel wide, 2 tall).
+    """
+    if _is_slow_device(path):
+        return ""
+    try:
+        from PIL import Image
+        img = Image.open(path).convert("RGB")
+        # Resize to width x 2 pixels (2 rows → 1 row of half-blocks)
+        # LANCZOS for downscaling — best quality for shrinking photos to tiny thumbnails
+        thumb = img.resize((width, 2), resample=Image.LANCZOS)
+        pixels = thumb.load()
+        parts = []
+        for x in range(width):
+            top_r, top_g, top_b = pixels[x, 0]
+            bot_r, bot_g, bot_b = pixels[x, 1]
+            fg = f"#{top_r:02x}{top_g:02x}{top_b:02x}"
+            bg = f"#{bot_r:02x}{bot_g:02x}{bot_b:02x}"
+            parts.append(f"[{fg} on {bg}]\u2580[/]")
+        return "".join(parts)
+    except Exception:
+        return ""
+
+
 class ImagePreview(Widget):
     """Renders an image in the terminal using half-block characters."""
 
@@ -62,12 +107,13 @@ class ImagePreview(Widget):
         self._loading = False
         self._rendered = self._render_pil(img, name)
         self.image_path = ""
-        self.refresh()
+        self.refresh(layout=True)
 
     def watch_image_path(self, new_path: str) -> None:
         if not new_path:
-            if not self._pil_image:
-                self._rendered = None
+            self._pil_image = None
+            self._rendered = None
+            self.refresh()
             return
         if new_path == self._last_path:
             return
@@ -85,7 +131,7 @@ class ImagePreview(Widget):
             if self._last_path == path:
                 self._rendered = rendered
                 self._loading = False
-                self.refresh()
+                self.refresh(layout=True)
         except Exception as e:
             self._rendered = Text(f"  Cannot preview: {e}", style="red")
             self._loading = False
@@ -151,6 +197,7 @@ class ImagePreview(Widget):
         text.append(f"  {orig_w}x{orig_h}  {file_size / 1024:.0f}KB\n", style="dim")
 
         target_w, target_h = self._calc_target(orig_w, orig_h)
+        # LANCZOS for downscaling — best quality for shrinking photos to terminal size
         img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
         _render_half_blocks(img, text, target_w, target_h)
 

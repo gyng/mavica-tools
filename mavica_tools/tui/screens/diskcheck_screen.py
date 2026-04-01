@@ -12,19 +12,11 @@ from textual.worker import get_current_worker
 
 from mavica_tools.multipass import TOTAL_SECTORS
 from mavica_tools.tui.widgets.defrag_map import DefragMap
+from mavica_tools.tui.widgets.drive_input import DriveInput
 
 
 class _StopRequested(Exception):
     pass
-
-
-def _default_floppy_device() -> str:
-    system = platform.system()
-    if system == "Windows":
-        return r"\\.\A:"
-    elif system == "Darwin":
-        return "/dev/disk2"
-    return "/dev/fd0"
 
 
 class DiskCheckScreen(Screen):
@@ -50,6 +42,7 @@ class DiskCheckScreen(Screen):
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("f", "full_check", "Full Check"),
         Binding("q", "quick_check", "Quick Check"),
+        Binding("s", "stop_check", "Stop"),
     ]
 
     _stop_requested: bool = False
@@ -70,10 +63,13 @@ class DiskCheckScreen(Screen):
                 "[bold #ffaa00]Disk Checker[/]  [dim]Test if a floppy is safe for camera use[/]\n",
                 id="title-bar",
             )
-            with Horizontal(classes="input-row"):
-                yield Static("  [bold]Device[/] ", classes="row-label")
-                yield Input(value=_default_floppy_device(), placeholder="Device path", id="device-path")
-                yield Button("Browse", id="btn-browse-device")
+            yield DriveInput(
+                label="Device",
+                default="auto",
+                show_mounts=False,
+                autodetect_on_mount=False,
+                id="drive-input",
+            )
             with Horizontal(classes="button-row", id="check-buttons"):
                 yield Button("Full (f)", variant="success", id="btn-full")
                 yield Button("Quick (q)", variant="warning", id="btn-quick")
@@ -89,9 +85,7 @@ class DiskCheckScreen(Screen):
         yield Footer()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "btn-browse-device":
-            self._browse_device()
-        elif event.button.id == "btn-full":
+        if event.button.id == "btn-full":
             self._start_check(quick=False, write=False)
         elif event.button.id == "btn-quick":
             self._start_check(quick=True, write=False)
@@ -111,65 +105,14 @@ class DiskCheckScreen(Screen):
         if not btn.disabled:
             self._start_check(quick=True, write=False)
 
-    def _browse_device(self) -> None:
-        """Show detected floppy drives for selection."""
-        from textual.screen import ModalScreen
-        from textual.widgets import Static, OptionList
-        from textual.widgets.option_list import Option
-        from textual.containers import Vertical
-        from mavica_tools.detect import detect_floppy_drives
-
-        drives = detect_floppy_drives()
-
-        class DrivePickerScreen(ModalScreen[str]):
-            DEFAULT_CSS = """
-            DrivePickerScreen {
-                align: center middle;
-            }
-            #drive-dialog {
-                width: 50;
-                height: auto;
-                max-height: 16;
-                border: thick #33ff33;
-                background: #0a0a0a;
-                padding: 1 2;
-            }
-            #drive-dialog OptionList {
-                height: auto;
-                max-height: 10;
-            }
-            """
-            BINDINGS = [("escape", "cancel", "Cancel")]
-
-            def compose(self):
-                with Vertical(id="drive-dialog"):
-                    yield Static("[bold #ffaa00]Select Drive[/]\n")
-                    options = []
-                    for d in drives:
-                        size = f" ({d.size_bytes:,} bytes)" if d.size_bytes else ""
-                        options.append(Option(
-                            f"[bold]{d.device}[/]  [dim]{d.label}{size}[/]",
-                            id=d.device,
-                        ))
-                    if not options:
-                        options.append(Option("[dim]No floppy drives detected[/]", disabled=True))
-                    yield OptionList(*options, id="drive-list")
-
-            def on_option_list_option_selected(self, event):
-                if event.option.id:
-                    self.dismiss(event.option.id)
-
-            def action_cancel(self):
-                self.dismiss("")
-
-        def on_result(device: str) -> None:
-            if device:
-                self.query_one("#device-path", Input).value = device
-
-        self.app.push_screen(DrivePickerScreen(), on_result)
+    def action_stop_check(self) -> None:
+        btn = self.query_one("#btn-stop", Button)
+        if not btn.disabled:
+            self._stop_requested = True
+            btn.disabled = True
 
     def _start_check(self, quick: bool, write: bool) -> None:
-        device = self.query_one("#device-path", Input).value.strip()
+        device = self.query_one("#drive-input", DriveInput).value
         if not device:
             self.notify("Enter a device path", severity="warning")
             return
@@ -183,7 +126,7 @@ class DiskCheckScreen(Screen):
     def _confirm_write(self) -> None:
         """Show write test warning before starting."""
         log = self.query_one("#log", RichLog)
-        device = self.query_one("#device-path", Input).value.strip()
+        device = self.query_one("#drive-input", DriveInput).value
         if not device:
             self.notify("Enter a device path", severity="warning")
             return
@@ -242,7 +185,7 @@ class DiskCheckScreen(Screen):
                 on_sector=on_sector,
                 on_metadata_ready=on_metadata_ready,
             )
-        except _StopRequested:
+        except (_StopRequested, asyncio.CancelledError):
             log.write("[yellow]Cancelled.[/]")
             self._reset_buttons()
             return
@@ -301,6 +244,7 @@ class DiskCheckScreen(Screen):
         sectors_read = [0]
         progress.update(total=TOTAL_SECTORS, progress=0)
         pending_result = [None]  # (idx, state) waiting to be flushed
+        fat_bad_sectors: set[int] = set()  # sectors marked bad in FAT
 
         def on_sector(idx, state):
             if self._stop_requested or worker.is_cancelled:
@@ -313,7 +257,13 @@ class DiskCheckScreen(Screen):
                     pending_result[0] = None
                 self.app.call_from_thread(defrag.update_sector, idx, state)
             else:
-                # Defer good/bad — will be flushed when next "reading" arrives
+                # Distinguish FAT-marked-bad vs actual read results
+                if idx in fat_bad_sectors:
+                    if state == "bad":
+                        state = "marked_bad"  # confirmed bad
+                    elif state == "good":
+                        state = "marked"  # marked but actually readable
+                # Defer — will be flushed when next "reading" arrives
                 pending_result[0] = (idx, state)
             sectors_read[0] += 1
             if sectors_read[0] % 50 == 0:
@@ -321,13 +271,20 @@ class DiskCheckScreen(Screen):
 
         def on_metadata_ready(data_bytes):
             try:
-                from mavica_tools.fat12 import file_sector_map_from_data
+                from mavica_tools.fat12 import file_sector_map_from_data, bad_sectors_from_fat
                 boundaries = file_sector_map_from_data(data_bytes)
                 if boundaries:
                     self.app.call_from_thread(defrag.set_file_boundaries, boundaries)
                     self.app.call_from_thread(
                         log.write,
                         f"  [dim]FAT12: {len(boundaries)} file(s) on disk[/]",
+                    )
+                marked = bad_sectors_from_fat(data_bytes)
+                if marked:
+                    fat_bad_sectors.update(marked)
+                    self.app.call_from_thread(
+                        log.write,
+                        f"  [dim]FAT12: {len(marked)} sector(s) marked bad in FAT[/]",
                     )
             except Exception:
                 pass
@@ -346,7 +303,7 @@ class DiskCheckScreen(Screen):
                     on_metadata_ready=on_metadata_ready if not write else None,
                     quick=quick,
                 )
-        except _StopRequested:
+        except (_StopRequested, asyncio.CancelledError):
             log.write("[yellow]Cancelled.[/]")
             self._reset_buttons()
             return
@@ -407,9 +364,18 @@ class DiskCheckScreen(Screen):
             )
 
         # Stats
-        good = result.tested_sectors - len(result.bad_sectors)
+        defrag = self.query_one("#defrag-map", DefragMap)
+        marked = defrag._cells.count("marked")
+        marked_bad = defrag._cells.count("marked_bad")
+        actual_bad = len(result.bad_sectors)
+        good = result.tested_sectors - actual_bad
         log.write(f"\n  Tested: {result.tested_sectors}/{result.total_sectors} sectors")
-        log.write(f"  [green]Good: {good}[/]  [red]Bad: {len(result.bad_sectors)}[/]")
+        parts = f"[green]Good: {good}[/]  [red]Bad: {actual_bad}[/]"
+        if marked:
+            parts += f"  [#ff8800]Marked OK: {marked}[/]"
+        if marked_bad:
+            parts += f"  [red]Marked+Bad: {marked_bad}[/]"
+        log.write(f"  {parts}")
         if result.elapsed_seconds > 0:
             elapsed = result.elapsed_seconds
             bytes_read = result.tested_sectors * 512

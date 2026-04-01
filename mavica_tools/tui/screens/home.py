@@ -1,4 +1,4 @@
-"""Home screen — organized around 3 major use cases."""
+"""Home screen — organized by user workflow priority."""
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -7,57 +7,47 @@ from textual.widgets import Static, Header, Footer, OptionList
 from textual.widgets.option_list import Option
 
 
-# Three use cases with their tools
-USE_CASES = [
-    # Use case 1: Regular use — get photos off floppy, tag, export
+# Organized by frequency of use and workflow order.
+# Primary: the main import→tag→export pipeline (what most users do every time)
+# Recovery: for when things go wrong (less frequent but critical)
+# Disk: hardware-level tools (least frequent)
+SECTIONS = [
     {
-        "header": "Import & Tag Photos",
-        "desc": "Get photos off your Mavica floppy, add metadata, and export",
+        "header": "Photos",
         "tools": [
-            ("1", "import_workflow", "Import from Floppy", "Read floppy > tag > organize > export"),
-            ("f", "fat12", "Browse Floppy Files", "View and extract files with original Mavica names"),
-            ("s", "stamp", "Add Photo Info", "Add camera model, date, lens data to EXIF"),
-            ("g", "gps", "Add GPS Location", "Match photos to a GPS track file"),
-            ("e", "export", "Export & Share", "Organize, contact sheets, watermarks, resize"),
-            ("4", "thumb411", ".411 Thumbnails", "View and convert Mavica .411 thumbnail files"),
+            ("i", "import_workflow", "Import from Floppy", "Copy photos off a floppy disk"),
+            ("s", "stamp", "Tag Photos", "Add camera model, date, and EXIF tags"),
+            ("g", "gps", "Add GPS Location", "Match photos to a GPX track file"),
+            ("e", "export", "Export & Share", "Organize, contact sheets, resize"),
+            ("t", "thumb411", ".411 Thumbnails", "View and convert Mavica camera thumbnails"),
         ],
     },
-    # Use case 2: Recovery — damaged disk, corrupt photos
     {
-        "header": "Repair & Recovery",
-        "desc": "Recover photos from damaged or unreadable floppies",
+        "header": "Disk",
         "tools": [
-            ("r", "recovery_workflow", "Guided Recovery", "Step by step: image > extract > check > repair"),
-            ("m", "multipass", "Multi-Pass Read", "Read floppy multiple times, merge best sectors"),
-            ("c", "carve", "Carve from Raw", "Extract JPEGs directly from raw disk data"),
-            ("k", "check", "Check for Damage", "Scan JPEGs for corruption"),
-            ("p", "repair", "Repair Images", "Salvage pixels from corrupt files"),
+            ("d", "diskcheck", "Test Disk", "Check if a floppy is safe before using it"),
+            ("f", "format", "Format Disk", "Prepare a floppy for Mavica use"),
         ],
     },
-    # Use case 3: Debugging — which hardware is broken?
     {
-        "header": "Diagnose Problems",
-        "desc": "Figure out if the problem is the camera, disk, or drive",
+        "header": "Recovery",
         "tools": [
-            ("x", "diskcheck", "Disk Checker", "Test if a floppy is safe before using it"),
-            ("t", "troubleshoot", "Troubleshooting Wizard", "Guided Q&A to find the problem"),
-            ("w", "swaptest", "Camera Swap Test", "Test camera+disk combos to isolate the fault"),
-            ("d", "detect", "Detect Floppy Drives", "Auto-detect available floppy drives"),
-            ("h", "history", "Disk Health History", "Track sector health over time"),
+            ("m", "multipass", "Image Disk", "Read a damaged floppy multiple times, keep best data"),
+            ("b", "fat12", "Browse Image", "View files in a disk image with original Mavica names"),
+            ("c", "carve", "Recover Image", "Scan raw disk data for recoverable photos"),
+            ("k", "check", "Check Photos", "Scan photos for corruption or damage"),
+            ("r", "repair", "Repair Photos", "Recover pixels from damaged photo files"),
+            (None, "flux", "Flux Recovery", "Greaseweazle / KryoFlux raw flux capture"),
         ],
     },
 ]
 
-# Utility tools (less prominent)
-UTILITY_TOOLS = [
-    ("8", "format", "Format Floppy", "Create Mavica-compatible FAT12 format"),
-    ("9", "report", "Recovery Report", "Generate HTML summary with thumbnails"),
-    ("7", "recover", "One-Click Recover", "Full pipeline in one command"),
-]
+# Collect all shortcut keys for bindings
+_ALL_TOOLS = [(t[0], t[1]) for s in SECTIONS for t in s["tools"] if t[0] is not None]
 
 
 class HomeScreen(Screen):
-    """Landing screen organized by use case."""
+    """Landing screen — organized by workflow priority."""
 
     DEFAULT_CSS = """
     HomeScreen {
@@ -69,80 +59,50 @@ class HomeScreen(Screen):
     """
 
     BINDINGS = [
-        # Import & Tag
-        Binding("1", "tool('import_workflow')", show=False),
-        Binding("f", "tool('fat12')", show=False),
-        Binding("s", "tool('stamp')", show=False),
-        Binding("g", "tool('gps')", show=False),
-        Binding("e", "tool('export')", show=False),
-        Binding("4", "tool('thumb411')", show=False),
-        # Recovery
-        Binding("r", "tool('recovery_workflow')", show=False),
-        Binding("m", "tool('multipass')", show=False),
-        Binding("c", "tool('carve')", show=False),
-        Binding("k", "tool('check')", show=False),
-        Binding("p", "tool('repair')", show=False),
-        # Diagnostic
-        Binding("x", "tool('diskcheck')", show=False),
-        Binding("t", "tool('troubleshoot')", show=False),
-        Binding("w", "tool('swaptest')", show=False),
-        Binding("d", "tool('detect')", show=False),
-        # Utility
-        Binding("7", "tool('recover')", show=False),
-        Binding("8", "tool('format')", show=False),
-        Binding("9", "tool('report')", show=False),
+        Binding(key, f"tool('{screen_id}')", show=False)
+        for key, screen_id in _ALL_TOOLS
     ]
 
+    _NAME_WIDTH = 20
+
     def compose(self) -> ComposeResult:
+        from mavica_tools.fun import random_trivia
         yield Header()
         yield Static(
-            "[bold #33ff33]mavica-tools[/] — Sony Mavica Floppy Toolkit\n",
+            f"[bold #33ff33]mavica-tools[/] — Sony Mavica Floppy Toolkit"
+            f"    [dim italic]{random_trivia()}[/]\n",
             id="title-bar",
         )
-        from mavica_tools.fun import random_trivia
-        yield Static(f"  [dim italic]{random_trivia()}[/]\n")
 
         options = []
-
-        for uc in USE_CASES:
+        for section in SECTIONS:
             options.append(Option(
-                f"[bold #33ff33]--- {uc['header']} ---[/]\n"
-                f"     [dim]{uc['desc']}[/]",
+                f"[bold #33ff33]  {section['header']}[/]",
                 disabled=True,
             ))
-            for tool in uc["tools"]:
-                options.append(self._make_option(tool))
-
-        options.append(Option("[dim]--- Other Tools ---[/]", disabled=True))
-        for tool in UTILITY_TOOLS:
-            options.append(self._make_option(tool, dim=True))
+            for tool in section["tools"]:
+                key, screen_id, name, desc = tool
+                padded = name.ljust(self._NAME_WIDTH)
+                if key is None:
+                    options.append(Option(
+                        f"  [dim]·  {padded}  {desc}  (not implemented)[/]",
+                        disabled=True,
+                    ))
+                else:
+                    options.append(Option(
+                        f"  [bold #ffaa00]{key}[/]  [bold]{padded}[/]  [dim]{desc}[/]",
+                        id=screen_id,
+                    ))
 
         yield OptionList(*options, id="tool-list")
         yield Static(
-            "\n  [dim]? help  |  q quit  |  Windows / macOS / Linux[/]",
+            "  [dim]? help  |  q quit[/]",
         )
         yield Footer()
 
-    # Longest tool name across all sections (for alignment)
-    _NAME_WIDTH = 22
-
-    def _make_option(self, item, dim=False):
-        key, screen_id, name, desc = item
-        padded = name.ljust(self._NAME_WIDTH)
-        if dim:
-            return Option(
-                f"[dim][{key}]  {padded}  {desc}[/]",
-                id=screen_id,
-            )
-        return Option(
-            f"[bold #ffaa00][{key}][/]  [bold]{padded}[/]  [dim]{desc}[/]",
-            id=screen_id,
-        )
-
     def on_option_list_option_selected(self, event: OptionList.OptionSelected) -> None:
-        screen_id = event.option.id
-        if screen_id:
-            self._open_screen(screen_id)
+        if event.option.id:
+            self._open_screen(event.option.id)
 
     def action_tool(self, screen_id: str) -> None:
         self._open_screen(screen_id)
@@ -151,4 +111,4 @@ class HomeScreen(Screen):
         if screen_id in self.app.SCREENS:
             self.app.push_screen(screen_id)
         else:
-            self.app.notify(f"{screen_id} screen not yet implemented", severity="warning")
+            self.app.notify(f"{screen_id}: not yet implemented", severity="warning")

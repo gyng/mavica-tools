@@ -79,17 +79,49 @@ def create_boot_sector(volume_label: str = "MAVICA") -> bytes:
     return bytes(boot)
 
 
-def create_fat() -> bytes:
-    """Create an empty FAT12 table (9 sectors)."""
+def _set_fat12_entry(fat: bytearray, index: int, value: int) -> None:
+    """Set a FAT12 entry. FAT12 packs two 12-bit entries into 3 bytes."""
+    byte_offset = (index * 3) // 2
+    if index % 2 == 0:
+        # Even entry: low 8 bits in byte[n], low 4 bits of byte[n+1]
+        fat[byte_offset] = value & 0xFF
+        fat[byte_offset + 1] = (fat[byte_offset + 1] & 0xF0) | ((value >> 8) & 0x0F)
+    else:
+        # Odd entry: high 4 bits of byte[n], all 8 bits of byte[n+1]
+        fat[byte_offset] = (fat[byte_offset] & 0x0F) | ((value & 0x0F) << 4)
+        fat[byte_offset + 1] = (value >> 4) & 0xFF
+
+
+# Data area starts at sector 33 (boot=1 + FAT1=9 + FAT2=9 + rootdir=14)
+DATA_START_SECTOR = 33
+
+# FAT12 bad cluster marker
+BAD_CLUSTER = 0xFF7
+
+
+def create_fat(bad_sectors: list[int] | None = None) -> bytes:
+    """Create a FAT12 table (9 sectors), marking bad sectors if provided.
+
+    bad_sectors is a list of absolute sector indices (0-2879).
+    Only sectors in the data area (>=33) can be marked bad.
+    """
     fat = bytearray(SECTORS_PER_FAT * SECTOR_SIZE)
 
     # First two entries are reserved
     # Entry 0: media descriptor
     # Entry 1: end-of-chain marker
-    # FAT12: entries 0 and 1 packed into first 3 bytes
     fat[0] = MEDIA_DESCRIPTOR
     fat[1] = 0xFF
     fat[2] = 0xFF
+
+    # Mark bad sectors in the FAT
+    if bad_sectors:
+        for sector in bad_sectors:
+            if sector >= DATA_START_SECTOR:
+                # Cluster number = sector - DATA_START_SECTOR + 2
+                # (clusters 0 and 1 are reserved in FAT12)
+                cluster = sector - DATA_START_SECTOR + 2
+                _set_fat12_entry(fat, cluster, BAD_CLUSTER)
 
     return bytes(fat)
 
@@ -100,8 +132,13 @@ def create_root_directory() -> bytes:
     return b"\x00" * root_dir_size
 
 
-def create_disk_image(volume_label: str = "MAVICA") -> bytes:
-    """Create a complete 1.44MB FAT12 disk image."""
+def create_disk_image(volume_label: str = "MAVICA",
+                      bad_sectors: list[int] | None = None) -> bytes:
+    """Create a complete 1.44MB FAT12 disk image.
+
+    If bad_sectors is provided, those clusters are marked 0xFF7 in both FATs
+    so the camera will skip them.
+    """
     image = bytearray(DISK_SIZE)
 
     offset = 0
@@ -111,12 +148,12 @@ def create_disk_image(volume_label: str = "MAVICA") -> bytes:
     image[offset : offset + SECTOR_SIZE] = boot
     offset += SECTOR_SIZE
 
-    # FAT 1
-    fat = create_fat()
+    # FAT 1 (with bad sector mapping)
+    fat = create_fat(bad_sectors)
     image[offset : offset + len(fat)] = fat
     offset += len(fat)
 
-    # FAT 2 (copy)
+    # FAT 2 (identical copy)
     image[offset : offset + len(fat)] = fat
     offset += len(fat)
 
@@ -509,6 +546,9 @@ def format_floppy_full(device: str, volume_label: str = "MAVICA",
                        on_sector=None) -> tuple[bool, str, int]:
     """Full format: zero every sector, verify, then write FAT12.
 
+    Bad sectors found during verification are marked as 0xFF7 in the FAT
+    so the camera will skip them.
+
     Returns (success, message, bad_sector_count).
     on_sector(sector_index, state) callback for live progress.
     """
@@ -517,18 +557,18 @@ def format_floppy_full(device: str, volume_label: str = "MAVICA",
         return False, error, 0
 
     system = platform.system()
-    bad_sectors = 0
+    bad_list: list[int] = []
 
     # Phase 1: Write zeros to every sector and verify
     try:
         if system == "Windows":
-            ok, msg, bad_sectors = _full_format_win32(device, on_sector)
+            ok, msg, bad_list = _full_format_win32(device, on_sector)
             if not ok:
-                return False, msg, bad_sectors
+                return False, msg, len(bad_list)
         else:
-            ok, msg, bad_sectors = _full_format_unix(device, on_sector)
+            ok, msg, bad_list = _full_format_unix(device, on_sector)
             if not ok:
-                return False, msg, bad_sectors
+                return False, msg, len(bad_list)
     except PermissionError:
         if system == "Windows":
             return False, "Permission denied. Run as Administrator.", 0
@@ -541,19 +581,29 @@ def format_floppy_full(device: str, volume_label: str = "MAVICA",
             return False, "Disk is write-protected. Slide the write-protect tab on the floppy.", 0
         return False, f"Error: {e}", 0
 
-    # Phase 2: Write FAT12 filesystem structures
-    ok, msg = format_floppy(device, volume_label)
+    # Phase 2: Write FAT12 filesystem with bad sectors marked in FAT
+    ok, msg = format_floppy(device, volume_label, bad_sectors=bad_list or None)
     if not ok:
-        return False, msg, bad_sectors
+        return False, msg, len(bad_list)
 
-    if bad_sectors:
-        return True, f"Formatted with {bad_sectors} bad sector(s)", bad_sectors
-    return True, "Formatted successfully (all sectors verified)", bad_sectors
+    if bad_list:
+        # Count how many bad sectors are in the data area (mappable)
+        data_bad = [s for s in bad_list if s >= DATA_START_SECTOR]
+        meta_bad = [s for s in bad_list if s < DATA_START_SECTOR]
+        return True, (
+            f"Formatted with {len(bad_list)} bad sector(s) "
+            f"({len(data_bad)} marked in FAT"
+            f"{f', {len(meta_bad)} in metadata area' if meta_bad else ''})"
+        ), len(bad_list)
+    return True, "Formatted successfully (all sectors verified)", 0
 
 
 def _full_format_unix(device, on_sector=None):
-    """Full format on Linux/macOS — write zeros, read back, verify."""
-    bad = 0
+    """Full format on Linux/macOS — write zeros, read back, verify.
+
+    Returns (success, message, list_of_bad_sector_indices).
+    """
+    bad_list: list[int] = []
     zero_sector = b"\x00" * SECTOR_SIZE
 
     with open(device, "r+b") as dev:
@@ -567,7 +617,7 @@ def _full_format_unix(device, on_sector=None):
                 dev.seek(offset)
                 dev.write(zero_sector)
             except OSError:
-                bad += 1
+                bad_list.append(s)
                 if on_sector:
                     on_sector(s, "bad")
                 continue
@@ -580,15 +630,15 @@ def _full_format_unix(device, on_sector=None):
                     if on_sector:
                         on_sector(s, "good")
                 else:
-                    bad += 1
+                    bad_list.append(s)
                     if on_sector:
                         on_sector(s, "bad")
             except OSError:
-                bad += 1
+                bad_list.append(s)
                 if on_sector:
                     on_sector(s, "bad")
 
-    return True, "", bad
+    return True, "", bad_list
 
 
 def _full_format_win32(device, on_sector=None):
@@ -621,7 +671,7 @@ def _full_format_win32(device, on_sector=None):
             return False, "Drive not ready. Is a disk inserted?", 0
         return False, f"Cannot open device (Win32 error {err})", 0
 
-    bad = 0
+    bad_list: list[int] = []
     try:
         import time as _time
         dummy = wt.DWORD(0)
@@ -646,7 +696,7 @@ def _full_format_win32(device, on_sector=None):
                 None, 0, None, 0, ctypes.byref(dummy), None,
             )
             if not locked:
-                return False, "Cannot lock volume. Close Explorer and any programs using the disk, then retry.", 0
+                return False, "Cannot lock volume. Close Explorer and any programs using the disk, then retry.", []
 
         kernel32.DeviceIoControl(
             handle, FSCTL_DISMOUNT_VOLUME,
@@ -670,7 +720,7 @@ def _full_format_win32(device, on_sector=None):
             written = wt.DWORD(0)
             ok = kernel32.WriteFile(handle, zero_buf, SECTOR_SIZE, ctypes.byref(written), None)
             if not ok or written.value != SECTOR_SIZE:
-                bad += 1
+                bad_list.append(s)
                 if on_sector:
                     on_sector(s, "bad")
                 continue
@@ -686,7 +736,7 @@ def _full_format_win32(device, on_sector=None):
                 if on_sector:
                     on_sector(s, "good")
             else:
-                bad += 1
+                bad_list.append(s)
                 if on_sector:
                     on_sector(s, "bad")
 
@@ -697,11 +747,14 @@ def _full_format_win32(device, on_sector=None):
     finally:
         kernel32.CloseHandle(handle)
 
-    return True, "", bad
+    return True, "", bad_list
 
 
-def format_floppy(device: str, volume_label: str = "MAVICA") -> tuple[bool, str]:
+def format_floppy(device: str, volume_label: str = "MAVICA",
+                   bad_sectors: list[int] | None = None) -> tuple[bool, str]:
     """Write a Mavica-compatible FAT12 filesystem to a floppy device.
+
+    If bad_sectors is provided, those clusters are marked 0xFF7 in the FAT.
 
     Returns (success, message).
     """
@@ -710,7 +763,7 @@ def format_floppy(device: str, volume_label: str = "MAVICA") -> tuple[bool, str]
     if error:
         return False, error
 
-    image = create_disk_image(volume_label)
+    image = create_disk_image(volume_label, bad_sectors=bad_sectors)
     system = platform.system()
 
     try:

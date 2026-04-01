@@ -6,7 +6,7 @@ import glob as globmod
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog, ProgressBar
+from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog, ProgressBar, Switch
 from textual.containers import Horizontal
 from textual.worker import get_current_worker
 
@@ -43,6 +43,10 @@ class RepairScreen(Screen):
                 id="output-dir",
             )
             yield Button("Repair", variant="success", id="btn-repair")
+        with Horizontal(classes="input-row"):
+            yield Static("  ", classes="row-label")
+            yield Switch(value=False, id="use-411")
+            yield Static("  Use .411 thumbnails to fill missing areas", id="label-411")
         yield ProgressBar(total=100, show_percentage=True, show_eta=True, id="progress")
         yield DataTable(id="results-table")
         yield Static(
@@ -164,12 +168,15 @@ class RepairScreen(Screen):
             base, _ = os.path.splitext(name)
             out_path = os.path.join(output_dir, base + "_repaired.png")
 
-            ok, result_path, msg = repair_jpeg(filepath, out_path)
+            use_411 = self.query_one("#use-411", Switch).value
+            ok, result_path, msg = repair_jpeg(filepath, out_path, use_411=use_411)
 
             if ok:
                 success += 1
                 strategy = "Pillow"
-                if "truncated at" in msg:
+                if ".411" in msg:
+                    strategy = ".411 assist"
+                elif "truncated at" in msg:
                     strategy = "Sector trim"
                 elif "trimmed" in msg:
                     strategy = "Tail trim"

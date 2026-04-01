@@ -53,7 +53,7 @@ class TestQuickImport:
         # Verify EXIF was written
         img = Image.open(os.path.join(out, "MVC-001.JPG"))
         exif = img.getexif()
-        assert exif.get(0x0110) == "Sony Mavica MVC-FD7"  # Model
+        assert exif.get(0x0110) == "SONY MAVICA MVC-FD7"  # Model
 
     def test_import_with_contact_sheet(self, tmp_dir):
         src = os.path.join(tmp_dir, "floppy")
