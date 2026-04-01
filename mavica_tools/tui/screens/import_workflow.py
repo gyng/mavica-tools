@@ -124,7 +124,6 @@ class ImportWorkflowScreen(Screen):
             with Horizontal(classes="button-row"):
                 yield Button("Stamp Photos", variant="warning", id="btn-stamp", disabled=True)
                 yield Button("Add GPS Track", variant="default", id="btn-gps", disabled=True)
-                yield Button("Contact Sheet", variant="default", id="btn-contact", disabled=True)
 
             yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
@@ -222,8 +221,6 @@ class ImportWorkflowScreen(Screen):
             screen = self.app.SCREENS["gps"]()
             screen._prefill_photos = self.query_one("#output-dir", Input).value.strip()
             self.app.push_screen(screen)
-        elif event.button.id == "btn-contact":
-            self._make_contact_sheet()
 
     # ── Actions / keybindings ─────────────────────────────────────
 
@@ -483,7 +480,6 @@ class ImportWorkflowScreen(Screen):
         self.query_one("#btn-next-disk", Button).disabled = False
         self.query_one("#btn-stamp", Button).disabled = False
         self.query_one("#btn-gps", Button).disabled = False
-        self.query_one("#btn-contact", Button).disabled = False
 
         self._reset_buttons()
 
@@ -498,25 +494,6 @@ class ImportWorkflowScreen(Screen):
         else:
             screen._prefill_path = self.query_one("#output-dir", Input).value.strip()
         self.app.push_screen(screen)
-
-    def _make_contact_sheet(self) -> None:
-        if not self._imported_files:
-            return
-
-        output_dir = self.query_one("#output-dir", Input).value.strip() or "photos"
-        log = self.query_one("#log", RichLog)
-
-        from mavica_tools.utils import make_contact_sheet
-
-        path = os.path.join(output_dir, "contact_sheet.jpg")
-        make_contact_sheet(
-            self._imported_files,
-            path,
-            columns=4,
-            title=f"Mavica Photos \u2014 Disk {self._disk_count}",
-        )
-        log.write(f"[green]Contact sheet: {path}[/]")
-        self.query_one("#preview", ImagePreview).image_path = path
 
     def _next_disk(self) -> None:
         """Reset for the next floppy disk with eject animation."""
@@ -545,7 +522,6 @@ class ImportWorkflowScreen(Screen):
             "#btn-next-disk",
             "#btn-stamp",
             "#btn-gps",
-            "#btn-contact",
         ):
             self.query_one(btn_id, Button).disabled = True
 

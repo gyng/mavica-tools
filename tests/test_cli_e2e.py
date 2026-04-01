@@ -160,18 +160,6 @@ class TestImportCLI:
         exif = img.getexif()
         assert exif.get(0x0110) == "SONY MAVICA MVC-FD7"
 
-    def test_import_with_contact_sheet(self, tmp_dir):
-        src = os.path.join(tmp_dir, "floppy")
-        os.makedirs(src)
-        for i in range(4):
-            make_jpeg(src, f"MVC-{i:03d}.JPG")
-        out = os.path.join(tmp_dir, "photos")
-
-        r = run(["import", src, "-o", out, "--contact-sheet"])
-        assert r.returncode == 0
-        assert "contact" in r.stdout.lower()
-        assert os.path.exists(os.path.join(out, "contact_sheet.jpg"))
-
     def test_import_empty_dir(self, tmp_dir):
         src = os.path.join(tmp_dir, "empty")
         os.makedirs(src)
@@ -353,15 +341,6 @@ class TestMultipassCLI:
         assert "health" in r.stdout.lower() or "Sector" in r.stdout
 
 
-# ─── mavica history ──────────────────────────────────────────────────────
-
-
-class TestHistoryCLI:
-    def test_history_view_empty(self, tmp_dir):
-        r = run(["history", "view"], env={**os.environ, "HOME": tmp_dir})
-        assert r.returncode == 0
-
-
 # ─── Full pipeline: import → check → stamp ───────────────────────────────
 
 
@@ -377,14 +356,14 @@ class TestFullPipeline:
 
         # 2. Import with tagging
         photos = os.path.join(tmp_dir, "photos")
-        r = run(["import", floppy, "-o", photos, "-m", "fd7", "--contact-sheet"])
+        r = run(["import", floppy, "-o", photos, "-m", "fd7"])
         assert r.returncode == 0
         assert "5 photo(s) imported" in r.stdout
 
-        # 3. Check imported photos (5 photos + contact sheet = 6 files)
+        # 3. Check imported photos
         r = run(["check", photos, "-v"])
         assert r.returncode == 0
-        assert "6 files checked" in r.stdout
+        assert "5 files checked" in r.stdout
 
         # 4. Verify EXIF on a photo
         img = Image.open(os.path.join(photos, "MVC-001.JPG"))

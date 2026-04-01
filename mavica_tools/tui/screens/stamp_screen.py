@@ -964,7 +964,7 @@ class StampScreen(Screen):
         log.write(f"\n[bold]Results:[/] {summary}")
         if success:
             log.write(
-                "[bold #33ff33]Next:[/] Use [bold]Export & Share[/] to organize and create contact sheets."
+                "[bold #33ff33]Next:[/] Use [bold]Add GPS Location[/] to geotag photos with a GPX track."
             )
         self._reset_button()
 

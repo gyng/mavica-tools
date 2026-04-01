@@ -28,8 +28,6 @@ class TestModuleImports:
         "mavica_tools.format",
         "mavica_tools.stamp",
         "mavica_tools.detect",
-        "mavica_tools.history",
-        "mavica_tools.report",
         "mavica_tools.gps",
         "mavica_tools.importcmd",
         "mavica_tools.fun",
@@ -119,8 +117,6 @@ class TestCLIHelp:
             "format",
             "stamp",
             "detect",
-            "history",
-            "report",
             "gps",
             "tui",
         ]:

@@ -185,7 +185,7 @@ class TestEndToEndRecovery:
         assert len(carved) >= 1
 
     def test_quick_import_full_pipeline(self, tmp_dir):
-        """Quick import from directory → tag → contact sheet."""
+        """Quick import from directory → tag."""
         src = os.path.join(tmp_dir, "floppy")
         os.makedirs(src)
 
@@ -195,12 +195,10 @@ class TestEndToEndRecovery:
             img.save(os.path.join(src, f"MVC-{i:03d}.JPG"), "JPEG")
 
         out = os.path.join(tmp_dir, "photos")
-        result = quick_import(src, out, model="fd7", contact_sheet=True)
+        result = quick_import(src, out, model="fd7")
 
         assert result["imported"] == 3
         assert result["tagged"] is True
-        assert result["contact_sheet"] is not None
-        assert os.path.exists(result["contact_sheet"])
 
         # Verify EXIF on an imported file
         img = Image.open(result["files"][0])

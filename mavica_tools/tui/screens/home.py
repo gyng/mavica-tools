@@ -7,7 +7,6 @@ from textual.widgets import Footer, Header, OptionList, Static
 from textual.widgets.option_list import Option
 
 # Organized by frequency of use and workflow order.
-# Organized by frequency of use and workflow order.
 # Primary: the main import→tag→GPS pipeline (what most users do every time)
 # Recovery: for when things go wrong (less frequent but critical)
 # Disk: hardware-level tools (least frequent)
@@ -15,30 +14,25 @@ SECTIONS = [
     {
         "header": "Photos",
         "tools": [
-            ("i", "import_workflow", "Import Floppy", "Copy photos off a floppy disk"),
-            ("s", "stamp", "Tag Photos", "Add camera model, date, and EXIF tags"),
-            ("g", "gps", "Add GPS Location", "Match photos to a GPX track file"),
-            ("t", "thumb411", ".411 Thumbnails", "View and convert Mavica camera thumbnails"),
+            ("1", "import_workflow", "Import Floppy", "Copy photos off a floppy disk"),
+            ("2", "stamp", "Tag Photos", "Add camera model, date, and EXIF tags"),
+            ("3", "gps", "Add GPS Location", "Match photos to a GPX track file"),
+            ("4", "thumb411", ".411 Thumbnails", "View and convert Mavica camera thumbnails"),
         ],
     },
     {
         "header": "Disk",
         "tools": [
-            ("d", "diskcheck", "Test Disk", "Check if a floppy is safe before using it"),
-            ("f", "format", "Format Disk", "Prepare a floppy for Mavica use"),
+            ("5", "diskcheck", "Test Disk", "Check if a floppy is safe before using it"),
+            ("6", "format", "Format Disk", "Prepare a floppy for Mavica use"),
         ],
     },
     {
         "header": "Recovery",
         "tools": [
-            (
-                "m",
-                "multipass",
-                "Image Disk",
-                "Read a damaged floppy multiple times, keep best data",
-            ),
-            ("b", "recover_image", "Recover Image", "Extract photos from a disk image (FAT12 + carve)"),
-            ("r", "repair", "Check & Repair", "Scan photos for damage, then fix what's broken"),
+            ("7", "multipass", "Image Disk", "Read a damaged floppy multiple times, keep best data"),
+            ("8", "recover_image", "Recover Image", "Extract photos from a disk image (FAT12 + carve)"),
+            ("9", "repair", "Check & Repair", "Scan photos for damage, then fix what's broken"),
             (None, "flux", "Flux Recovery", "Greaseweazle/KryoFlux raw flux capture"),
         ],
     },

@@ -1,11 +1,10 @@
 """Quick import command — photographer's one-liner.
 
-Copies photos from a mounted floppy or disk image, tags with camera info,
-and optionally creates a contact sheet. Designed for daily use.
+Copies photos from a mounted floppy or disk image and tags with camera info.
 
     mavica import /mnt/floppy -m fd7
-    mavica import E:\\ -m fd88 --contact-sheet
-    mavica import disk.img -m fd7 -o photos/ --contact-sheet
+    mavica import E:\\ -m fd88
+    mavica import disk.img -m fd7 -o photos/
 """
 
 import argparse
@@ -20,7 +19,6 @@ def quick_import(
     source: str,
     output_dir: str = "photos",
     model: str | None = None,
-    contact_sheet: bool = False,
 ) -> dict:
     """Import photos from a floppy source.
 
@@ -82,7 +80,7 @@ def quick_import(
             imported = carve_jpegs(source, output_dir)
     else:
         print(f"Don't know how to read: {source}", file=sys.stderr)
-        return {"imported": 0, "tagged": False, "contact_sheet": None}
+        return {"imported": 0, "tagged": False, "files": []}
 
     # Tag
     tagged = False
@@ -94,19 +92,9 @@ def quick_import(
                 stamp_jpeg(path, model=model, date="auto", overwrite=True)
         tagged = True
 
-    # Contact sheet
-    sheet_path = None
-    if contact_sheet and imported:
-        from mavica_tools.utils import make_contact_sheet
-
-        sheet_path = os.path.join(output_dir, "contact_sheet.jpg")
-        title = f"Mavica {model.upper()}" if model else "Mavica Photos"
-        make_contact_sheet(imported, sheet_path, columns=4, title=title)
-
     return {
         "imported": len(imported),
         "tagged": tagged,
-        "contact_sheet": sheet_path,
         "files": imported,
     }
 
@@ -124,11 +112,6 @@ def main():
     )
     parser.add_argument("-o", "--output", default="mavica_out/photos", help="Output directory")
     parser.add_argument("-m", "--model", help="Camera model (e.g., fd7, fd88)")
-    parser.add_argument(
-        "--contact-sheet",
-        action="store_true",
-        help="Generate a contact sheet grid",
-    )
     parser.add_argument(
         "--preview",
         action="store_true",
@@ -164,7 +147,6 @@ def main():
         source,
         output_dir=args.output,
         model=args.model,
-        contact_sheet=args.contact_sheet,
     )
 
     from mavica_tools.fun import random_trivia
@@ -172,13 +154,10 @@ def main():
     print(f"\n{result['imported']} photo(s) imported to {args.output}/")
     if result["tagged"]:
         print(f"  Tagged with camera: {args.model}")
-    if result["contact_sheet"]:
-        print(f"  Contact sheet: {result['contact_sheet']}")
 
     if result["imported"] == 0:
         print("\n  No photos found. Check the path and try again.")
     else:
-        # Show fun stats
         total_bytes = sum(os.path.getsize(f) for f in result["files"] if os.path.exists(f))
         from mavica_tools.fun import disk_stats_text
 
@@ -186,14 +165,10 @@ def main():
         print(f"\n  \033[2m{random_trivia()}\033[0m")
 
         if args.preview:
-            from mavica_tools.terminal_image import show_image, show_images
+            from mavica_tools.terminal_image import show_images
 
-            if result["contact_sheet"]:
-                print()
-                show_image(result["contact_sheet"], label=False)
-            else:
-                print()
-                show_images(result["files"], max_images=6)
+            print()
+            show_images(result["files"], max_images=6)
 
 
 if __name__ == "__main__":

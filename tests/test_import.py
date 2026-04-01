@@ -55,18 +55,6 @@ class TestQuickImport:
         exif = img.getexif()
         assert exif.get(0x0110) == "SONY MAVICA MVC-FD7"  # Model
 
-    def test_import_with_contact_sheet(self, tmp_dir):
-        src = os.path.join(tmp_dir, "floppy")
-        os.makedirs(src)
-        for i in range(4):
-            make_jpeg(src, f"MVC-{i:03d}.JPG")
-        out = os.path.join(tmp_dir, "photos")
-
-        result = quick_import(src, out, contact_sheet=True)
-        assert result["imported"] == 4
-        assert result["contact_sheet"] is not None
-        assert os.path.exists(result["contact_sheet"])
-
     def test_import_empty_directory(self, tmp_dir):
         src = os.path.join(tmp_dir, "empty")
         os.makedirs(src)
@@ -89,17 +77,16 @@ class TestQuickImport:
         assert len(files) == 2  # MVC-001.JPG + MVC-001_1.JPG
 
     def test_import_all_in_one(self, tmp_dir):
-        """Import + tag + contact sheet in one call."""
+        """Import + tag in one call."""
         src = os.path.join(tmp_dir, "floppy")
         os.makedirs(src)
         make_jpeg(src, "MVC-001.JPG")
         make_jpeg(src, "MVC-002.JPG")
         out = os.path.join(tmp_dir, "photos")
 
-        result = quick_import(src, out, model="fd88", contact_sheet=True)
+        result = quick_import(src, out, model="fd88")
         assert result["imported"] == 2
         assert result["tagged"] is True
-        assert result["contact_sheet"] is not None
 
 
 class TestImportAutoDetect:

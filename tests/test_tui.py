@@ -61,10 +61,10 @@ async def test_home_screen_has_all_tool_options():
 
 
 _KEY_SCREEN_MAP = [
-    ("i", ImportWorkflowScreen),
-    ("m", MultipassScreen),
-    ("b", RecoverImageScreen),
-    ("r", RepairScreen),
+    ("1", ImportWorkflowScreen),
+    ("7", MultipassScreen),
+    ("8", RecoverImageScreen),
+    ("9", RepairScreen),
 ]
 
 
@@ -152,7 +152,7 @@ async def test_escape_returns_to_previous_screen():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("r")
+        await pilot.press("9")
         await pilot.pause()
         assert isinstance(app.screen, RepairScreen)
         await pilot.press("escape")
@@ -166,7 +166,7 @@ async def test_escape_from_multiple_screens():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("b")
+        await pilot.press("8")
         await pilot.pause()
         assert isinstance(app.screen, RecoverImageScreen)
         await pilot.press("escape")
@@ -185,7 +185,7 @@ async def test_repair_screen_check_with_valid_path():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("r")
+        await pilot.press("9")
         await pilot.pause()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -211,7 +211,7 @@ async def test_repair_screen_empty_path_shows_notification():
     app = MavicaApp()
     async with app.run_test(size=(100, 32), notifications=True) as pilot:
         await pilot.pause()
-        await pilot.press("r")
+        await pilot.press("9")
         await pilot.pause()
 
         app.screen.action_run_check()
@@ -225,7 +225,7 @@ async def test_repair_screen_no_files_found():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("r")
+        await pilot.press("9")
         await pilot.pause()
 
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -248,23 +248,22 @@ async def test_repair_screen_no_files_found():
 
 @pytest.mark.asyncio
 async def test_key_binding_navigates_to_import():
-    """Pressing 'i' should navigate to ImportWorkflowScreen."""
+    """Pressing '1' should navigate to ImportWorkflowScreen."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("i")
+        await pilot.press("1")
         await pilot.pause()
         assert isinstance(app.screen, ImportWorkflowScreen)
 
 
-
 @pytest.mark.asyncio
 async def test_key_binding_navigates_to_gps():
-    """Pressing 'g' should navigate to GpsScreen."""
+    """Pressing '3' should navigate to GpsScreen."""
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("g")
+        await pilot.press("3")
         await pilot.pause()
         from mavica_tools.tui.screens.gps_screen import GpsScreen
 
@@ -282,7 +281,7 @@ async def test_home_key_binding_returns_home():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("r")
+        await pilot.press("9")
         await pilot.pause()
         assert isinstance(app.screen, RepairScreen)
         app.action_go_home()
@@ -309,7 +308,7 @@ async def test_screen_stack_depth():
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
         assert len(app.screen_stack) == 2
-        await pilot.press("i")
+        await pilot.press("1")
         await pilot.pause()
         assert len(app.screen_stack) == 3
 
@@ -320,7 +319,7 @@ async def test_multipass_screen_has_default_device_path():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("m")
+        await pilot.press("7")
         await pilot.pause()
         device_input = app.screen.query_one("#device-path", Input)
         assert len(device_input.value) > 0
@@ -332,7 +331,7 @@ async def test_recover_image_screen_has_output_dir_default():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("b")
+        await pilot.press("8")
         await pilot.pause()
         output_input = app.screen.query_one("#output-dir", Input)
         assert output_input.value == "mavica_out/recovered"
@@ -344,7 +343,7 @@ async def test_repair_screen_has_output_dir_default():
     app = MavicaApp()
     async with app.run_test(size=(100, 32)) as pilot:
         await pilot.pause()
-        await pilot.press("r")
+        await pilot.press("9")
         await pilot.pause()
         output_input = app.screen.query_one("#output-dir", Input)
         assert output_input.value == "mavica_out/repaired"

@@ -27,7 +27,7 @@ pip install "mavica-tools[gps]" # optional: GPS track merging
 **Import photos from a floppy:**
 
 ```bash
-mavica import /mnt/floppy -m fd7 --contact-sheet
+mavica import /mnt/floppy -m fd7
 mavica tui    # or use the interactive TUI
 ```
 
@@ -77,7 +77,7 @@ mavica tui
 ## CLI Quick Reference
 
 ```bash
-mavica import /mnt/floppy -m fd7          # copy photos, add EXIF, contact sheet
+mavica import /mnt/floppy -m fd7          # copy photos, add EXIF tags
 mavica recover device /dev/fd0 -n 5       # full recovery pipeline
 mavica multipass read /dev/fd0 -n 5       # multi-pass floppy image
 mavica check photos/                      # batch corruption scan
