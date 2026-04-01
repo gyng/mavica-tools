@@ -94,6 +94,8 @@ class RepairScreen(Screen):
             log.write(f"[dim]{len(self._prefill_files)} file(s) pre-loaded[/]")
             first_dir = os.path.dirname(self._prefill_files[0])
             self.query_one("#source-path", Input).value = first_dir
+        else:
+            self.call_later(self._apply_latest_import)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-check":
@@ -325,3 +327,34 @@ class RepairScreen(Screen):
         btn = self.query_one("#btn-repair", Button)
         btn.disabled = not self._bad_files
         btn.label = "Repair Bad Files"
+
+    # ── Auto-detect source ───────────────────────────────────────
+
+    def _apply_latest_import(self) -> None:
+        latest = self._find_latest_import()
+        if latest:
+            self.query_one("#source-path", Input).value = latest
+
+    def _find_latest_import(self) -> str | None:
+        """Find the most recent import_* dir with JPEGs in mavica_out/."""
+        out_dir = "mavica_out"
+        if not os.path.isdir(out_dir):
+            return None
+        candidates = []
+        for name in os.listdir(out_dir):
+            path = os.path.join(out_dir, name)
+            if os.path.isdir(path) and name.startswith("import_"):
+                jpegs = []
+                for ext in ("*.jpg", "*.JPG", "*.jpeg", "*.JPEG"):
+                    jpegs.extend(globmod.glob(os.path.join(path, ext)))
+                if jpegs:
+                    candidates.append((os.path.getmtime(path), path, len(jpegs)))
+        if not candidates:
+            return None
+        candidates.sort(reverse=True)
+        _, path, count = candidates[0]
+        self.notify(
+            f"Loaded {os.path.basename(path)} ({count} photo{'s' if count != 1 else ''})",
+            severity="information",
+        )
+        return path
