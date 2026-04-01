@@ -34,13 +34,10 @@ mavica-tools/
 │       ├── screens/
 │       │   ├── home.py           # Categorized tool menu (4 sections, keyboard shortcuts)
 │       │   ├── multipass.py      # Floppy imager with live sector map
-│       │   ├── carve.py          # JPEG extraction with image preview
+│       │   ├── recover_image_screen.py # Combined FAT12 browser + JPEG carver
 │       │   ├── check.py          # Corruption scanner with progress bar
 │       │   ├── repair.py         # Before/after image preview
 │       │   ├── swaptest.py       # Interactive test matrix
-│       │   ├── workflow.py       # Guided step-by-step recovery
-│       │   ├── fat12_screen.py   # FAT12 file browser
-│       │   ├── recover_screen.py # Batch recovery pipeline
 │       │   ├── stamp_screen.py   # EXIF metadata stamper
 │       │   ├── format_screen.py  # Floppy formatter (image + device)
 │       │   ├── export_screen.py # Photo export with contact sheets
@@ -127,8 +124,8 @@ MavicaApp (app.py)
 └── Screen navigation via push_screen/pop_screen
 
 Screen data flow (prefill attributes):
-  MultipassScreen._merged_path → CarveScreen._prefill_image
-  CarveScreen output_dir → CheckScreen._prefill_path
+  MultipassScreen._merged_path → RecoverImageScreen._prefill_image
+  RecoverImageScreen output_dir → CheckScreen._prefill_path
   CheckScreen._bad_files → RepairScreen._prefill_files
   CheckScreen._good_files → StampScreen._prefill_files
   WorkflowScreen: sequential step enabling
@@ -148,6 +145,14 @@ These patterns were established in the .411 viewer and should be replicated acro
 5. Main content area (`height: 1fr` — takes all remaining space)
 6. Log (2-3 rows, `border: none`)
 7. Footer (1 row, docked)
+
+**Planning with ASCII mockups**:
+When redesigning or creating a TUI screen, include a fixed-width ASCII mockup of the target layout in the plan **before writing code**. The mockup should:
+- Be exactly 80 columns wide (minimum) to verify nothing gets cut off
+- Show all 24 rows with annotations for each row's purpose and height
+- Include a row budget tallying fixed chrome vs `1fr` content area
+- Show realistic content (filenames, sizes, button labels) to catch overflow issues
+- Implement layout-only first (Phase 1: `compose()` + CSS, no workers), take a screenshot to verify, then add behavior (Phase 2)
 
 **Input/Output rows**:
 - Label + Input + buttons on same row: `In [path...] Browse Open`
@@ -408,6 +413,17 @@ All tests run without hardware. Synthetic disk images and JPEG data are created 
 - **Runtime**: Python 3.10+, Pillow>=9.0, piexif>=1.1.3 (GPS EXIF), Textual>=0.50
 - **Dev**: pytest>=7.0, pytest-asyncio>=0.23
 - **CI**: GitHub Actions (Linux/Windows/macOS × Python 3.11/3.12)
+
+### Screenshots
+
+README screenshots are generated from headless TUI sessions using Textual's `run_test` API.
+
+- **Script**: `scripts/generate_screenshots.py`
+- **Output**: `screenshots/*.svg` (16 screens)
+- **Run**: `uv run python scripts/generate_screenshots.py` (all) or `uv run python scripts/generate_screenshots.py home check` (specific)
+- **How it works**: For each screen, the script creates a headless `MavicaApp`, navigates to the screen, populates widgets with sample data via per-screen setup functions, then calls `app.save_screenshot()`.
+- **Adding a screenshot for a new screen**: Add an entry to the `_build_screen_list()` function and write a `setup_<name>()` function to populate the screen with representative sample data.
+- **Size**: Fixed at `(120, 36)` for consistent aspect ratio. Seeded `random` for deterministic trivia on home screen.
 
 ### Adding a New Tool
 

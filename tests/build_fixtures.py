@@ -127,24 +127,52 @@ def build_good_disk() -> bytearray:
 
 
 def build_bad_sectors_disk(good_disk: bytearray) -> bytearray:
-    """Build disk_bad_sectors.img — zero out 2 consecutive sectors mid-JPEG.
+    """Build disk_bad_sectors.img — simulate a damaged floppy.
 
-    check_jpeg_structure flags zero runs > 512 bytes, so we need at least
-    2 sectors (1024 bytes) of zeros to trigger detection.
+    Damage:
+      - MVC-006F.JPG: 8 consecutive sectors zeroed mid-file + marked bad in FAT
+      - MVC-002F.JPG: 4 consecutive sectors zeroed near the end
+    This produces visible corruption that check_jpeg_structure detects
+    (zero runs > 512 bytes) and bad sectors visible on the defrag map.
     """
     disk = bytearray(good_disk)
 
-    # MVC-006F.JPG is the 3rd JPEG written. Find its start by calculating:
-    # cluster after MVC-004F (11 sectors) + MVC-002F (68 sectors)
     jpeg_004_clusters = (len(_load_fixture("MVC-004F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
     jpeg_002_clusters = (len(_load_fixture("MVC-002F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
     jpeg_006_clusters = (len(_load_fixture("MVC-006F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
 
-    start_cluster_006 = 2 + jpeg_004_clusters + jpeg_002_clusters
-    # Zero out 2 consecutive sectors in the middle of MVC-006F.JPG
-    mid_cluster = start_cluster_006 + jpeg_006_clusters // 2
-    mid_offset = (DATA_START_SECTOR + (mid_cluster - 2)) * SECTOR_SIZE
-    disk[mid_offset : mid_offset + SECTOR_SIZE * 2] = b"\x00" * (SECTOR_SIZE * 2)
+    start_cluster_002 = 2 + jpeg_004_clusters
+    start_cluster_006 = start_cluster_002 + jpeg_002_clusters
+
+    # MVC-006F.JPG: zero out 8 sectors in the middle.
+    # FAT chain stays intact (file is extractable but has a hole).
+    # Also mark a few unallocated sectors as bad in FAT to test
+    # the 0xFF7 detection path separately.
+    mid_006 = start_cluster_006 + jpeg_006_clusters // 2
+    for c in range(mid_006, mid_006 + 8):
+        offset = (DATA_START_SECTOR + (c - 2)) * SECTOR_SIZE
+        disk[offset : offset + SECTOR_SIZE] = b"\x00" * SECTOR_SIZE
+
+    # Mark a few free clusters as bad in FAT (0xFF7) — simulates
+    # a disk that was scanned and had bad sectors recorded
+    next_free = 2 + jpeg_004_clusters + jpeg_002_clusters + jpeg_006_clusters
+    # Skip past .411 thumbnails
+    for _, _, thumb_data in [
+        ("MVC-006F", "411", _load_fixture("MVC-006F.411")),
+        ("MVC-004F", "411", _load_fixture("MVC-004F.411")),
+        ("MVC-002F", "411", _load_fixture("MVC-002F.411")),
+    ]:
+        next_free += (len(thumb_data) + SECTOR_SIZE - 1) // SECTOR_SIZE
+    # Mark 4 free clusters as bad in FAT
+    for c in range(next_free, next_free + 4):
+        _set_fat12_entry(disk, c, 0xFF7)
+
+    # MVC-002F.JPG: zero out 4 sectors near the end (no FAT marking —
+    # simulates undetected read failure from multipass merge)
+    near_end_002 = start_cluster_002 + int(jpeg_002_clusters * 0.8)
+    for c in range(near_end_002, near_end_002 + 4):
+        offset = (DATA_START_SECTOR + (c - 2)) * SECTOR_SIZE
+        disk[offset : offset + SECTOR_SIZE] = b"\x00" * SECTOR_SIZE
 
     return disk
 
@@ -178,6 +206,40 @@ def build_deleted_files_disk(good_disk: bytearray) -> bytearray:
     return disk
 
 
+def build_gpx_track() -> str:
+    """Build track_2001-07-04.gpx — a GPX track matching the photo timestamps.
+
+    Simulates a walk through Tokyo on 2001-07-04 with trackpoints every
+    minute from 10:00 to 11:00 UTC. The fixture JPEGs (MVC-002F, MVC-004F,
+    MVC-006F) have DOS date 2001-07-04, so they'll match within tolerance.
+    """
+    import math
+
+    lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">',
+        "<trk><name>Tokyo Walk 2001-07-04</name><trkseg>",
+    ]
+
+    # 61 trackpoints, one per minute from 10:00 to 11:00
+    for i in range(61):
+        t = i / 60.0
+        lat = 35.6800 + t * 0.015 + math.sin(t * 6) * 0.001
+        lon = 139.7660 + t * 0.014 + math.cos(t * 4) * 0.001
+        alt = 30.0 + math.sin(t * 3) * 5
+        minute = i
+        hour = 10 + minute // 60
+        minute = minute % 60
+        time_str = f"2001-07-04T{hour:02d}:{minute:02d}:00Z"
+        lines.append(
+            f'<trkpt lat="{lat:.6f}" lon="{lon:.6f}">'
+            f"<ele>{alt:.1f}</ele><time>{time_str}</time></trkpt>"
+        )
+
+    lines.append("</trkseg></trk></gpx>")
+    return "\n".join(lines)
+
+
 def main():
     os.makedirs(FIXTURES_DIR, exist_ok=True)
 
@@ -197,7 +259,51 @@ def main():
             f.write(data)
         print(f"  {name} ({len(data):,} bytes)")
 
-    print(f"\nDone. {len(images)} disk images in {FIXTURES_DIR}/")
+    # Build GPX fixture
+    gpx_content = build_gpx_track()
+    gpx_path = os.path.join(FIXTURES_DIR, "track_2001-07-04.gpx")
+    with open(gpx_path, "w", encoding="utf-8") as f:
+        f.write(gpx_content)
+    print(f"  track_2001-07-04.gpx ({len(gpx_content):,} bytes)")
+
+    # Stamp fixture JPEGs with EXIF dates that fall within the GPX track window.
+    # The track runs 10:00-11:00 UTC on 2001-07-04, so space the photos across it.
+    stamp_fixture_jpeg_dates()
+
+    print(f"\nDone. {len(images)} disk images + 1 GPX track in {FIXTURES_DIR}/")
+
+
+def stamp_fixture_jpeg_dates():
+    """Add EXIF DateTimeOriginal to fixture JPEGs so they match the GPX track."""
+    try:
+        import piexif
+    except ImportError:
+        print("  (skipping EXIF stamp — piexif not installed)")
+        return
+
+    # Timestamps offset from trackpoints to test tolerance matching:
+    #   MVC-002F: 42s after 10:10 trackpoint — easy match within default 5m tolerance
+    #   MVC-004F: 3m18s after 10:33 trackpoint — within 5m but tests interpolation
+    #   MVC-006F: 6m15s after track ends at 11:00 — outside 5m tolerance, needs 7m+
+    jpeg_times = {
+        "MVC-002F.JPG": "2001:07:04 10:10:42",
+        "MVC-004F.JPG": "2001:07:04 10:33:18",
+        "MVC-006F.JPG": "2001:07:04 11:06:15",
+    }
+
+    for name, date_str in jpeg_times.items():
+        path = os.path.join(FIXTURES_DIR, name)
+        if not os.path.exists(path):
+            continue
+        try:
+            exif_dict = piexif.load(path)
+            exif_dict["Exif"][piexif.ExifIFD.DateTimeOriginal] = date_str.encode()
+            exif_dict["Exif"][piexif.ExifIFD.DateTimeDigitized] = date_str.encode()
+            exif_bytes = piexif.dump(exif_dict)
+            piexif.insert(exif_bytes, path)
+            print(f"  {name} stamped with {date_str}")
+        except Exception as e:
+            print(f"  {name} stamp failed: {e}")
 
 
 if __name__ == "__main__":

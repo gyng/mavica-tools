@@ -230,6 +230,114 @@ class TestMergeTracks:
         assert track[0].time < track[1].time
 
 
+FIXTURES_DIR = os.path.join(os.path.dirname(__file__), "fixtures")
+
+
+class TestFixtureGpx:
+    """Tests using the fixture GPX track and real Mavica JPEG fixtures."""
+
+    def test_parse_fixture_gpx(self):
+        """Fixture GPX should parse with 61 trackpoints."""
+        gpx_path = os.path.join(FIXTURES_DIR, "track_2001-07-04.gpx")
+        if not os.path.exists(gpx_path):
+            pytest.skip("fixture GPX not built — run tests/build_fixtures.py")
+        points = parse_gpx(gpx_path)
+        assert len(points) == 61
+        assert points[0].lat == pytest.approx(35.68, abs=0.01)
+        assert points[0].alt is not None
+        # Track spans 1 hour
+        duration = (points[-1].time - points[0].time).total_seconds()
+        assert duration == pytest.approx(3600, abs=1)
+
+    def test_match_fixture_jpegs_to_track(self, tmp_dir):
+        """Fixture JPEGs (with EXIF dates on 2001-07-04) should match the fixture track."""
+        gpx_path = os.path.join(FIXTURES_DIR, "track_2001-07-04.gpx")
+        if not os.path.exists(gpx_path):
+            pytest.skip("fixture GPX not built — run tests/build_fixtures.py")
+
+        track = parse_gpx(gpx_path)
+
+        # Create photos with timestamps that fall within the track window
+        photos = [
+            make_jpeg_with_time(tmp_dir, "MVC-001.JPG", "2001:07:04 10:05:00"),
+            make_jpeg_with_time(tmp_dir, "MVC-002.JPG", "2001:07:04 10:30:00"),
+            make_jpeg_with_time(tmp_dir, "MVC-003.JPG", "2001:07:04 10:55:00"),
+            make_jpeg_with_time(tmp_dir, "MVC-004.JPG", "2001:07:04 12:00:00"),  # outside track
+        ]
+
+        matches = match_photos_to_track(photos, track, tolerance_seconds=300)
+        # First 3 should match (within the 10:00-11:00 track window)
+        assert matches[0] is not None
+        assert matches[1] is not None
+        assert matches[2] is not None
+        # Last one is 1 hour after track ends — outside 5min tolerance
+        assert matches[3] is None
+
+        # Matched coordinates should be in Tokyo area
+        for m in matches[:3]:
+            assert 35.67 < m.point.lat < 35.70
+            assert 139.76 < m.point.lon < 139.79
+
+    def test_fixture_tolerance_matching(self):
+        """Fixture JPEGs have offset timestamps to test tolerance behavior.
+
+        MVC-002F: 10:10:42 — 42s offset from 10:10 trackpoint (easy match)
+        MVC-004F: 10:33:18 — 3m18s offset from 10:33 trackpoint (within 5m)
+        MVC-006F: 11:06:15 — 6m15s past track end at 11:00, outside 5m tolerance
+        """
+        gpx_path = os.path.join(FIXTURES_DIR, "track_2001-07-04.gpx")
+        if not os.path.exists(gpx_path):
+            pytest.skip("fixture GPX not built — run tests/build_fixtures.py")
+
+        track = parse_gpx(gpx_path)
+        fixture_jpegs = sorted(
+            os.path.join(FIXTURES_DIR, f)
+            for f in os.listdir(FIXTURES_DIR)
+            if f.endswith(".JPG")
+        )
+
+        # Default 5m tolerance: MVC-002F and MVC-004F match, MVC-006F doesn't
+        matches_5m = match_photos_to_track(fixture_jpegs, track, tolerance_seconds=300)
+        names = {os.path.basename(f): m for f, m in zip(fixture_jpegs, matches_5m)}
+        assert names["MVC-002F.JPG"] is not None  # 42s offset
+        assert names["MVC-002F.JPG"].offset_seconds < 60
+        assert names["MVC-004F.JPG"] is not None  # 3m18s offset
+        assert names["MVC-004F.JPG"].offset_seconds < 240
+        assert names["MVC-006F.JPG"] is None  # 6m15s — outside 5m
+
+        # Increase tolerance to 7m: now MVC-006F should also match
+        matches_7m = match_photos_to_track(fixture_jpegs, track, tolerance_seconds=420)
+        names_7m = {os.path.basename(f): m for f, m in zip(fixture_jpegs, matches_7m)}
+        assert names_7m["MVC-006F.JPG"] is not None
+        assert names_7m["MVC-006F.JPG"].offset_seconds < 420
+
+    def test_stamp_fixture_gpx_roundtrip(self, tmp_dir):
+        """Match + stamp + re-read GPS coordinates from fixture track."""
+        piexif = pytest.importorskip("piexif")
+        gpx_path = os.path.join(FIXTURES_DIR, "track_2001-07-04.gpx")
+        if not os.path.exists(gpx_path):
+            pytest.skip("fixture GPX not built — run tests/build_fixtures.py")
+
+        track = parse_gpx(gpx_path)
+        photo = make_jpeg_with_time(tmp_dir, "test.jpg", "2001:07:04 10:30:00")
+        matches = match_photos_to_track([photo], track, tolerance_seconds=300)
+        assert matches[0] is not None
+
+        # Stamp GPS
+        m = matches[0]
+        ok, msg = stamp_gps_exif(photo, m.point.lat, m.point.lon, m.point.alt, m.point.time)
+        assert ok
+
+        # Read back and verify coordinates
+        exif_dict = piexif.load(photo)
+        gps = exif_dict["GPS"]
+        assert piexif.GPSIFD.GPSLatitude in gps
+        assert piexif.GPSIFD.GPSLongitude in gps
+        # Latitude ref should be N (Tokyo)
+        assert gps[piexif.GPSIFD.GPSLatitudeRef] == b"N"
+        assert gps[piexif.GPSIFD.GPSLongitudeRef] == b"E"
+
+
 class TestMapHtml:
     def test_generates_html(self, tmp_dir):
         matches = [

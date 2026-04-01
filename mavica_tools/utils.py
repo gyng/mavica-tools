@@ -91,7 +91,13 @@ def get_photo_timestamp(filepath: str, use_mtime: bool = False) -> datetime | No
 
             img = Image.open(filepath)
             exif = img.getexif()
-            date_str = exif.get(0x9003) or exif.get(0x0132)  # DateTimeOriginal or DateTime
+            # DateTimeOriginal (0x9003) lives in the Exif sub-IFD (0x8769)
+            exif_ifd = exif.get_ifd(0x8769)
+            date_str = (
+                exif_ifd.get(0x9003)  # DateTimeOriginal in Exif IFD
+                or exif.get(0x9003)  # fallback: some encoders put it in IFD0
+                or exif.get(0x0132)  # DateTime in IFD0
+            )
             if date_str:
                 return datetime.strptime(date_str, "%Y:%m:%d %H:%M:%S")
         except Exception:

@@ -7,6 +7,7 @@ external GPS logger data (Garmin, phone GPX export, Google Timeline).
 
 import argparse
 import glob as globmod
+import math
 import os
 import sys
 import xml.etree.ElementTree as ET
@@ -32,7 +33,9 @@ class GpsMatch:
 
     photo_path: str
     point: GpsPoint
-    offset_seconds: float  # Time difference between photo and GPS point
+    offset_seconds: float  # Time difference between photo and nearest GPS point
+    interpolated: bool = False  # True if position was interpolated between two points
+    nearest_distance_m: float = 0.0  # Distance from nearest trackpoint in metres
 
 
 def parse_gpx(gpx_path: str) -> list[GpsPoint]:
@@ -137,6 +140,18 @@ def _interpolate_point(p1: GpsPoint, p2: GpsPoint, target_time: datetime) -> Gps
     return GpsPoint(lat=lat, lon=lon, alt=alt, time=target_time)
 
 
+def _haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """Haversine distance between two lat/lon points in metres."""
+    R = 6_371_000  # Earth radius in metres
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2
+    )
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
 def match_photos_to_track(
     photo_paths: list[str],
     track_points: list[GpsPoint],
@@ -184,9 +199,16 @@ def match_photos_to_track(
         # Interpolate between flanking points if possible
         if interpolate and 0 < idx < len(track_points):
             point = _interpolate_point(track_points[idx - 1], track_points[idx], photo_time)
-            results.append(GpsMatch(photo_path=path, point=point, offset_seconds=best_offset))
+            dist = _haversine_m(point.lat, point.lon, best_point.lat, best_point.lon)
+            results.append(GpsMatch(
+                photo_path=path, point=point, offset_seconds=best_offset,
+                interpolated=True, nearest_distance_m=dist,
+            ))
         else:
-            results.append(GpsMatch(photo_path=path, point=best_point, offset_seconds=best_offset))
+            results.append(GpsMatch(
+                photo_path=path, point=best_point, offset_seconds=best_offset,
+                interpolated=False, nearest_distance_m=0.0,
+            ))
 
     return results
 

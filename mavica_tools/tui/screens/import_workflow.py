@@ -226,7 +226,9 @@ class ImportWorkflowScreen(Screen):
             screen._prefill_path = self.query_one("#output-dir", Input).value.strip()
             self.app.push_screen(screen)
         elif event.button.id == "btn-gps":
-            self.app.push_screen("gps")
+            screen = self.app.SCREENS["gps"]()
+            screen._prefill_photos = self.query_one("#output-dir", Input).value.strip()
+            self.app.push_screen(screen)
         elif event.button.id == "btn-contact":
             self._make_contact_sheet()
 
