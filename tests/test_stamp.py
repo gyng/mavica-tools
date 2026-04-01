@@ -2,7 +2,6 @@
 
 import os
 import tempfile
-from io import BytesIO
 
 import pytest
 
@@ -10,10 +9,21 @@ PIL = pytest.importorskip("PIL")
 from PIL import Image
 
 from mavica_tools.stamp import (
-    stamp_jpeg, stamp_files, MAVICA_MODELS, MAVICA_SPECS,
-    TAG_MODEL, TAG_MAKE, TAG_DATETIME, TAG_EXIF_IFD,
-    TAG_FOCAL_LENGTH, TAG_FOCAL_LENGTH_35MM, TAG_FNUMBER, TAG_ISO,
-    TAG_COLOR_SPACE, TAG_PIXEL_X, TAG_PIXEL_Y, TAG_FLASH,
+    MAVICA_MODELS,
+    MAVICA_SPECS,
+    TAG_COLOR_SPACE,
+    TAG_DATETIME,
+    TAG_EXIF_IFD,
+    TAG_FNUMBER,
+    TAG_FOCAL_LENGTH,
+    TAG_FOCAL_LENGTH_35MM,
+    TAG_ISO,
+    TAG_MAKE,
+    TAG_MODEL,
+    TAG_PIXEL_X,
+    TAG_PIXEL_Y,
+    stamp_files,
+    stamp_jpeg,
 )
 
 
@@ -160,6 +170,7 @@ class TestStampJpeg:
 
         # FD7 specs from mavica-db.tsv
         from mavica_tools.mavica_db import MODELS
+
         fd7 = MODELS["fd7"]
 
         assert TAG_FOCAL_LENGTH in exif_ifd
@@ -190,6 +201,7 @@ class TestStampJpeg:
 
         # FD7 and FD200 should have different 35mm equiv focal lengths
         from mavica_tools.mavica_db import MODELS
+
         assert exif7[TAG_FOCAL_LENGTH_35MM] == MODELS["fd7"].focal_length_35mm
         assert exif200[TAG_FOCAL_LENGTH_35MM] == MODELS["fd200"].focal_length_35mm
 
@@ -199,7 +211,14 @@ class TestStampJpeg:
 
     def test_mavica_specs_completeness(self):
         """All MAVICA_SPECS entries should have required fields."""
-        required = {"model", "focal_length_mm", "focal_length_35mm", "aperture_max", "iso", "resolution"}
+        required = {
+            "model",
+            "focal_length_mm",
+            "focal_length_35mm",
+            "aperture_max",
+            "iso",
+            "resolution",
+        }
         for key, specs in MAVICA_SPECS.items():
             for field in required:
                 assert field in specs, f"{key} missing {field}"

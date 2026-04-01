@@ -18,7 +18,6 @@ import platform
 import struct
 import sys
 
-
 SECTOR_SIZE = 512
 TOTAL_SECTORS = 2880
 DISK_SIZE = SECTOR_SIZE * TOTAL_SECTORS  # 1,474,560 bytes
@@ -40,29 +39,29 @@ def create_boot_sector(volume_label: str = "MAVICA") -> bytes:
     boot = bytearray(SECTOR_SIZE)
 
     # Jump instruction + NOP
-    boot[0:3] = b"\xEB\x3C\x90"
+    boot[0:3] = b"\xeb\x3c\x90"
 
     # OEM name (8 bytes)
     boot[3:11] = b"MAVICA  "
 
     # BIOS Parameter Block
-    struct.pack_into("<H", boot, 11, BYTES_PER_SECTOR)       # bytes per sector
-    boot[13] = SECTORS_PER_CLUSTER                             # sectors per cluster
-    struct.pack_into("<H", boot, 14, RESERVED_SECTORS)        # reserved sectors
-    boot[16] = NUM_FATS                                        # number of FATs
-    struct.pack_into("<H", boot, 17, ROOT_ENTRIES)            # root dir entries
-    struct.pack_into("<H", boot, 19, TOTAL_SECTORS)           # total sectors
-    boot[21] = MEDIA_DESCRIPTOR                                # media descriptor
-    struct.pack_into("<H", boot, 22, SECTORS_PER_FAT)         # sectors per FAT
-    struct.pack_into("<H", boot, 24, SECTORS_PER_TRACK)       # sectors per track
-    struct.pack_into("<H", boot, 26, NUM_HEADS)               # number of heads
-    struct.pack_into("<I", boot, 28, 0)                        # hidden sectors
-    struct.pack_into("<I", boot, 32, 0)                        # total sectors (32-bit, 0 = use 16-bit)
+    struct.pack_into("<H", boot, 11, BYTES_PER_SECTOR)  # bytes per sector
+    boot[13] = SECTORS_PER_CLUSTER  # sectors per cluster
+    struct.pack_into("<H", boot, 14, RESERVED_SECTORS)  # reserved sectors
+    boot[16] = NUM_FATS  # number of FATs
+    struct.pack_into("<H", boot, 17, ROOT_ENTRIES)  # root dir entries
+    struct.pack_into("<H", boot, 19, TOTAL_SECTORS)  # total sectors
+    boot[21] = MEDIA_DESCRIPTOR  # media descriptor
+    struct.pack_into("<H", boot, 22, SECTORS_PER_FAT)  # sectors per FAT
+    struct.pack_into("<H", boot, 24, SECTORS_PER_TRACK)  # sectors per track
+    struct.pack_into("<H", boot, 26, NUM_HEADS)  # number of heads
+    struct.pack_into("<I", boot, 28, 0)  # hidden sectors
+    struct.pack_into("<I", boot, 32, 0)  # total sectors (32-bit, 0 = use 16-bit)
 
     # Extended boot record
-    boot[36] = 0x00             # drive number (floppy)
-    boot[37] = 0x00             # reserved
-    boot[38] = 0x29             # extended boot signature
+    boot[36] = 0x00  # drive number (floppy)
+    boot[37] = 0x00  # reserved
+    boot[38] = 0x29  # extended boot signature
     struct.pack_into("<I", boot, 39, 0x12345678)  # volume serial number
 
     # Volume label (11 bytes, space-padded)
@@ -128,12 +127,11 @@ def create_fat(bad_sectors: list[int] | None = None) -> bytes:
 
 def create_root_directory() -> bytes:
     """Create an empty root directory (14 sectors)."""
-    root_dir_size = (ROOT_ENTRIES * 32)
+    root_dir_size = ROOT_ENTRIES * 32
     return b"\x00" * root_dir_size
 
 
-def create_disk_image(volume_label: str = "MAVICA",
-                      bad_sectors: list[int] | None = None) -> bytes:
+def create_disk_image(volume_label: str = "MAVICA", bad_sectors: list[int] | None = None) -> bytes:
     """Create a complete 1.44MB FAT12 disk image.
 
     If bad_sectors is provided, those clusters are marked 0xFF7 in both FATs
@@ -185,15 +183,20 @@ def get_blocking_processes(device: str) -> list[str]:
 
     try:
         import subprocess
+
         # Check for processes with open files on the drive
         result = subprocess.run(
             [
-                "powershell", "-NoProfile", "-Command",
+                "powershell",
+                "-NoProfile",
+                "-Command",
                 f"Get-Process | Where-Object {{ $_.Path -and "
                 f"(Get-Process -Id $_.Id -FileVersionInfo -ErrorAction SilentlyContinue).FileName -like '{drive_letter}:\\\\*' }} | "
-                f"Select-Object -ExpandProperty Name -Unique"
+                f"Select-Object -ExpandProperty Name -Unique",
             ],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
             return [name.strip() for name in result.stdout.strip().split("\n") if name.strip()]
@@ -204,14 +207,19 @@ def get_blocking_processes(device: str) -> list[str]:
     blockers = []
     try:
         import subprocess
+
         # Check if Explorer has the drive open
         result = subprocess.run(
             [
-                "powershell", "-NoProfile", "-Command",
+                "powershell",
+                "-NoProfile",
+                "-Command",
                 "Get-Process explorer -ErrorAction SilentlyContinue | "
-                "Select-Object -ExpandProperty Name"
+                "Select-Object -ExpandProperty Name",
             ],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and "explorer" in result.stdout.lower():
             blockers.append("Windows Explorer (may have drive window open)")
@@ -221,14 +229,19 @@ def get_blocking_processes(device: str) -> list[str]:
     # Check for common antivirus
     try:
         import subprocess
+
         result = subprocess.run(
             [
-                "powershell", "-NoProfile", "-Command",
+                "powershell",
+                "-NoProfile",
+                "-Command",
                 "Get-Process | Where-Object { "
                 "$_.Name -match 'antivirus|defender|malware|avast|avg|norton|mcafee|kaspersky|bitdefender'"
-                " } | Select-Object -ExpandProperty Name -Unique"
+                " } | Select-Object -ExpandProperty Name -Unique",
             ],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
             for name in result.stdout.strip().split("\n"):
@@ -266,7 +279,10 @@ def force_dismount_volume(device: str) -> tuple[bool, str]:
         device,
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
-        None, OPEN_EXISTING, 0, None,
+        None,
+        OPEN_EXISTING,
+        0,
+        None,
     )
     if handle == ctypes.c_void_p(-1).value:
         return False, "Cannot open device"
@@ -275,23 +291,41 @@ def force_dismount_volume(device: str) -> tuple[bool, str]:
         dummy = wt.DWORD(0)
         # Force dismount — invalidates all open handles to this volume
         ok = kernel32.DeviceIoControl(
-            handle, FSCTL_DISMOUNT_VOLUME,
-            None, 0, None, 0, ctypes.byref(dummy), None,
+            handle,
+            FSCTL_DISMOUNT_VOLUME,
+            None,
+            0,
+            None,
+            0,
+            ctypes.byref(dummy),
+            None,
         )
         if not ok:
             return False, "Dismount failed"
 
         # Try to lock after dismount
         locked = kernel32.DeviceIoControl(
-            handle, FSCTL_LOCK_VOLUME,
-            None, 0, None, 0, ctypes.byref(dummy), None,
+            handle,
+            FSCTL_LOCK_VOLUME,
+            None,
+            0,
+            None,
+            0,
+            ctypes.byref(dummy),
+            None,
         )
 
         # Unlock — we just wanted to verify it's free now
         if locked:
             kernel32.DeviceIoControl(
-                handle, FSCTL_UNLOCK_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_UNLOCK_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
 
         return True, "Volume dismounted successfully"
@@ -343,6 +377,7 @@ def _write_windows_device(device: str, image: bytes) -> tuple[bool, str]:
 
     try:
         import time as _time
+
         dummy = wt.DWORD(0)
 
         # Lock the volume — retry a few times as a previous operation
@@ -350,8 +385,14 @@ def _write_windows_device(device: str, image: bytes) -> tuple[bool, str]:
         locked = False
         for attempt in range(5):
             locked = kernel32.DeviceIoControl(
-                handle, FSCTL_LOCK_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_LOCK_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             if locked:
                 break
@@ -360,42 +401,76 @@ def _write_windows_device(device: str, image: bytes) -> tuple[bool, str]:
         if not locked:
             # Force dismount without lock — last resort
             kernel32.DeviceIoControl(
-                handle, FSCTL_DISMOUNT_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_DISMOUNT_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             # Try lock one more time after dismount
             locked = kernel32.DeviceIoControl(
-                handle, FSCTL_LOCK_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_LOCK_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             if not locked:
-                return False, "Cannot lock volume. Close Explorer and any programs using the disk, then retry."
+                return (
+                    False,
+                    "Cannot lock volume. Close Explorer and any programs using the disk, then retry.",
+                )
 
         # Dismount so Windows doesn't cache stale data
         kernel32.DeviceIoControl(
-            handle, FSCTL_DISMOUNT_VOLUME,
-            None, 0, None, 0, ctypes.byref(dummy), None,
+            handle,
+            FSCTL_DISMOUNT_VOLUME,
+            None,
+            0,
+            None,
+            0,
+            ctypes.byref(dummy),
+            None,
         )
 
         # Write the image
         written = wt.DWORD(0)
         buf = ctypes.create_string_buffer(image)
         ok = kernel32.WriteFile(
-            handle, buf, len(image), ctypes.byref(written), None,
+            handle,
+            buf,
+            len(image),
+            ctypes.byref(written),
+            None,
         )
         if not ok or written.value != len(image):
             err = ctypes.get_last_error() or kernel32.GetLastError()
             if err == 19:
                 return False, "Disk is write-protected. Slide the write-protect tab on the floppy."
-            return False, f"Write failed (wrote {written.value}/{len(image)} bytes, Win32 error {err})"
+            return (
+                False,
+                f"Write failed (wrote {written.value}/{len(image)} bytes, Win32 error {err})",
+            )
 
         # Flush
         kernel32.FlushFileBuffers(handle)
 
         # Unlock
         kernel32.DeviceIoControl(
-            handle, FSCTL_UNLOCK_VOLUME,
-            None, 0, None, 0, ctypes.byref(dummy), None,
+            handle,
+            FSCTL_UNLOCK_VOLUME,
+            None,
+            0,
+            None,
+            0,
+            ctypes.byref(dummy),
+            None,
         )
 
         return True, "Formatted successfully"
@@ -424,9 +499,13 @@ def _get_device_size(device: str) -> int | None:
             IOCTL_DISK_GET_LENGTH_INFO = 0x0007405C
 
             handle = kernel32.CreateFileW(
-                device, GENERIC_READ,
+                device,
+                GENERIC_READ,
                 FILE_SHARE_READ | FILE_SHARE_WRITE,
-                None, OPEN_EXISTING, 0, None,
+                None,
+                OPEN_EXISTING,
+                0,
+                None,
             )
             if handle == ctypes.c_void_p(-1).value:
                 return None
@@ -435,10 +514,14 @@ def _get_device_size(device: str) -> int | None:
                 size = ctypes.c_longlong(0)
                 returned = wt.DWORD(0)
                 ok = kernel32.DeviceIoControl(
-                    handle, IOCTL_DISK_GET_LENGTH_INFO,
-                    None, 0,
-                    ctypes.byref(size), ctypes.sizeof(size),
-                    ctypes.byref(returned), None,
+                    handle,
+                    IOCTL_DISK_GET_LENGTH_INFO,
+                    None,
+                    0,
+                    ctypes.byref(size),
+                    ctypes.sizeof(size),
+                    ctypes.byref(returned),
+                    None,
                 )
                 if ok:
                     return size.value
@@ -452,6 +535,7 @@ def _get_device_size(device: str) -> int | None:
         try:
             import fcntl
             import struct as _struct
+
             BLKGETSIZE64 = 0x80081272
             with open(device, "rb") as f:
                 buf = b"\x00" * 8
@@ -464,12 +548,15 @@ def _get_device_size(device: str) -> int | None:
     elif system == "Darwin":
         try:
             import subprocess as _sp
+
             result = _sp.run(
                 ["diskutil", "info", "-plist", device],
-                capture_output=True, timeout=5,
+                capture_output=True,
+                timeout=5,
             )
             if result.returncode == 0:
                 import plistlib
+
                 info = plistlib.loads(result.stdout)
                 return info.get("TotalSize", None)
         except Exception:
@@ -515,9 +602,18 @@ def _validate_device_path(device: str) -> str | None:
                     f"Expected /dev/fd0 or similar."
                 )
         # Block obvious system devices
-        if d in ("/dev/sda", "/dev/sda1", "/dev/nvme0n1", "/dev/nvme0n1p1",
-                 "/dev/vda", "/dev/vda1", "/dev/xvda", "/dev/xvda1",
-                 "/dev/mmcblk0", "/dev/mmcblk0p1"):
+        if d in (
+            "/dev/sda",
+            "/dev/sda1",
+            "/dev/nvme0n1",
+            "/dev/nvme0n1p1",
+            "/dev/vda",
+            "/dev/vda1",
+            "/dev/xvda",
+            "/dev/xvda1",
+            "/dev/mmcblk0",
+            "/dev/mmcblk0p1",
+        ):
             return f"Refusing to format {device} -- that looks like a system disk."
     elif system == "Darwin":
         if d == "/dev/disk0" or d.startswith("/dev/disk0s"):
@@ -535,15 +631,16 @@ def _validate_device_path(device: str) -> str | None:
         size_mb = size / (1024 * 1024)
         return (
             f"Refusing to format {device} -- disk is {size_mb:.0f}MB, "
-            f"too large to be a floppy (max {MAX_FLOPPY_SIZE // (1024*1024)}MB). "
+            f"too large to be a floppy (max {MAX_FLOPPY_SIZE // (1024 * 1024)}MB). "
             f"This looks like a hard drive or USB stick."
         )
 
     return None
 
 
-def format_floppy_full(device: str, volume_label: str = "MAVICA",
-                       on_sector=None) -> tuple[bool, str, int]:
+def format_floppy_full(
+    device: str, volume_label: str = "MAVICA", on_sector=None
+) -> tuple[bool, str, int]:
     """Full format: zero every sector, verify, then write FAT12.
 
     Bad sectors found during verification are marked as 0xFF7 in the FAT
@@ -590,11 +687,15 @@ def format_floppy_full(device: str, volume_label: str = "MAVICA",
         # Count how many bad sectors are in the data area (mappable)
         data_bad = [s for s in bad_list if s >= DATA_START_SECTOR]
         meta_bad = [s for s in bad_list if s < DATA_START_SECTOR]
-        return True, (
-            f"Formatted with {len(bad_list)} bad sector(s) "
-            f"({len(data_bad)} marked in FAT"
-            f"{f', {len(meta_bad)} in metadata area' if meta_bad else ''})"
-        ), len(bad_list)
+        return (
+            True,
+            (
+                f"Formatted with {len(bad_list)} bad sector(s) "
+                f"({len(data_bad)} marked in FAT"
+                f"{f', {len(meta_bad)} in metadata area' if meta_bad else ''})"
+            ),
+            len(bad_list),
+        )
     return True, "Formatted successfully (all sectors verified)", 0
 
 
@@ -661,7 +762,10 @@ def _full_format_win32(device, on_sector=None):
         device,
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
-        None, OPEN_EXISTING, 0, None,
+        None,
+        OPEN_EXISTING,
+        0,
+        None,
     )
     if handle == ctypes.c_void_p(-1).value:
         err = ctypes.get_last_error() or kernel32.GetLastError()
@@ -674,13 +778,20 @@ def _full_format_win32(device, on_sector=None):
     bad_list: list[int] = []
     try:
         import time as _time
+
         dummy = wt.DWORD(0)
 
         locked = False
         for attempt in range(5):
             locked = kernel32.DeviceIoControl(
-                handle, FSCTL_LOCK_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_LOCK_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             if locked:
                 break
@@ -688,19 +799,41 @@ def _full_format_win32(device, on_sector=None):
 
         if not locked:
             kernel32.DeviceIoControl(
-                handle, FSCTL_DISMOUNT_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_DISMOUNT_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             locked = kernel32.DeviceIoControl(
-                handle, FSCTL_LOCK_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_LOCK_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             if not locked:
-                return False, "Cannot lock volume. Close Explorer and any programs using the disk, then retry.", []
+                return (
+                    False,
+                    "Cannot lock volume. Close Explorer and any programs using the disk, then retry.",
+                    [],
+                )
 
         kernel32.DeviceIoControl(
-            handle, FSCTL_DISMOUNT_VOLUME,
-            None, 0, None, 0, ctypes.byref(dummy), None,
+            handle,
+            FSCTL_DISMOUNT_VOLUME,
+            None,
+            0,
+            None,
+            0,
+            ctypes.byref(dummy),
+            None,
         )
 
         zero_sector = b"\x00" * SECTOR_SIZE
@@ -741,8 +874,14 @@ def _full_format_win32(device, on_sector=None):
                     on_sector(s, "bad")
 
         kernel32.DeviceIoControl(
-            handle, FSCTL_UNLOCK_VOLUME,
-            None, 0, None, 0, ctypes.byref(dummy), None,
+            handle,
+            FSCTL_UNLOCK_VOLUME,
+            None,
+            0,
+            None,
+            0,
+            ctypes.byref(dummy),
+            None,
         )
     finally:
         kernel32.CloseHandle(handle)
@@ -750,8 +889,9 @@ def _full_format_win32(device, on_sector=None):
     return True, "", bad_list
 
 
-def format_floppy(device: str, volume_label: str = "MAVICA",
-                   bad_sectors: list[int] | None = None) -> tuple[bool, str]:
+def format_floppy(
+    device: str, volume_label: str = "MAVICA", bad_sectors: list[int] | None = None
+) -> tuple[bool, str]:
     """Write a Mavica-compatible FAT12 filesystem to a floppy device.
 
     If bad_sectors is provided, those clusters are marked 0xFF7 in the FAT.
@@ -772,9 +912,15 @@ def format_floppy(device: str, volume_label: str = "MAVICA",
         else:
             # Linux/macOS: use dd for safety
             import subprocess
+
             result = subprocess.run(
-                ["dd", f"of={device}", f"bs={SECTOR_SIZE}",
-                 f"count={TOTAL_SECTORS}", "conv=notrunc"],
+                [
+                    "dd",
+                    f"of={device}",
+                    f"bs={SECTOR_SIZE}",
+                    f"count={TOTAL_SECTORS}",
+                    "conv=notrunc",
+                ],
                 input=image,
                 capture_output=True,
             )
@@ -798,9 +944,7 @@ def format_floppy(device: str, volume_label: str = "MAVICA",
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Create Mavica-compatible FAT12 floppy format"
-    )
+    parser = argparse.ArgumentParser(description="Create Mavica-compatible FAT12 floppy format")
     subparsers = parser.add_subparsers(dest="command")
 
     # Create image file
@@ -814,7 +958,8 @@ def main():
     dev_parser.add_argument("-l", "--label", default="MAVICA", help="Volume label")
     dev_parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation")
     dev_parser.add_argument(
-        "--full", action="store_true",
+        "--full",
+        action="store_true",
         help="Full format: zero + verify every sector, then write FAT12 (slow but thorough)",
     )
 
@@ -826,7 +971,7 @@ def main():
             f.write(image)
         print(f"Created {args.output} ({len(image):,} bytes)")
         print(f"  Volume label: {args.label}")
-        print(f"  Format: FAT12, 1.44MB, Mavica-compatible")
+        print("  Format: FAT12, 1.44MB, Mavica-compatible")
 
     elif args.command == "device":
         if not args.yes:

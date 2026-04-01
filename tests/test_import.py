@@ -4,9 +4,9 @@ import os
 import subprocess
 import sys
 import tempfile
+from unittest.mock import patch
 
 import pytest
-from unittest.mock import patch
 
 PIL = pytest.importorskip("PIL")
 from PIL import Image
@@ -125,7 +125,8 @@ class TestImportAutoDetect:
         ):
             result = subprocess.run(
                 [
-                    sys.executable, "-c",
+                    sys.executable,
+                    "-c",
                     "from unittest.mock import patch; "
                     "patch('mavica_tools.detect.detect_floppy_mount_points', return_value=[]).start(); "
                     "from mavica_tools.importcmd import main; main()",
@@ -135,3 +136,50 @@ class TestImportAutoDetect:
                 timeout=10,
             )
         assert result.returncode != 0
+
+
+class TestImportRealFixtures:
+    """Import tests using real Mavica photos from fixtures."""
+
+    def test_import_real_mavica_photos(self, tmp_dir, fixture_dir):
+        """Import real Mavica JPEGs, verify count and valid structure."""
+        # Copy fixture JPEGs to a fake floppy source dir
+        src = os.path.join(tmp_dir, "floppy")
+        os.makedirs(src)
+        import glob
+        import shutil
+
+        for f in glob.glob(os.path.join(fixture_dir, "*.JPG")):
+            shutil.copy2(f, src)
+
+        out = os.path.join(tmp_dir, "photos")
+        result = quick_import(src, out)
+
+        assert result["imported"] == 3
+        # Verify each output is a valid JPEG (starts with SOI)
+        for path in result["files"]:
+            with open(path, "rb") as fh:
+                assert fh.read(2) == b"\xff\xd8"
+
+    def test_import_with_thumbnails(self, tmp_dir, fixture_dir):
+        """Import directory with both .JPG and .411 files."""
+        src = os.path.join(tmp_dir, "floppy")
+        os.makedirs(src)
+        import glob
+        import shutil
+
+        for f in glob.glob(os.path.join(fixture_dir, "*.JPG")) + glob.glob(
+            os.path.join(fixture_dir, "*.411")
+        ):
+            shutil.copy2(f, src)
+
+        out = os.path.join(tmp_dir, "photos")
+        result = quick_import(src, out)
+
+        # Should import both JPEGs and .411 thumbnails
+        assert result["imported"] == 6
+        out_files = os.listdir(out)
+        jpg_count = sum(1 for f in out_files if f.endswith(".JPG"))
+        thumb_count = sum(1 for f in out_files if f.endswith(".411"))
+        assert jpg_count == 3
+        assert thumb_count == 3

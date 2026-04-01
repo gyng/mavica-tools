@@ -3,9 +3,8 @@
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import Static, Header, Footer, OptionList
+from textual.widgets import Footer, Header, OptionList, Static
 from textual.widgets.option_list import Option
-
 
 # Organized by frequency of use and workflow order.
 # Primary: the main import→tag→export pipeline (what most users do every time)
@@ -32,7 +31,12 @@ SECTIONS = [
     {
         "header": "Recovery",
         "tools": [
-            ("m", "multipass", "Image Disk", "Read a damaged floppy multiple times, keep best data"),
+            (
+                "m",
+                "multipass",
+                "Image Disk",
+                "Read a damaged floppy multiple times, keep best data",
+            ),
             ("b", "fat12", "Browse Image", "View files in a disk image with original Mavica names"),
             ("c", "carve", "Recover Image", "Scan raw disk data for recoverable photos"),
             ("k", "check", "Check Photos", "Scan photos for corruption or damage"),
@@ -58,15 +62,13 @@ class HomeScreen(Screen):
     }
     """
 
-    BINDINGS = [
-        Binding(key, f"tool('{screen_id}')", show=False)
-        for key, screen_id in _ALL_TOOLS
-    ]
+    BINDINGS = [Binding(key, f"tool('{screen_id}')", show=False) for key, screen_id in _ALL_TOOLS]
 
     _NAME_WIDTH = 20
 
     def compose(self) -> ComposeResult:
         from mavica_tools.fun import random_trivia
+
         yield Header()
         yield Static(
             f"[bold #33ff33]mavica-tools[/] — Sony Mavica Floppy Toolkit"
@@ -76,23 +78,29 @@ class HomeScreen(Screen):
 
         options = []
         for section in SECTIONS:
-            options.append(Option(
-                f"[bold #33ff33]  {section['header']}[/]",
-                disabled=True,
-            ))
+            options.append(
+                Option(
+                    f"[bold #33ff33]  {section['header']}[/]",
+                    disabled=True,
+                )
+            )
             for tool in section["tools"]:
                 key, screen_id, name, desc = tool
                 padded = name.ljust(self._NAME_WIDTH)
                 if key is None:
-                    options.append(Option(
-                        f"  [dim]·  {padded}  {desc}  (not implemented)[/]",
-                        disabled=True,
-                    ))
+                    options.append(
+                        Option(
+                            f"  [dim]·  {padded}  {desc}  (not implemented)[/]",
+                            disabled=True,
+                        )
+                    )
                 else:
-                    options.append(Option(
-                        f"  [bold #ffaa00]{key}[/]  [bold]{padded}[/]  [dim]{desc}[/]",
-                        id=screen_id,
-                    ))
+                    options.append(
+                        Option(
+                            f"  [bold #ffaa00]{key}[/]  [bold]{padded}[/]  [dim]{desc}[/]",
+                            id=screen_id,
+                        )
+                    )
 
         yield OptionList(*options, id="tool-list")
         yield Static(

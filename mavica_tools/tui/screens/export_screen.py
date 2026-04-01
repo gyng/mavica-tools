@@ -1,13 +1,10 @@
 """Export screen — organize, rename, watermark, contact sheets."""
 
-import os
-
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, RichLog, ProgressBar, Checkbox
 from textual.containers import Horizontal
-from textual.worker import get_current_worker
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, Input, ProgressBar, RichLog, Static
 
 from mavica_tools.tui.widgets.file_picker import FilePicker
 from mavica_tools.tui.widgets.image_preview import ImagePreview
@@ -26,8 +23,7 @@ class ExportScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
-            "[bold #ffaa00]Photo Export[/]  "
-            "[dim]Organize, rename, watermark, contact sheets[/]\n",
+            "[bold #ffaa00]Photo Export[/]  [dim]Organize, rename, watermark, contact sheets[/]\n",
             id="title-bar",
         )
         yield Static("  [bold]Source[/]")
@@ -36,7 +32,9 @@ class ExportScreen(Screen):
             yield Button("Browse", id="btn-browse")
         yield Static("  [bold]Output Dir[/]  /  [bold]Organize[/]")
         with Horizontal(classes="input-row"):
-            yield Input(value="mavica_out/exported", placeholder="Output directory", id="output-dir")
+            yield Input(
+                value="mavica_out/exported", placeholder="Output directory", id="output-dir"
+            )
             yield Input(value="flat", placeholder="Organize: flat/date/year", id="organize")
         yield Static("  [bold]Watermark[/]  /  [bold]Resize[/]")
         with Horizontal(classes="input-row"):
@@ -69,6 +67,7 @@ class ExportScreen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#source-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(title="Select image directory", select_directory=True),
             on_selected,
@@ -101,7 +100,8 @@ class ExportScreen(Screen):
         progress.update(total=100, progress=10)
 
         summary = export_images(
-            source, output,
+            source,
+            output,
             organize=organize,
             watermark=watermark,
             resize=resize,
@@ -111,7 +111,9 @@ class ExportScreen(Screen):
 
         progress.update(progress=100)
         output = self.query_one("#output-dir", Input).value.strip() or "export"
-        log.write(f"[bold #33ff33]Done![/] {summary['exported']}/{summary['total']} images exported to [bold]{output}/[/]")
+        log.write(
+            f"[bold #33ff33]Done![/] {summary['exported']}/{summary['total']} images exported to [bold]{output}/[/]"
+        )
         if summary["errors"]:
             log.write(f"[red]{summary['errors']} error(s)[/]")
         if summary["contact_sheet_path"]:

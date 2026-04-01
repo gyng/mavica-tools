@@ -4,10 +4,9 @@ import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, RichLog, ProgressBar
 from textual.containers import Horizontal
-from textual.worker import get_current_worker
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, Input, ProgressBar, RichLog, Static
 
 from mavica_tools.tui.widgets.file_picker import FilePicker
 
@@ -38,7 +37,9 @@ class RecoverScreen(Screen):
             yield Button("Browse", id="btn-browse")
         yield Static("  [bold]Output Dir[/]")
         with Horizontal(classes="input-row"):
-            yield Input(value="mavica_out/recovery", placeholder="Output directory", id="output-dir")
+            yield Input(
+                value="mavica_out/recovery", placeholder="Output directory", id="output-dir"
+            )
         yield Static(
             "  [dim][bold]FAT12 first[/] — recovers original Mavica filenames (MVC-001.JPG).\n"
             "  [bold]Carve only[/] — scans raw data for JPEGs. Use if FAT12 fails or disk is very damaged.[/]\n"
@@ -49,8 +50,12 @@ class RecoverScreen(Screen):
         yield ProgressBar(total=4, show_percentage=True, show_eta=True, id="progress")
         yield Static("", id="step-status")
         with Horizontal(classes="button-row"):
-            yield Button("Next: Add Photo Info", variant="default", id="btn-next-stamp", disabled=True)
-            yield Button("Next: Export & Share", variant="default", id="btn-next-export", disabled=True)
+            yield Button(
+                "Next: Add Photo Info", variant="default", id="btn-next-stamp", disabled=True
+            )
+            yield Button(
+                "Next: Export & Share", variant="default", id="btn-next-export", disabled=True
+            )
             yield Button("Open Folder", variant="default", id="btn-open-folder", disabled=True)
         yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
@@ -68,9 +73,7 @@ class RecoverScreen(Screen):
                 parts.append(f"[bold #ffaa00]\u25cf {label}[/bold #ffaa00]")
             else:
                 parts.append(f"[dim]\u25cb {label}[/dim]")
-        self.query_one("#breadcrumb", Static).update(
-            "  " + "  \u2500\u25b6  ".join(parts)
-        )
+        self.query_one("#breadcrumb", Static).update("  " + "  \u2500\u25b6  ".join(parts))
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-browse":
@@ -87,12 +90,14 @@ class RecoverScreen(Screen):
             output = self.query_one("#output-dir", Input).value.strip()
             if output and os.path.isdir(output):
                 from mavica_tools.utils import open_directory
+
                 open_directory(output)
 
     def action_browse(self) -> None:
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#source-dir", Input).value = path
+
         self.app.push_screen(
             FilePicker(
                 extensions=(".img",),
@@ -115,9 +120,9 @@ class RecoverScreen(Screen):
 
     async def _run_pipeline(self, source: str, output: str, use_fat: bool) -> None:
         import glob as globmod
+
         from mavica_tools.recover import recover_from_images
 
-        worker = get_current_worker()
         log = self.query_one("#log", RichLog)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#step-status", Static)
@@ -130,7 +135,9 @@ class RecoverScreen(Screen):
 
         if not img_files:
             log.write("[red]No disk images found.[/] Need .img files in that directory.")
-            log.write("[bold #33ff33]Tip:[/] Use [bold]Multi-Pass Read[/] (key [bold]m[/]) to create disk images from your floppy first.")
+            log.write(
+                "[bold #33ff33]Tip:[/] Use [bold]Multi-Pass Read[/] (key [bold]m[/]) to create disk images from your floppy first."
+            )
             self._reset_buttons()
             return
 
@@ -152,7 +159,7 @@ class RecoverScreen(Screen):
         progress.update(progress=4)
 
         # Show results
-        log.write(f"\n{'='*50}")
+        log.write(f"\n{'=' * 50}")
         log.write(f"[bold]Recovery complete:[/] {output}/")
         log.write(f"  Total:    {summary['total_files']}")
         log.write(f"  [green]Good:     {summary['good']}[/]")
@@ -160,7 +167,7 @@ class RecoverScreen(Screen):
         log.write(f"  [red]Failed:   {summary['failed']}[/]")
         log.write(f"  Method:   {summary['extraction_method']}")
 
-        if summary['total_files'] > 0:
+        if summary["total_files"] > 0:
             status.update(
                 f"  Done — {summary['total_files']} files, "
                 f"{summary['good']} good, {summary['repaired']} repaired\n\n"

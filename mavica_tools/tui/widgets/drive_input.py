@@ -11,7 +11,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.message import Message
 from textual.widget import Widget
-from textual.widgets import Static, Input, Button
+from textual.widgets import Button, Input, Static
 
 
 def _default_floppy_device() -> str:
@@ -37,8 +37,8 @@ def _fmt_size(size_bytes: int) -> str:
 
 def _mount_info(path: str) -> str:
     """Get volume label and size info for a mounted path."""
-    import os
     import shutil
+
     parts = []
     try:
         usage = shutil.disk_usage(path)
@@ -48,7 +48,8 @@ def _mount_info(path: str) -> str:
     except OSError:
         pass
     if parts:
-        return f"[dim]mounted  {' \u2014 '.join(parts)}[/]"
+        sep = " \u2014 "
+        return f"[dim]mounted  {sep.join(parts)}[/]"
     return "[dim]mounted[/]"
 
 
@@ -79,6 +80,7 @@ class DriveInput(Widget):
 
     class Changed(Message):
         """Posted when the drive path changes."""
+
         def __init__(self, value: str) -> None:
             super().__init__()
             self.value = value
@@ -192,13 +194,18 @@ class DriveInput(Widget):
             if count == 1:
                 self.app.notify(f"Found floppy: {mounts[0]}", severity="information")
             else:
-                self.app.notify(f"Found {count} drive(s), using {mounts[0]}", severity="information")
+                self.app.notify(
+                    f"Found {count} drive(s), using {mounts[0]}", severity="information"
+                )
         elif drives:
             inp.value = drives[0].device
             if len(drives) == 1:
                 self.app.notify(f"Found drive: {drives[0].device}", severity="information")
             else:
-                self.app.notify(f"Found {len(drives)} drive(s), using {drives[0].device}", severity="information")
+                self.app.notify(
+                    f"Found {len(drives)} drive(s), using {drives[0].device}",
+                    severity="information",
+                )
 
     # ── Browse ────────────────────────────────────────────────────
 
@@ -227,12 +234,12 @@ class DriveInput(Widget):
         self._show_picker(drives, mounts)
 
     def _show_picker(self, drives, mounts) -> None:
-        from textual.screen import ModalScreen
-        from textual.widgets import Static as S, OptionList, Button as PickerButton
-        from textual.widgets.option_list import Option
-        from textual.containers import Vertical
-
         from textual.containers import Horizontal as H
+        from textual.containers import Vertical
+        from textual.screen import ModalScreen
+        from textual.widgets import OptionList
+        from textual.widgets import Static as S
+        from textual.widgets.option_list import Option
 
         class DrivePickerScreen(ModalScreen[str]):
             DEFAULT_CSS = """
@@ -268,10 +275,12 @@ class DriveInput(Widget):
                     options = []
                     for mp in mounts:
                         info = _mount_info(mp)
-                        options.append(Option(
-                            f"[bold]{mp}[/]  {info}",
-                            id=mp,
-                        ))
+                        options.append(
+                            Option(
+                                f"[bold]{mp}[/]  {info}",
+                                id=mp,
+                            )
+                        )
                     for d in drives:
                         if d.device not in [o.id for o in options]:
                             size = _fmt_size(d.size_bytes) if d.size_bytes else ""
@@ -279,10 +288,12 @@ class DriveInput(Widget):
                             detail = f"[dim]{label}[/]"
                             if size:
                                 detail += f"  [dim]{size}[/]"
-                            options.append(Option(
-                                f"[bold]{d.device}[/]  {detail}",
-                                id=d.device,
-                            ))
+                            options.append(
+                                Option(
+                                    f"[bold]{d.device}[/]  {detail}",
+                                    id=d.device,
+                                )
+                            )
                     if not options:
                         options.append(Option("[dim]No floppy drives detected[/]", disabled=True))
                     yield OptionList(*options, id="drive-list")
@@ -332,7 +343,9 @@ class DriveInput(Widget):
     def _open_path(self) -> None:
         """Open the current path in the system file manager."""
         import os
+
         from mavica_tools.utils import open_directory
+
         path = self.value
         if not path:
             return

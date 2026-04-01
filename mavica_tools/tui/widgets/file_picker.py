@@ -1,12 +1,11 @@
 """File and directory picker modal widget."""
 
 import os
-from pathlib import Path
 
 from textual.app import ComposeResult
-from textual.containers import Vertical, Horizontal
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
-from textual.widgets import DirectoryTree, Static, Button, Input
+from textual.widgets import Button, DirectoryTree, Input, Static
 
 
 class FilteredDirectoryTree(DirectoryTree):
@@ -19,10 +18,7 @@ class FilteredDirectoryTree(DirectoryTree):
     def filter_paths(self, paths):
         if not self._extensions:
             return paths
-        return [
-            p for p in paths
-            if p.is_dir() or p.suffix.lower() in self._extensions
-        ]
+        return [p for p in paths if p.is_dir() or p.suffix.lower() in self._extensions]
 
 
 class FilePicker(ModalScreen[str]):

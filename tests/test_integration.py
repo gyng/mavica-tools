@@ -10,20 +10,26 @@ import tempfile
 import pytest
 
 PIL = pytest.importorskip("PIL")
-from PIL import Image
 from io import BytesIO
 
-from mavica_tools.format import create_disk_image
-from mavica_tools.fat12 import (
-    FAT_OFFSET, FATS_COUNT, SECTORS_PER_FAT, ROOT_DIR_ENTRIES,
-    DATA_START_SECTOR, SECTOR_SIZE, extract_with_names, list_files,
-)
-from mavica_tools.multipass import merge_passes
+from PIL import Image
+
 from mavica_tools.carve import carve_jpegs
 from mavica_tools.check import check_jpeg_structure
+from mavica_tools.fat12 import (
+    DATA_START_SECTOR,
+    FAT_OFFSET,
+    FATS_COUNT,
+    SECTOR_SIZE,
+    SECTORS_PER_FAT,
+    extract_with_names,
+    list_files,
+)
+from mavica_tools.format import create_disk_image
+from mavica_tools.importcmd import quick_import
+from mavica_tools.multipass import merge_passes
 from mavica_tools.repair import repair_jpeg
 from mavica_tools.stamp import stamp_jpeg
-from mavica_tools.importcmd import quick_import
 
 
 @pytest.fixture
@@ -63,9 +69,9 @@ def _embed_jpeg_in_disk(disk: bytearray, jpeg_data: bytes, cluster: int = 2):
 
     # Copy FAT to FAT2
     fat2_offset = fat_offset + SECTORS_PER_FAT * SECTOR_SIZE
-    disk[fat2_offset : fat2_offset + SECTORS_PER_FAT * SECTOR_SIZE] = (
-        disk[fat_offset : fat_offset + SECTORS_PER_FAT * SECTOR_SIZE]
-    )
+    disk[fat2_offset : fat2_offset + SECTORS_PER_FAT * SECTOR_SIZE] = disk[
+        fat_offset : fat_offset + SECTORS_PER_FAT * SECTOR_SIZE
+    ]
 
     # Write directory entry
     root_offset = (FAT_OFFSET + FATS_COUNT * SECTORS_PER_FAT) * SECTOR_SIZE
@@ -117,9 +123,10 @@ class TestEndToEndRecovery:
         """Carve from raw → check → repair truncated."""
         # Create a truncated JPEG embedded in a disk image
         jpeg_data = _make_real_jpeg()
-        truncated = jpeg_data[:int(len(jpeg_data) * 0.7)]  # Cut 30%
+        truncated = jpeg_data[: int(len(jpeg_data) * 0.7)]  # Cut 30%
 
         from mavica_tools.multipass import DISK_SIZE
+
         disk = bytearray(DISK_SIZE)
         offset = DATA_START_SECTOR * SECTOR_SIZE
         disk[offset : offset + len(truncated)] = truncated
@@ -201,6 +208,87 @@ class TestEndToEndRecovery:
         assert "SONY" in exif.get(0x010F, "")
 
 
+class TestRealPhotoFixtures:
+    """Tests using real Mavica photo fixtures and disk images."""
+
+    def test_fixture_disk_extract_check_stamp(self, tmp_dir, fixture_disk_image):
+        """Full pipeline: extract from fixture disk → check → stamp."""
+        extract_dir = os.path.join(tmp_dir, "extracted")
+        results = extract_with_names(fixture_disk_image, extract_dir)
+
+        # Should have 6 files (3 JPEGs + 3 .411s)
+        assert len(results) == 6
+
+        # Find a JPEG and run check + stamp
+        jpeg_results = [(n, p, s, d) for n, p, s, d in results if n.endswith(".JPG")]
+        assert len(jpeg_results) == 3
+
+        name, path, size, deleted = jpeg_results[0]
+        check_result = check_jpeg_structure(path)
+        assert check_result["has_soi"] is True
+        assert check_result["valid"] is True
+
+        ok, stamped_path, msg = stamp_jpeg(path, model="fd7", date="2001-07-04", overwrite=True)
+        assert ok is True
+        img = Image.open(path)
+        exif = img.getexif()
+        assert exif[0x0110] == "SONY MAVICA MVC-FD7"
+
+    def test_real_photos_all_valid(self, fixture_jpegs):
+        """All fixture JPEGs should pass structural validation."""
+        assert len(fixture_jpegs) == 3
+        for jpeg_path in fixture_jpegs:
+            result = check_jpeg_structure(jpeg_path)
+            assert result["valid"] is True, f"{jpeg_path} failed: {result['issues']}"
+            assert result["has_soi"] is True
+            assert result["has_eoi"] is True
+
+    def test_deleted_file_recovery(self, tmp_dir):
+        """Recover a file with deleted directory entry (0xE5)."""
+        deleted_disk = os.path.join(os.path.dirname(__file__), "fixtures", "disk_deleted_files.img")
+
+        # Without include_deleted — should find 5 files
+        files = list_files(deleted_disk, include_deleted=False)
+        assert len(files) == 5
+
+        # With include_deleted — should find 6, one marked deleted
+        files = list_files(deleted_disk, include_deleted=True)
+        assert len(files) == 6
+        deleted = [f for f in files if f.is_deleted]
+        assert len(deleted) == 1
+        assert deleted[0].name == "MVC-004F.JPG"
+
+        # Extract with deleted — should recover the file
+        extract_dir = os.path.join(tmp_dir, "extracted")
+        results = extract_with_names(deleted_disk, extract_dir, include_deleted=True)
+        assert len(results) == 6
+        deleted_results = [(n, p) for n, p, s, d in results if d]
+        assert len(deleted_results) == 1
+        # Verify recovered file starts with JPEG SOI
+        with open(deleted_results[0][1], "rb") as f:
+            assert f.read(2) == b"\xff\xd8"
+
+    def test_bad_sector_check_and_repair(self, tmp_dir):
+        """Extract damaged JPEG from bad-sectors disk, check and attempt repair."""
+        bad_disk = os.path.join(os.path.dirname(__file__), "fixtures", "disk_bad_sectors.img")
+        extract_dir = os.path.join(tmp_dir, "extracted")
+        results = extract_with_names(bad_disk, extract_dir)
+
+        # Find the damaged file
+        for name, path, size, deleted in results:
+            if name == "MVC-006F.JPG":
+                check = check_jpeg_structure(path)
+                assert any("zero-byte" in issue for issue in check["issues"])
+
+                # Attempt repair
+                repaired_path = os.path.join(tmp_dir, "repaired.jpg")
+                ok, rpath, msg = repair_jpeg(path, repaired_path)
+                # Repair may or may not succeed, but should not crash
+                break
+        else:
+            pytest.fail("MVC-006F.JPG not found")
+
+
 class TestEdgeCases:
     """Edge cases that could break core functionality."""
 
@@ -256,6 +344,7 @@ class TestEdgeCases:
     def test_carve_no_jpegs_in_zeros(self, tmp_dir):
         """Carving an all-zeros disk should find nothing."""
         from mavica_tools.multipass import DISK_SIZE
+
         img_path = os.path.join(tmp_dir, "zeros.img")
         with open(img_path, "wb") as f:
             f.write(b"\x00" * DISK_SIZE)
@@ -281,6 +370,7 @@ class TestFuzzLike:
     def test_carve_random_data(self, tmp_dir):
         """Carving random data should not crash."""
         import random
+
         random.seed(42)
         data = bytes(random.getrandbits(8) for _ in range(10000))
 
@@ -294,6 +384,7 @@ class TestFuzzLike:
     def test_fat12_corrupt_image(self, tmp_dir):
         """Parsing a corrupt FAT12 image should not crash."""
         import random
+
         random.seed(42)
         data = bytes(random.getrandbits(8) for _ in range(1_474_560))
 

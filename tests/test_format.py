@@ -7,14 +7,14 @@ import tempfile
 import pytest
 
 from mavica_tools.format import (
-    create_boot_sector,
-    create_fat,
-    create_disk_image,
-    SECTOR_SIZE,
-    TOTAL_SECTORS,
     DISK_SIZE,
-    SECTORS_PER_FAT,
     MEDIA_DESCRIPTOR,
+    SECTOR_SIZE,
+    SECTORS_PER_FAT,
+    TOTAL_SECTORS,
+    create_boot_sector,
+    create_disk_image,
+    create_fat,
 )
 
 
@@ -94,12 +94,13 @@ class TestCreateDiskImage:
 
     def test_image_is_valid_fat12(self):
         """The created image should be parseable by our FAT12 parser."""
-        from mavica_tools.fat12 import read_fat12, list_files
+        from mavica_tools.fat12 import list_files, read_fat12
 
         image = create_disk_image("TEST")
 
         # Write to temp file for list_files
         import tempfile
+
         with tempfile.NamedTemporaryFile(suffix=".img", delete=False) as f:
             f.write(image)
             path = f.name

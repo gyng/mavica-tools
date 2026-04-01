@@ -23,9 +23,7 @@ THUMB_SIZE = 4608  # 64 * 48 * 1.5
 def decode_411(data: bytes) -> list[tuple[int, int, int]]:
     """Decode raw .411 YCbCr 4:1:1 data to a list of (R, G, B) tuples."""
     if len(data) != THUMB_SIZE:
-        raise ValueError(
-            f"Expected {THUMB_SIZE} bytes for a .411 thumbnail, got {len(data)}"
-        )
+        raise ValueError(f"Expected {THUMB_SIZE} bytes for a .411 thumbnail, got {len(data)}")
 
     pixels: list[tuple[int, int, int]] = []
     # Each 6-byte group encodes 4 pixels: Y0 Y1 Y2 Y3 Cb Cr
@@ -53,7 +51,9 @@ def decode_411_to_image(path: str):
 
 
 def convert_411(
-    src: str, dest: str | None = None, fmt: str = "PNG",
+    src: str,
+    dest: str | None = None,
+    fmt: str = "PNG",
 ) -> str:
     """Convert a .411 thumbnail to a standard image format.
 
@@ -83,14 +83,20 @@ def main():
         description="Decode Sony Mavica .411 thumbnails to standard images"
     )
     parser.add_argument(
-        "files", nargs="+", help=".411 file(s) to convert",
+        "files",
+        nargs="+",
+        help=".411 file(s) to convert",
     )
     parser.add_argument(
-        "-o", "--output-dir", default=None,
+        "-o",
+        "--output-dir",
+        default=None,
         help="Output directory (default: same directory as input)",
     )
     parser.add_argument(
-        "-f", "--format", default="png",
+        "-f",
+        "--format",
+        default="png",
         help="Output format: png, jpg, bmp (default: png)",
     )
     args = parser.parse_args()

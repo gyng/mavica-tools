@@ -37,12 +37,14 @@ def main():
         # No subcommand — launch TUI if interactive, otherwise show help
         if sys.stdin.isatty() and sys.stdout.isatty():
             from mavica_tools.tui.app import run
+
             run()
             return
         # Non-interactive: fall through to help text below
 
     if args.tool == "tui":
         from mavica_tools.tui.app import run
+
         run()
         return
     elif args.tool == "import":
@@ -108,7 +110,7 @@ def main():
         sys.exit(0)
 
     # Re-run with the remaining args
-    sys.argv = [f"mavica {args.tool}"] + remaining
+    sys.argv = [f"mavica {args.tool}", *remaining]
     tool_main()
 
 

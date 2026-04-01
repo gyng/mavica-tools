@@ -1,16 +1,18 @@
 """Format screen — create Mavica-compatible FAT12 disk images."""
 
-import os
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, RichLog, ProgressBar
 from textual.containers import Horizontal
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, ProgressBar, RichLog, Static
 from textual.worker import get_current_worker
 
 from mavica_tools.format import (
-    format_floppy, format_floppy_full, TOTAL_SECTORS,
-    get_blocking_processes, force_dismount_volume,
+    TOTAL_SECTORS,
+    force_dismount_volume,
+    format_floppy,
+    format_floppy_full,
+    get_blocking_processes,
 )
 from mavica_tools.tui.widgets.defrag_map import DefragMap
 from mavica_tools.tui.widgets.drive_input import DriveInput
@@ -31,6 +33,7 @@ class FormatScreen(Screen):
 
     def on_screen_suspend(self) -> None:
         from textual.screen import ModalScreen
+
         top = self.app.screen
         if isinstance(top, ModalScreen):
             return
@@ -41,13 +44,10 @@ class FormatScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
-            "[bold #ffaa00]Format Disk[/]  "
-            "[dim]Create Mavica-compatible FAT12 format[/]\n",
+            "[bold #ffaa00]Format Disk[/]  [dim]Create Mavica-compatible FAT12 format[/]\n",
             id="title-bar",
         )
-        yield Static(
-            "  Format a physical floppy for use with Mavica cameras.\n"
-        )
+        yield Static("  Format a physical floppy for use with Mavica cameras.\n")
         yield DriveInput(
             label="Device",
             default="auto",
@@ -63,7 +63,9 @@ class FormatScreen(Screen):
             yield Button("Quick Format", variant="error", id="btn-format", disabled=True)
             yield Button("Full Format", variant="error", id="btn-format-full", disabled=True)
             yield Button("Stop", variant="error", id="btn-stop", disabled=True)
-            yield Button("Force Dismount & Retry", variant="warning", id="btn-force-dismount", disabled=True)
+            yield Button(
+                "Force Dismount & Retry", variant="warning", id="btn-force-dismount", disabled=True
+            )
         with Horizontal(classes="button-row"):
             yield Button("I understand this erases all data", variant="warning", id="btn-confirm")
 
@@ -130,11 +132,16 @@ class FormatScreen(Screen):
 
             try:
                 ok, msg, bad = await asyncio.to_thread(
-                    format_floppy_full, device, label, on_sector=on_sector,
+                    format_floppy_full,
+                    device,
+                    label,
+                    on_sector=on_sector,
                 )
             except _StopRequested:
                 log.write("[yellow]Format stopped.[/]")
-                log.write("[red]WARNING: Disk is in an incomplete state. Format again before use.[/]")
+                log.write(
+                    "[red]WARNING: Disk is in an incomplete state. Format again before use.[/]"
+                )
                 self._finish_format()
                 return
 
@@ -142,7 +149,9 @@ class FormatScreen(Screen):
 
             if ok:
                 if bad:
-                    log.write(f"[#ffaa00]Done with {bad} bad sector(s). Disk has defects but is formatted.[/]")
+                    log.write(
+                        f"[#ffaa00]Done with {bad} bad sector(s). Disk has defects but is formatted.[/]"
+                    )
                 else:
                     log.write("[green]Done! All sectors verified. Disk is ready for Mavica use.[/]")
             else:
@@ -178,7 +187,7 @@ class FormatScreen(Screen):
                     defrag.update_sector(s, "good")
                 progress.update(progress=33)
                 log.write("  [dim]Sectors 19-32: root directory[/]")
-                log.write(f"  [dim]Sectors 33-2879: data area (unchanged)[/]")
+                log.write("  [dim]Sectors 33-2879: data area (unchanged)[/]")
                 log.write("[green]Done! Disk is ready for Mavica use.[/]")
             else:
                 for s in range(33):
@@ -205,7 +214,9 @@ class FormatScreen(Screen):
                 for b in blockers:
                     log.write(f"  [bold]>[/] {b}")
             else:
-                log.write("[dim]Could not identify specific programs, but something has the drive open.[/]")
+                log.write(
+                    "[dim]Could not identify specific programs, but something has the drive open.[/]"
+                )
 
             log.write(
                 "\n[bold]Options:[/]\n"
@@ -219,7 +230,6 @@ class FormatScreen(Screen):
     def _do_force_dismount(self) -> None:
         """Force-dismount the volume and retry the format."""
         device = self.query_one("#drive-input", DriveInput).value
-        label = "MAVICA"
         log = self.query_one("#log", RichLog)
 
         log.write("\n[bold]Force dismounting volume...[/]")

@@ -13,7 +13,6 @@ import os
 import struct
 from dataclasses import dataclass
 
-
 SECTOR_SIZE = 512
 CLUSTER_SIZE = SECTOR_SIZE  # 1 sector per cluster on Mavica floppies
 
@@ -30,16 +29,17 @@ DATA_START_SECTOR = 1 + (FATS_COUNT * SECTORS_PER_FAT) + ROOT_DIR_SECTORS  # sec
 @dataclass
 class FileEntry:
     """A file found in the FAT12 directory."""
-    name: str           # Full 8.3 name (e.g., "MVC-001.JPG")
-    short_name: str     # Raw 8.3 (space-padded)
-    size: int           # File size in bytes
+
+    name: str  # Full 8.3 name (e.g., "MVC-001.JPG")
+    short_name: str  # Raw 8.3 (space-padded)
+    size: int  # File size in bytes
     start_cluster: int  # First cluster number
-    is_deleted: bool    # True if the file was deleted (first byte 0xE5)
+    is_deleted: bool  # True if the file was deleted (first byte 0xE5)
     is_directory: bool
-    raw_date: int       # DOS date field
-    raw_time: int       # DOS time field
-    date_str: str       # "YYYY-MM-DD" or "" if invalid
-    time_str: str       # "HH:MM:SS" or "" if invalid
+    raw_date: int  # DOS date field
+    raw_time: int  # DOS time field
+    date_str: str  # "YYYY-MM-DD" or "" if invalid
+    time_str: str  # "HH:MM:SS" or "" if invalid
 
     @property
     def start_sector(self) -> int:
@@ -187,18 +187,22 @@ def read_directory(data: bytes, dir_offset: int, max_entries: int) -> list[FileE
         start_cluster = struct.unpack_from("<H", raw, 26)[0]
         size = struct.unpack_from("<I", raw, 28)[0]
 
-        entries.append(FileEntry(
-            name=name,
-            short_name=raw_name.decode("ascii", errors="replace") + "." + raw_ext.decode("ascii", errors="replace"),
-            size=size,
-            start_cluster=start_cluster,
-            is_deleted=is_deleted,
-            is_directory=is_directory,
-            raw_date=raw_date,
-            raw_time=raw_time,
-            date_str=_decode_dos_date(raw_date),
-            time_str=_decode_dos_time(raw_time),
-        ))
+        entries.append(
+            FileEntry(
+                name=name,
+                short_name=raw_name.decode("ascii", errors="replace")
+                + "."
+                + raw_ext.decode("ascii", errors="replace"),
+                size=size,
+                start_cluster=start_cluster,
+                is_deleted=is_deleted,
+                is_directory=is_directory,
+                raw_date=raw_date,
+                raw_time=raw_time,
+                date_str=_decode_dos_date(raw_date),
+                time_str=_decode_dos_time(raw_time),
+            )
+        )
 
     return entries
 
@@ -268,9 +272,7 @@ def file_sector_map_from_data(data: bytes) -> list[tuple[str, list[int]]]:
     return _build_sector_map(files, fat)
 
 
-def _build_sector_map(
-    files: list[FileEntry], fat: list[int]
-) -> list[tuple[str, list[int]]]:
+def _build_sector_map(files: list[FileEntry], fat: list[int]) -> list[tuple[str, list[int]]]:
     """Build (filename, [sector_numbers]) list from parsed FAT12 data."""
     result = []
     for entry in files:
@@ -330,6 +332,7 @@ def extract_with_names(
         if entry.date_str:
             try:
                 from datetime import datetime as _dt
+
                 ts_str = entry.date_str
                 if entry.time_str:
                     ts_str += f" {entry.time_str}"
@@ -385,9 +388,7 @@ def main():
     import argparse
     import sys
 
-    parser = argparse.ArgumentParser(
-        description="FAT12 parser for Mavica floppy disk images"
-    )
+    parser = argparse.ArgumentParser(description="FAT12 parser for Mavica floppy disk images")
     subparsers = parser.add_subparsers(dest="command")
 
     ls_parser = subparsers.add_parser("ls", help="List files on disk image")
@@ -396,7 +397,9 @@ def main():
 
     extract_parser = subparsers.add_parser("extract", help="Extract files with original names")
     extract_parser.add_argument("image", help="Disk image file")
-    extract_parser.add_argument("-o", "--output", default="mavica_out/extracted", help="Output directory")
+    extract_parser.add_argument(
+        "-o", "--output", default="mavica_out/extracted", help="Output directory"
+    )
     extract_parser.add_argument("--deleted", action="store_true", help="Include deleted files")
 
     args = parser.parse_args()

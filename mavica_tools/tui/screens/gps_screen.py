@@ -1,14 +1,13 @@
 """GPS screen — merge GPS track data into photos."""
 
-import os
 import glob as globmod
+import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog, ProgressBar
 from textual.containers import Horizontal
-from textual.worker import get_current_worker
+from textual.screen import Screen
+from textual.widgets import Button, DataTable, Footer, Header, Input, ProgressBar, RichLog, Static
 
 from mavica_tools.tui.widgets.file_picker import FilePicker
 
@@ -24,8 +23,7 @@ class GpsScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
-            "[bold #ffaa00]GPS Track Merge[/]  "
-            "[dim]Match photo timestamps to GPS logger data[/]\n",
+            "[bold #ffaa00]GPS Track Merge[/]  [dim]Match photo timestamps to GPS logger data[/]\n",
             id="title-bar",
         )
         yield Static(
@@ -36,7 +34,10 @@ class GpsScreen(Screen):
         # Show piexif status
         try:
             import piexif  # noqa: F401
-            yield Static("  [green]piexif installed[/] — GPS coordinates will be written to EXIF.\n")
+
+            yield Static(
+                "  [green]piexif installed[/] — GPS coordinates will be written to EXIF.\n"
+            )
         except ImportError:
             yield Static(
                 "  [#ffaa00]piexif not installed[/] — preview works, but GPS won't be saved to files.\n"
@@ -82,6 +83,7 @@ class GpsScreen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one(f"#{input_id}", Input).value = path
+
         self.app.push_screen(FilePicker(**kwargs), on_selected)
 
     def _run_merge(self, dry_run: bool) -> None:
@@ -93,7 +95,7 @@ class GpsScreen(Screen):
         self.run_worker(self._do_merge(photos, gpx, dry_run), exclusive=True)
 
     async def _do_merge(self, photos_dir: str, gpx_path: str, dry_run: bool) -> None:
-        from mavica_tools.gps import parse_gpx, match_photos_to_track, stamp_gps_exif
+        from mavica_tools.gps import match_photos_to_track, parse_gpx, stamp_gps_exif
 
         log = self.query_one("#log", RichLog)
         table = self.query_one("#results-table", DataTable)
@@ -139,8 +141,11 @@ class GpsScreen(Screen):
                     table.add_row("[#ffaa00]PREVIEW[/]", name, loc, offset)
                 else:
                     ok, msg = stamp_gps_exif(
-                        path, match.point.lat, match.point.lon,
-                        match.point.alt, match.point.time,
+                        path,
+                        match.point.lat,
+                        match.point.lon,
+                        match.point.alt,
+                        match.point.time,
                     )
                     status = "[green]OK[/]" if ok else "[red]FAIL[/]"
                     table.add_row(status, name, loc, offset)
@@ -162,9 +167,9 @@ class GpsScreen(Screen):
             self.run_worker(self._do_map(), exclusive=True)
 
     async def _do_map(self) -> None:
-        from mavica_tools.gps import generate_map_html, GpsMatch, GpsPoint
-        from mavica_tools.gps import _get_photo_time
         from datetime import timezone
+
+        from mavica_tools.gps import GpsMatch, GpsPoint, generate_map_html
 
         log = self.query_one("#log", RichLog)
         photos_dir = self._photos_dir
@@ -178,22 +183,38 @@ class GpsScreen(Screen):
         for path in sorted(files):
             try:
                 from PIL import Image
+
                 img = Image.open(path)
                 exif = img.getexif()
                 gps = exif.get(0x8825)
                 if gps and 0x0002 in gps:
                     lat_dms = gps[0x0002]
                     lon_dms = gps[0x0004]
-                    lat = lat_dms[0][0]/lat_dms[0][1] + lat_dms[1][0]/(lat_dms[1][1]*60) + lat_dms[2][0]/(lat_dms[2][1]*3600)
-                    lon = lon_dms[0][0]/lon_dms[0][1] + lon_dms[1][0]/(lon_dms[1][1]*60) + lon_dms[2][0]/(lon_dms[2][1]*3600)
-                    if gps.get(0x0001) == "S": lat = -lat
-                    if gps.get(0x0003) == "W": lon = -lon
+                    lat = (
+                        lat_dms[0][0] / lat_dms[0][1]
+                        + lat_dms[1][0] / (lat_dms[1][1] * 60)
+                        + lat_dms[2][0] / (lat_dms[2][1] * 3600)
+                    )
+                    lon = (
+                        lon_dms[0][0] / lon_dms[0][1]
+                        + lon_dms[1][0] / (lon_dms[1][1] * 60)
+                        + lon_dms[2][0] / (lon_dms[2][1] * 3600)
+                    )
+                    if gps.get(0x0001) == "S":
+                        lat = -lat
+                    if gps.get(0x0003) == "W":
+                        lon = -lon
                     from datetime import datetime
-                    matches.append(GpsMatch(
-                        photo_path=path,
-                        point=GpsPoint(lat=lat, lon=lon, alt=None, time=datetime.now(tz=timezone.utc)),
-                        offset_seconds=0,
-                    ))
+
+                    matches.append(
+                        GpsMatch(
+                            photo_path=path,
+                            point=GpsPoint(
+                                lat=lat, lon=lon, alt=None, time=datetime.now(tz=timezone.utc)
+                            ),
+                            offset_seconds=0,
+                        )
+                    )
             except Exception:
                 pass
 

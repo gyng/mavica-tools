@@ -39,7 +39,8 @@ def _composite_with_411(repaired_img, thumb_411_path):
     Upscales the 64x48 thumbnail to match the repaired image size,
     then blends it into regions that are solid gray (unrecovered).
     """
-    from PIL import Image, ImageFilter
+    from PIL import Image
+
     from mavica_tools.thumb411 import decode_411_to_image
 
     try:
@@ -126,18 +127,22 @@ def repair_jpeg(input_path, output_path=None, use_411=False):
             if thumb_path:
                 try:
                     from mavica_tools.thumb411 import decode_411_to_image
+
                     thumb = decode_411_to_image(thumb_path)
                     # Upscale to 640x480 (common Mavica resolution)
                     result = thumb.resize((640, 480), resample=Image.LANCZOS)
                     result.save(output_path, "PNG")
-                    return True, output_path, (
-                        f"Recovered from .411 thumbnail only (64x48 → 640x480)"
+                    return (
+                        True,
+                        output_path,
+                        ("Recovered from .411 thumbnail only (64x48 → 640x480)"),
                     )
                 except Exception:
                     pass
         return False, None, "Not a JPEG file (missing SOI marker)"
 
     from io import BytesIO
+
     repaired_img = None
     repair_msg = ""
 
@@ -217,11 +222,14 @@ def repair_jpeg(input_path, output_path=None, use_411=False):
             if thumb_path:
                 try:
                     from mavica_tools.thumb411 import decode_411_to_image
+
                     thumb = decode_411_to_image(thumb_path)
                     result = thumb.resize((640, 480), resample=Image.LANCZOS)
                     result.save(output_path, "PNG")
-                    return True, output_path, (
-                        "Recovered from .411 thumbnail only (64x48 \u2192 640x480)"
+                    return (
+                        True,
+                        output_path,
+                        ("Recovered from .411 thumbnail only (64x48 \u2192 640x480)"),
                     )
                 except Exception:
                     pass
@@ -245,8 +253,9 @@ def repair_files(paths, output_dir=None, use_411=False):
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
-    from mavica_tools.utils import print_progress
     import time
+
+    from mavica_tools.utils import print_progress
 
     success_count = 0
     fail_count = 0
@@ -278,9 +287,7 @@ def repair_files(paths, output_dir=None, use_411=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Repair corrupt/truncated Mavica JPEG files"
-    )
+    parser = argparse.ArgumentParser(description="Repair corrupt/truncated Mavica JPEG files")
     parser.add_argument(
         "paths",
         nargs="+",

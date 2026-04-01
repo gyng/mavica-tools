@@ -1,22 +1,23 @@
 """Main Textual application for mavica-tools."""
 
-from textual.app import App, ComposeResult
+import os
+
+from textual.app import App
 from textual.binding import Binding
 
+from mavica_tools.tui.screens.carve import CarveScreen
+from mavica_tools.tui.screens.check import CheckScreen
+from mavica_tools.tui.screens.diskcheck_screen import DiskCheckScreen
+from mavica_tools.tui.screens.export_screen import ExportScreen
+from mavica_tools.tui.screens.fat12_screen import Fat12Screen
+from mavica_tools.tui.screens.format_screen import FormatScreen
+from mavica_tools.tui.screens.gps_screen import GpsScreen
 from mavica_tools.tui.screens.home import HomeScreen
 from mavica_tools.tui.screens.import_workflow import ImportWorkflowScreen
-from mavica_tools.tui.screens.check import CheckScreen
-from mavica_tools.tui.screens.carve import CarveScreen
-from mavica_tools.tui.screens.repair import RepairScreen
 from mavica_tools.tui.screens.multipass import MultipassScreen
-from mavica_tools.tui.screens.fat12_screen import Fat12Screen
+from mavica_tools.tui.screens.repair import RepairScreen
 from mavica_tools.tui.screens.stamp_screen import StampScreen
-from mavica_tools.tui.screens.format_screen import FormatScreen
-from mavica_tools.tui.screens.export_screen import ExportScreen
-from mavica_tools.tui.screens.gps_screen import GpsScreen
-from mavica_tools.tui.screens.diskcheck_screen import DiskCheckScreen
 from mavica_tools.tui.screens.thumb411_screen import Thumb411Screen
-
 
 CSS = """
 Screen {
@@ -211,8 +212,13 @@ class MavicaApp(App):
 
     def get_system_commands(self, screen):
         from textual.app import SystemCommand
+
         yield from super().get_system_commands(screen)
-        yield SystemCommand("Screenshot to clipboard", "Copy SVG screenshot to clipboard", self._screenshot_to_clipboard)
+        yield SystemCommand(
+            "Screenshot to clipboard",
+            "Copy SVG screenshot to clipboard",
+            self._screenshot_to_clipboard,
+        )
 
     def on_mount(self) -> None:
         self.push_screen("home")
@@ -233,9 +239,9 @@ class MavicaApp(App):
                 self.exit()
                 return
 
-        from textual.screen import ModalScreen
-        from textual.widgets import Static, Button
         from textual.containers import Horizontal
+        from textual.screen import ModalScreen
+        from textual.widgets import Button, Static
 
         class QuitConfirm(ModalScreen[bool]):
             DEFAULT_CSS = """
@@ -275,6 +281,7 @@ class MavicaApp(App):
 
             def compose(self):
                 from textual.containers import Vertical
+
                 with Vertical(id="quit-dialog"):
                     yield Static("Quit mavica-tools?")
                     with Horizontal():
@@ -304,9 +311,12 @@ class MavicaApp(App):
                 # Graceful exit — lets Textual restore the terminal.
                 # Force-kill after 1s if a worker thread is stuck on I/O.
                 import threading
+
                 def _force_exit():
                     import os
+
                     os._exit(0)
+
                 threading.Timer(1.0, _force_exit).daemon = True
                 t = threading.Timer(1.0, _force_exit)
                 t.daemon = True
@@ -319,6 +329,7 @@ class MavicaApp(App):
     def _get_screenshots_dir() -> str:
         """Get the OS default screenshots directory."""
         import platform
+
         system = platform.system()
         home = os.path.expanduser("~")
         if system == "Windows":
@@ -340,6 +351,7 @@ class MavicaApp(App):
 
     def _screenshot_to_file(self) -> None:
         import time
+
         screenshots_dir = self._get_screenshots_dir()
         os.makedirs(screenshots_dir, exist_ok=True)
         timestamp = time.strftime("%Y%m%d_%H%M%S")
@@ -351,9 +363,9 @@ class MavicaApp(App):
             self.notify(f"Saved: {os.path.join(screenshots_dir, filename)}", timeout=3)
 
     def _screenshot_to_clipboard(self) -> None:
+        import os
         import subprocess
         import tempfile
-        import os
 
         # Save to temp file first
         with tempfile.NamedTemporaryFile(suffix=".svg", delete=False) as f:
@@ -366,19 +378,24 @@ class MavicaApp(App):
             # Try platform-specific clipboard — pass raw bytes to avoid
             # encoding errors (SVG contains Unicode that cp1252 can't handle)
             import platform
+
             system = platform.system()
             if system == "Windows":
                 proc = subprocess.run(
-                    ["clip.exe"], input=svg_bytes,
-                    capture_output=True, timeout=5,
+                    ["clip.exe"],
+                    input=svg_bytes,
+                    capture_output=True,
+                    timeout=5,
                 )
                 if proc.returncode == 0:
                     self.notify("SVG copied to clipboard", timeout=3)
                     return
             elif system == "Darwin":
                 proc = subprocess.run(
-                    ["pbcopy"], input=svg_bytes,
-                    capture_output=True, timeout=5,
+                    ["pbcopy"],
+                    input=svg_bytes,
+                    capture_output=True,
+                    timeout=5,
                 )
                 if proc.returncode == 0:
                     self.notify("SVG copied to clipboard", timeout=3)
@@ -387,8 +404,10 @@ class MavicaApp(App):
                 for cmd in (["xclip", "-selection", "clipboard"], ["xsel", "--clipboard"]):
                     try:
                         proc = subprocess.run(
-                            cmd, input=svg_bytes,
-                            capture_output=True, timeout=5,
+                            cmd,
+                            input=svg_bytes,
+                            capture_output=True,
+                            timeout=5,
                         )
                         if proc.returncode == 0:
                             self.notify("SVG copied to clipboard", timeout=3)
@@ -397,7 +416,9 @@ class MavicaApp(App):
                         continue
 
             # Fallback: save to file instead
-            self.notify("Clipboard unavailable, saving to file instead", severity="warning", timeout=3)
+            self.notify(
+                "Clipboard unavailable, saving to file instead", severity="warning", timeout=3
+            )
             self._screenshot_to_file()
         finally:
             try:

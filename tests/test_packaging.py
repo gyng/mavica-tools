@@ -71,6 +71,7 @@ class TestPackageMetadata:
 
     def test_version_exists(self):
         from mavica_tools import __version__
+
         assert __version__
         assert isinstance(__version__, str)
         # Should be semver-like
@@ -79,11 +80,13 @@ class TestPackageMetadata:
 
     def test_cli_entry_point_importable(self):
         from mavica_tools.cli import main
+
         assert callable(main)
 
     def test_dunder_main_exists(self):
         """__main__.py should exist and reference cli.main."""
         import mavica_tools.__main__
+
         assert hasattr(mavica_tools.__main__, "main")
         assert callable(mavica_tools.__main__.main)
 
@@ -94,7 +97,9 @@ class TestCLIHelp:
     def test_mavica_help(self):
         result = subprocess.run(
             [sys.executable, "-m", "mavica_tools", "--help"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert result.returncode == 0
         assert "mavica" in result.stdout.lower()
@@ -102,24 +107,50 @@ class TestCLIHelp:
     def test_all_subcommands_in_help(self):
         result = subprocess.run(
             [sys.executable, "-m", "mavica_tools"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         output = result.stdout + result.stderr
         for tool in [
-            "import", "multipass", "carve", "check", "repair",
-            "swaptest", "fat12", "recover", "format", "stamp",
-            "detect", "history", "report", "export", "gps", "tui",
+            "import",
+            "multipass",
+            "carve",
+            "check",
+            "repair",
+            "swaptest",
+            "fat12",
+            "recover",
+            "format",
+            "stamp",
+            "detect",
+            "history",
+            "report",
+            "export",
+            "gps",
+            "tui",
         ]:
             assert tool in output, f"'{tool}' missing from CLI help"
 
-    @pytest.mark.parametrize("subcommand", [
-        "import", "multipass", "carve", "check", "repair",
-        "stamp", "export", "detect",
-    ])
+    @pytest.mark.parametrize(
+        "subcommand",
+        [
+            "import",
+            "multipass",
+            "carve",
+            "check",
+            "repair",
+            "stamp",
+            "export",
+            "detect",
+        ],
+    )
     def test_subcommand_help(self, subcommand):
         result = subprocess.run(
             [sys.executable, "-m", "mavica_tools", subcommand, "--help"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert result.returncode == 0
 
@@ -129,22 +160,26 @@ class TestProjectFiles:
 
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-    @pytest.mark.parametrize("path", [
-        "pyproject.toml",
-        "LICENSE",
-        "README.md",
-        "mavica.spec",
-        "mavica_tools/__init__.py",
-        "mavica_tools/__main__.py",
-        "mavica_tools/cli.py",
-        ".github/workflows/ci.yml",
-        ".github/workflows/release.yml",
-    ])
+    @pytest.mark.parametrize(
+        "path",
+        [
+            "pyproject.toml",
+            "LICENSE",
+            "README.md",
+            "mavica.spec",
+            "mavica_tools/__init__.py",
+            "mavica_tools/__main__.py",
+            "mavica_tools/cli.py",
+            ".github/workflows/ci.yml",
+            ".github/workflows/release.yml",
+        ],
+    )
     def test_file_exists(self, path):
         assert os.path.exists(os.path.join(self.ROOT, path)), f"Missing: {path}"
 
     def test_pyproject_has_required_fields(self):
         import tomllib
+
         with open(os.path.join(self.ROOT, "pyproject.toml"), "rb") as f:
             config = tomllib.load(f)
 
@@ -170,10 +205,14 @@ class TestProjectFiles:
 
         # Every tool module should be in hiddenimports
         for mod in [
-            "mavica_tools.multipass", "mavica_tools.carve",
-            "mavica_tools.check", "mavica_tools.repair",
-            "mavica_tools.export", "mavica_tools.gps",
-            "mavica_tools.importcmd", "mavica_tools.fun",
+            "mavica_tools.multipass",
+            "mavica_tools.carve",
+            "mavica_tools.check",
+            "mavica_tools.repair",
+            "mavica_tools.export",
+            "mavica_tools.gps",
+            "mavica_tools.importcmd",
+            "mavica_tools.fun",
         ]:
             assert mod in spec, f"PyInstaller spec missing: {mod}"
 
@@ -183,13 +222,15 @@ class TestOptionalDependencies:
 
     def test_gps_works_without_piexif(self):
         """GPS module should import fine; stamp_gps_exif should fail gracefully."""
-        from mavica_tools.gps import parse_gpx, match_photos_to_track
+        from mavica_tools.gps import match_photos_to_track, parse_gpx
+
         # Core functions don't need piexif
         assert callable(parse_gpx)
         assert callable(match_photos_to_track)
 
     def test_piexif_is_optional_dep(self):
         import tomllib
+
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         with open(os.path.join(root, "pyproject.toml"), "rb") as f:
             config = tomllib.load(f)

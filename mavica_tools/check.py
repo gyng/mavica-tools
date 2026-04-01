@@ -6,10 +6,10 @@ Detects: truncation, marker errors, premature EOF, and partial decode failures.
 
 import argparse
 import os
-import struct
 import sys
 
-from mavica_tools.utils import gather_jpegs, JPEG_SOI_SHORT as JPEG_SOI, JPEG_EOI
+from mavica_tools.utils import JPEG_EOI, gather_jpegs
+from mavica_tools.utils import JPEG_SOI_SHORT as JPEG_SOI
 
 
 def check_jpeg_structure(filepath):
@@ -106,8 +106,7 @@ def check_jpeg_structure(filepath):
     if result["issues"]:
         # Distinguish warnings from hard failures
         hard_issues = [
-            i for i in result["issues"]
-            if "Missing SOI" in i or "empty" in i.lower() or "FAIL" in i
+            i for i in result["issues"] if "Missing SOI" in i or "empty" in i.lower() or "FAIL" in i
         ]
         if hard_issues:
             result["valid"] = False
@@ -117,8 +116,9 @@ def check_jpeg_structure(filepath):
 
 def check_files(paths, verbose=False):
     """Check multiple JPEG files and print a report."""
-    from mavica_tools.utils import print_progress
     import time
+
+    from mavica_tools.utils import print_progress
 
     results = []
     start = time.time()
@@ -162,27 +162,26 @@ def check_files(paths, verbose=False):
     print(f"  Bad:     {bad}")
 
     if warn > 0:
-        print(f"\nFiles with warnings may be partially recoverable — try mavica-repair.")
+        print("\nFiles with warnings may be partially recoverable — try mavica-repair.")
     if bad > 0:
-        print(f"\nBad files may need disk-level recovery — try mavica-multipass on the original floppy.")
+        print(
+            "\nBad files may need disk-level recovery — try mavica-multipass on the original floppy."
+        )
 
     return results
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Check Mavica JPEG files for corruption"
-    )
+    parser = argparse.ArgumentParser(description="Check Mavica JPEG files for corruption")
     parser.add_argument(
         "paths",
         nargs="+",
         help="JPEG files or directories to check",
     )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Show OK files too")
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Show OK files too"
-    )
-    parser.add_argument(
-        "--preview", action="store_true",
+        "--preview",
+        action="store_true",
         help="Show thumbnails of bad/warning files (from local disk only)",
     )
     args = parser.parse_args()
@@ -205,6 +204,7 @@ def main():
         if bad_files:
             print("\nPreviews of damaged files:")
             from mavica_tools.terminal_image import show_images
+
             show_images(bad_files, max_images=5)
 
 

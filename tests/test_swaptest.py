@@ -1,12 +1,11 @@
 """Tests for the cross-camera swap test tracker."""
 
-import json
 import os
 import tempfile
 
 import pytest
 
-from mavica_tools.swaptest import load_db, save_db, cmd_setup, cmd_log, cmd_report, cmd_status
+from mavica_tools.swaptest import cmd_log, cmd_report, cmd_setup, cmd_status, load_db, save_db
 
 
 @pytest.fixture
@@ -22,6 +21,7 @@ def db_path(tmp_dir):
 
 class FakeArgs:
     """Minimal args object to simulate argparse."""
+
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
@@ -46,7 +46,9 @@ class TestLoadSaveDb:
         db = load_db(db_path)
         db["cameras"] = ["A", "B"]
         db["disks"] = ["D1"]
-        db["tests"].append({"camera": "A", "disk": "D1", "result": "ok", "notes": "", "timestamp": "t"})
+        db["tests"].append(
+            {"camera": "A", "disk": "D1", "result": "ok", "notes": "", "timestamp": "t"}
+        )
         save_db(db, db_path)
 
         loaded = load_db(db_path)
@@ -115,17 +117,27 @@ class TestCmdReport:
         """
         db = {"cameras": cameras, "disks": disks, "tests": [], "created": "t"}
         for (c, d), result in results_map.items():
-            db["tests"].append({
-                "camera": c, "disk": d, "result": result,
-                "notes": "", "timestamp": "t",
-            })
+            db["tests"].append(
+                {
+                    "camera": c,
+                    "disk": d,
+                    "result": result,
+                    "notes": "",
+                    "timestamp": "t",
+                }
+            )
         return db
 
     def test_all_ok_suggests_pc_drive(self, capsys):
         db = self._make_full_db(
-            ["FD7-A", "FD7-B"], ["D1", "D2"],
-            {("FD7-A", "D1"): "ok", ("FD7-A", "D2"): "ok",
-             ("FD7-B", "D1"): "ok", ("FD7-B", "D2"): "ok"},
+            ["FD7-A", "FD7-B"],
+            ["D1", "D2"],
+            {
+                ("FD7-A", "D1"): "ok",
+                ("FD7-A", "D2"): "ok",
+                ("FD7-B", "D1"): "ok",
+                ("FD7-B", "D2"): "ok",
+            },
         )
         cmd_report(db, FakeArgs())
         output = capsys.readouterr().out
@@ -133,9 +145,14 @@ class TestCmdReport:
 
     def test_camera_failure_detected(self, capsys):
         db = self._make_full_db(
-            ["FD7-A", "FD7-B"], ["D1", "D2"],
-            {("FD7-A", "D1"): "fail", ("FD7-A", "D2"): "fail",
-             ("FD7-B", "D1"): "ok", ("FD7-B", "D2"): "ok"},
+            ["FD7-A", "FD7-B"],
+            ["D1", "D2"],
+            {
+                ("FD7-A", "D1"): "fail",
+                ("FD7-A", "D2"): "fail",
+                ("FD7-B", "D1"): "ok",
+                ("FD7-B", "D2"): "ok",
+            },
         )
         cmd_report(db, FakeArgs())
         output = capsys.readouterr().out
@@ -144,9 +161,14 @@ class TestCmdReport:
 
     def test_disk_failure_detected(self, capsys):
         db = self._make_full_db(
-            ["FD7-A", "FD7-B"], ["D1", "D2"],
-            {("FD7-A", "D1"): "ok", ("FD7-A", "D2"): "fail",
-             ("FD7-B", "D1"): "ok", ("FD7-B", "D2"): "fail"},
+            ["FD7-A", "FD7-B"],
+            ["D1", "D2"],
+            {
+                ("FD7-A", "D1"): "ok",
+                ("FD7-A", "D2"): "fail",
+                ("FD7-B", "D1"): "ok",
+                ("FD7-B", "D2"): "fail",
+            },
         )
         cmd_report(db, FakeArgs())
         output = capsys.readouterr().out
@@ -161,7 +183,8 @@ class TestCmdReport:
 
     def test_missing_combos_shown(self, capsys):
         db = self._make_full_db(
-            ["A", "B"], ["D1", "D2"],
+            ["A", "B"],
+            ["D1", "D2"],
             {("A", "D1"): "ok"},  # only 1 of 4 tested
         )
         cmd_report(db, FakeArgs())
@@ -170,9 +193,9 @@ class TestCmdReport:
 
     def test_isolated_failure_detected(self, capsys):
         db = self._make_full_db(
-            ["A", "B"], ["D1", "D2"],
-            {("A", "D1"): "ok", ("A", "D2"): "ok",
-             ("B", "D1"): "fail", ("B", "D2"): "ok"},
+            ["A", "B"],
+            ["D1", "D2"],
+            {("A", "D1"): "ok", ("A", "D2"): "ok", ("B", "D1"): "fail", ("B", "D2"): "ok"},
         )
         cmd_report(db, FakeArgs())
         output = capsys.readouterr().out

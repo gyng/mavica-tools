@@ -5,7 +5,7 @@ import tempfile
 
 import pytest
 
-from mavica_tools.report import generate_report, _sector_map_html, _file_table_html
+from mavica_tools.report import _file_table_html, _sector_map_html, generate_report
 
 
 @pytest.fixture

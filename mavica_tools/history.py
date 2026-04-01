@@ -8,9 +8,8 @@ import argparse
 import json
 import os
 import sys
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from dataclasses import dataclass, asdict
-
 
 HISTORY_DIR = os.path.join(os.path.expanduser("~"), ".mavica-tools")
 HISTORY_FILE = os.path.join(HISTORY_DIR, "disk_history.json")
@@ -19,6 +18,7 @@ HISTORY_FILE = os.path.join(HISTORY_DIR, "disk_history.json")
 @dataclass
 class DiskSnapshot:
     """A point-in-time snapshot of disk health."""
+
     disk_label: str
     timestamp: str
     total_sectors: int
@@ -33,7 +33,7 @@ class DiskSnapshot:
 def load_history(path: str = HISTORY_FILE) -> list[dict]:
     """Load disk health history."""
     if os.path.exists(path):
-        with open(path, "r") as f:
+        with open(path) as f:
             return json.load(f)
     return []
 
@@ -81,11 +81,7 @@ def record_snapshot(
 def get_disk_history(disk_label: str, path: str = HISTORY_FILE) -> list[DiskSnapshot]:
     """Get all snapshots for a specific disk."""
     history = load_history(path)
-    return [
-        DiskSnapshot(**h)
-        for h in history
-        if h.get("disk_label") == disk_label
-    ]
+    return [DiskSnapshot(**h) for h in history if h.get("disk_label") == disk_label]
 
 
 def get_all_disks(path: str = HISTORY_FILE) -> list[str]:
@@ -114,9 +110,9 @@ def print_disk_report(disk_label: str, path: str = HISTORY_FILE):
         return
 
     print(f"Disk Health History: {disk_label}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
     print(f"{'Date':<22} {'Good':>6} {'Recv':>6} {'Blank':>6} {'Readable':>10}")
-    print(f"{'-'*60}")
+    print(f"{'-' * 60}")
 
     for s in snapshots:
         date = s.timestamp[:19]
@@ -124,22 +120,20 @@ def print_disk_report(disk_label: str, path: str = HISTORY_FILE):
 
     if len(snapshots) >= 2:
         diff = compare_snapshots(snapshots[0], snapshots[-1])
-        print(f"\n{'─'*60}")
+        print(f"\n{'─' * 60}")
         print(f"Change over {diff['time_span']}:")
         sign = "+" if diff["readable_change"] >= 0 else ""
         print(f"  Readable: {sign}{diff['readable_change']:.1f}%")
         print(f"  Good sectors: {sign}{diff['good_change']}")
 
         if diff["degrading"]:
-            print(f"\n  ⚠ This disk is degrading. Consider retiring it.")
+            print("\n  ⚠ This disk is degrading. Consider retiring it.")
         else:
-            print(f"\n  Disk health is stable or improving.")
+            print("\n  Disk health is stable or improving.")
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Disk health history tracker"
-    )
+    parser = argparse.ArgumentParser(description="Disk health history tracker")
     subparsers = parser.add_subparsers(dest="command")
 
     # Record a snapshot
@@ -160,13 +154,16 @@ def main():
 
     if args.command == "record":
         from mavica_tools.multipass import merge_passes
+
         # Read and analyze the image
         print(f"Analyzing {args.image}...")
         merged, status = merge_passes([args.image])
         snapshot = record_snapshot(args.label, status, notes=args.notes)
         print(f"Recorded: {snapshot.disk_label} — {snapshot.readable_pct:.1f}% readable")
-        print(f"  Good: {snapshot.good}, Recovered: {snapshot.recovered}, "
-              f"Blank: {snapshot.blank}, Conflict: {snapshot.conflict}")
+        print(
+            f"  Good: {snapshot.good}, Recovered: {snapshot.recovered}, "
+            f"Blank: {snapshot.blank}, Conflict: {snapshot.conflict}"
+        )
 
     elif args.command == "view":
         if args.label:
@@ -181,8 +178,10 @@ def main():
                 for label in disks:
                     snapshots = get_disk_history(label)
                     latest = snapshots[-1]
-                    print(f"  {label:<20} {len(snapshots)} snapshot(s), "
-                          f"latest: {latest.readable_pct:.1f}% readable")
+                    print(
+                        f"  {label:<20} {len(snapshots)} snapshot(s), "
+                        f"latest: {latest.readable_pct:.1f}% readable"
+                    )
 
     elif args.command == "compare":
         snapshots = get_disk_history(args.label)

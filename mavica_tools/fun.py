@@ -4,11 +4,8 @@ Adds personality to the recovery process. Because recovering 25-year-old
 photos from a floppy disk should feel like archaeology, not dentistry.
 """
 
-import math
-import os
 import random
 from datetime import datetime
-
 
 # ─── Floppy disk ASCII art ───────────────────────────────────────────────
 
@@ -45,6 +42,7 @@ def floppy_art(label: str = "MAVICA", small: bool = False) -> str:
 
 
 # ─── Disk health visualization ───────────────────────────────────────────
+
 
 def health_bar(percent: float, width: int = 30) -> str:
     """Render a colored health bar.
@@ -98,6 +96,7 @@ def health_bar_rich(percent: float, width: int = 30) -> str:
 
 # ─── Disk age and fun stats ──────────────────────────────────────────────
 
+
 def disk_age_text(date_str: str) -> str:
     """Generate a fun message about how old this disk is.
 
@@ -138,7 +137,7 @@ def disk_stats_text(
 
     # File count
     if total_files == 1:
-        lines.append(f"  1 photo recovered")
+        lines.append("  1 photo recovered")
     else:
         lines.append(f"  {total_files} photos recovered")
 
@@ -162,6 +161,7 @@ def disk_stats_text(
 
 # ─── Suggestions based on results ────────────────────────────────────────
 
+
 def recovery_suggestions(
     sector_status: list[str] | None = None,
     good_files: int = 0,
@@ -179,7 +179,9 @@ def recovery_suggestions(
         if readable_pct == 100:
             suggestions.append("Disk read perfectly! No issues detected.")
         elif readable_pct >= 95:
-            suggestions.append(f"{blank} bad sector(s) — try cleaning the drive head and re-reading.")
+            suggestions.append(
+                f"{blank} bad sector(s) — try cleaning the drive head and re-reading."
+            )
         elif readable_pct >= 80:
             suggestions.append("Significant sector damage. Try:")
             suggestions.append("  - More read passes (10+) to recover marginal sectors")
@@ -200,13 +202,19 @@ def recovery_suggestions(
         if bad_files == total_files:
             suggestions.append("All photos are damaged. The disk surface may have a scratch.")
         elif bad_files > total_files / 2:
-            suggestions.append(f"{bad_files}/{total_files} photos damaged — check if they cluster in one area of the disk.")
+            suggestions.append(
+                f"{bad_files}/{total_files} photos damaged — check if they cluster in one area of the disk."
+            )
         else:
-            suggestions.append(f"{bad_files} photo(s) need repair — Pillow can often salvage partial images.")
+            suggestions.append(
+                f"{bad_files} photo(s) need repair — Pillow can often salvage partial images."
+            )
 
     if good_files > 0 and bad_files == 0:
         suggestions.append("All photos recovered successfully!")
-        suggestions.append("  Next: 'mavica stamp' to add camera info, then 'mavica export' to organize.")
+        suggestions.append(
+            "  Next: 'mavica stamp' to add camera info, then 'mavica export' to organize."
+        )
 
     return suggestions
 
@@ -224,7 +232,7 @@ TRIVIA = [
     "The last floppy Mavica (FD200) was released in 2002 with a 2MP sensor.",
     "Mavica cameras were popular with real estate agents and insurance adjusters.",
     "A Mavica floppy read at ~50KB/s — about 30 seconds for a full disk.",
-    "The 3.5\" floppy disk was invented by Sony in 1980.",
+    'The 3.5" floppy disk was invented by Sony in 1980.',
     "Floppy disks store data magnetically — keep them away from speakers.",
     "99% isopropyl alcohol is the recommended head cleaner — never use 70%.",
     "The Mavica line sold over 3 million units worldwide.",
@@ -259,6 +267,7 @@ def trivia_for_context(context: str = "") -> str:
 
 # ─── Sector map sparkline ────────────────────────────────────────────────
 
+
 def sector_sparkline(sector_status: list[str], width: int = 60) -> str:
     """Compact single-line sector health visualization.
 
@@ -270,10 +279,10 @@ def sector_sparkline(sector_status: list[str], width: int = 60) -> str:
     bucket_size = max(1, len(sector_status) // width)
     # Use ASCII-safe chars to avoid UnicodeEncodeError on Windows cp1252
     chars = {
-        "good": ("#", "\033[32m"),      # green
-        "recovered": ("=", "\033[36m"), # cyan
-        "blank": ("-", "\033[31m"),     # red
-        "conflict": ("!", "\033[35m"), # magenta
+        "good": ("#", "\033[32m"),  # green
+        "recovered": ("=", "\033[36m"),  # cyan
+        "blank": ("-", "\033[31m"),  # red
+        "conflict": ("!", "\033[35m"),  # magenta
     }
 
     priority = {"blank": 3, "conflict": 2, "recovered": 1, "good": 0}
@@ -405,7 +414,7 @@ def film_strip_border(text: str, width: int = 60) -> str:
     bottom = top
     lines = text.split("\n")
     framed = [f"  ◻ {line:<{width - 6}} ◻" for line in lines]
-    return "\n".join([top] + framed + [bottom])
+    return "\n".join([top, *framed, bottom])
 
 
 def disk_sleeve_header(label: str, file_count: int, total_kb: float) -> str:
@@ -414,6 +423,6 @@ def disk_sleeve_header(label: str, file_count: int, total_kb: float) -> str:
         f"┌{'─' * 30}┐\n"
         f"│ {label:<28} │\n"
         f"│ {file_count} photos  {total_kb:.0f}KB{' ' * (18 - len(str(file_count)) - len(f'{total_kb:.0f}'))}│\n"
-        f"│ Sony Mavica  3.5\" HD{' ' * 8}│\n"
+        f'│ Sony Mavica  3.5" HD{" " * 8}│\n'
         f"└{'─' * 30}┘"
     )

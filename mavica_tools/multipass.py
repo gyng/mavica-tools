@@ -8,11 +8,10 @@ picking the first good read for each sector.
 
 import argparse
 import os
-import struct
-import zlib
 import subprocess
 import sys
 import time
+import zlib
 
 SECTOR_SIZE = 512
 SECTORS_PER_TRACK = 18
@@ -61,8 +60,9 @@ def identify_bad_sectors(image_path):
     return bad
 
 
-def read_sectors(device, on_sector=None, on_metadata_ready=None,
-                 skip_sectors=None, only_sectors=None):
+def read_sectors(
+    device, on_sector=None, on_metadata_ready=None, skip_sectors=None, only_sectors=None
+):
     """Core sector-reading loop with track-level bulk reads.
 
     Returns (data_bytearray, error_count).
@@ -118,11 +118,17 @@ def read_sectors(device, on_sector=None, on_metadata_ready=None,
                     dev.seek(track_start * SECTOR_SIZE)
                     chunk = dev.read(remaining * SECTOR_SIZE)
                     if len(chunk) == remaining * SECTOR_SIZE:
-                        data[track_start * SECTOR_SIZE : track_start * SECTOR_SIZE + len(chunk)] = chunk
+                        data[track_start * SECTOR_SIZE : track_start * SECTOR_SIZE + len(chunk)] = (
+                            chunk
+                        )
                         for s in range(track_start, track_start + remaining):
                             if on_sector:
                                 on_sector(s, "good")
-                        if not metadata_fired and track_start + remaining > 32 and on_metadata_ready:
+                        if (
+                            not metadata_fired
+                            and track_start + remaining > 32
+                            and on_metadata_ready
+                        ):
                             metadata_fired = True
                             on_metadata_ready(bytes(data))
                         sector_idx = track_start + remaining
@@ -192,8 +198,9 @@ def read_sectors(device, on_sector=None, on_metadata_ready=None,
     return data, errors
 
 
-def read_pass_sectored(device, pass_num, output_dir, on_sector=None,
-                       on_metadata_ready=None, skip_sectors=None):
+def read_pass_sectored(
+    device, pass_num, output_dir, on_sector=None, on_metadata_ready=None, skip_sectors=None
+):
     """Read a floppy pass and write the result to a .img file.
 
     Thin wrapper around read_sectors() that persists the data.
@@ -204,7 +211,8 @@ def read_pass_sectored(device, pass_num, output_dir, on_sector=None,
     try:
         try:
             data, errors = read_sectors(
-                device, on_sector=on_sector,
+                device,
+                on_sector=on_sector,
                 on_metadata_ready=on_metadata_ready,
                 skip_sectors=skip_sectors,
             )
@@ -311,9 +319,9 @@ def print_summary(sector_status, pass_image_paths=None):
 
     readable_pct = 100 * (good + recovered) / total if total else 0
 
-    from mavica_tools.fun import health_bar, sector_sparkline, recovery_suggestions
+    from mavica_tools.fun import health_bar, recovery_suggestions, sector_sparkline
 
-    print(f"\nDisk health:")
+    print("\nDisk health:")
     print(health_bar(readable_pct))
     print(sector_sparkline(sector_status))
     print()
@@ -333,19 +341,19 @@ def print_summary(sector_status, pass_image_paths=None):
     if blank > 0:
         try:
             from mavica_tools.diagnose import diagnose_errors, format_diagnosis
+
             diag = diagnose_errors(
                 pass_image_paths=pass_image_paths,
                 sector_status=sector_status,
             )
             if diag.evidence:
-                print(f"\nDiagnosis:")
+                print("\nDiagnosis:")
                 print(format_diagnosis(diag, rich=False))
         except Exception:
             pass  # Diagnostics are best-effort
 
 
-def multipass_image(device, output_dir, passes=5, eject_between=True,
-                    adaptive_stop=True):
+def multipass_image(device, output_dir, passes=5, eject_between=True, adaptive_stop=True):
     """Run the full multi-pass imaging workflow.
 
     With adaptive_stop=True, stops early if 2 consecutive passes
@@ -353,34 +361,36 @@ def multipass_image(device, output_dir, passes=5, eject_between=True,
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    print(f"Multi-pass floppy imager")
+    print("Multi-pass floppy imager")
     print(f"  Device: {device}")
     print(f"  Passes: {passes}")
     print(f"  Output: {output_dir}")
     if adaptive_stop:
-        print(f"  Adaptive stop: enabled (stops if no improvement)")
+        print("  Adaptive stop: enabled (stops if no improvement)")
     print()
 
     image_paths = []
     good_sectors = set()  # Sectors known to be good from prior passes
-    stale_count = 0       # Consecutive passes with no new recovery
+    stale_count = 0  # Consecutive passes with no new recovery
 
     for i in range(1, passes + 1):
         skip = good_sectors if i > 1 else None
         if skip:
-            print(f"  Pass {i}: reading {len(good_sectors)} good, {TOTAL_SECTORS - len(good_sectors)} to retry")
+            print(
+                f"  Pass {i}: reading {len(good_sectors)} good, {TOTAL_SECTORS - len(good_sectors)} to retry"
+            )
 
         path, errors = read_pass_sectored(device, i, output_dir, skip_sectors=skip)
         image_paths.append(path)
         if errors:
             print(f"    ({errors} error(s))")
         else:
-            print(f"    clean read")
+            print("    clean read")
 
         # Update good sectors set
         bad = identify_bad_sectors(path)
         new_good = (set(range(TOTAL_SECTORS)) - bad) - good_sectors
-        good_sectors |= (set(range(TOTAL_SECTORS)) - bad)
+        good_sectors |= set(range(TOTAL_SECTORS)) - bad
 
         if i > 1:
             if new_good:
@@ -388,11 +398,11 @@ def multipass_image(device, output_dir, passes=5, eject_between=True,
                 stale_count = 0
             else:
                 stale_count += 1
-                print(f"    no new sectors recovered")
+                print("    no new sectors recovered")
 
         # Adaptive stop
         if adaptive_stop and stale_count >= 2 and i < passes:
-            print(f"\n  Stopping early: no improvement in last 2 passes.")
+            print("\n  Stopping early: no improvement in last 2 passes.")
             break
 
         if eject_between and i < passes:
@@ -455,9 +465,7 @@ def main():
     )
 
     # Merge existing images
-    merge_parser = subparsers.add_parser(
-        "merge", help="Merge existing disk images"
-    )
+    merge_parser = subparsers.add_parser("merge", help="Merge existing disk images")
     merge_parser.add_argument("images", nargs="+", help="Disk image files to merge")
     merge_parser.add_argument(
         "-o", "--output", default="merged.img", help="Output merged image path"

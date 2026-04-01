@@ -14,10 +14,8 @@ import os
 import sys
 from datetime import datetime
 from fractions import Fraction
-from io import BytesIO
 
 from mavica_tools.utils import gather_jpegs
-
 
 # EXIF tag IDs
 TAG_MAKE = 0x010F
@@ -80,7 +78,7 @@ def stamp_jpeg(
     """
     try:
         from PIL import Image
-        from PIL.ExifTags import Base as ExifBase
+        from PIL.ExifTags import Base as ExifBase  # noqa: F401
     except ImportError:
         return False, None, "Pillow is required: pip install Pillow"
 
@@ -118,7 +116,6 @@ def stamp_jpeg(
 
         # Write accurate camera specs into EXIF IFD
         if specs:
-
             exif_ifd = exif.get_ifd(TAG_EXIF_IFD)
 
             # Focal length as rational (numerator, denominator)
@@ -216,8 +213,9 @@ def stamp_files(
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
-    from mavica_tools.utils import print_progress
     import time
+
+    from mavica_tools.utils import print_progress
 
     success = 0
     fail = 0
@@ -233,8 +231,11 @@ def stamp_files(
             out_path = None
 
         ok, result_path, msg = stamp_jpeg(
-            path, out_path,
-            model=model, date=date, description=description,
+            path,
+            out_path,
+            model=model,
+            date=date,
+            description=description,
             overwrite=overwrite,
         )
 
@@ -251,17 +252,17 @@ def stamp_files(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Add EXIF metadata to recovered Mavica JPEGs"
-    )
+    parser = argparse.ArgumentParser(description="Add EXIF metadata to recovered Mavica JPEGs")
     parser.add_argument("paths", nargs="+", help="JPEG files or directories")
     parser.add_argument("-o", "--output", help="Output directory (default: save alongside)")
     parser.add_argument(
-        "-m", "--model",
+        "-m",
+        "--model",
         help="Camera model (e.g., 'fd7', 'fd88', or full name)",
     )
     parser.add_argument(
-        "-d", "--date",
+        "-d",
+        "--date",
         help="Date: 'auto' (from file mtime), 'YYYY-MM-DD', or 'YYYY-MM-DD HH:MM:SS'",
     )
     parser.add_argument(
@@ -269,7 +270,8 @@ def main():
         help="Image description / notes",
     )
     parser.add_argument(
-        "--overwrite", action="store_true",
+        "--overwrite",
+        action="store_true",
         help="Overwrite input files instead of creating new ones",
     )
     args = parser.parse_args()

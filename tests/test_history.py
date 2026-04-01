@@ -6,13 +6,13 @@ import tempfile
 import pytest
 
 from mavica_tools.history import (
-    load_history,
-    save_history,
-    record_snapshot,
-    get_disk_history,
-    get_all_disks,
-    compare_snapshots,
     DiskSnapshot,
+    compare_snapshots,
+    get_all_disks,
+    get_disk_history,
+    load_history,
+    record_snapshot,
+    save_history,
 )
 
 

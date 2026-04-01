@@ -15,13 +15,12 @@ import os
 import sys
 from datetime import datetime
 
-
 DEFAULT_DB = "swaptest_results.json"
 
 
 def load_db(path):
     if os.path.exists(path):
-        with open(path, "r") as f:
+        with open(path) as f:
             return json.load(f)
     return {"cameras": [], "disks": [], "tests": [], "created": datetime.now().isoformat()}
 
@@ -64,7 +63,7 @@ def cmd_setup(db, args):
             print(f"  {step}. Format {disk} in {camera}, take 5 photos, read on PC")
             step += 1
 
-    print(f"\nRun 'mavica-swaptest log' to record results for each combination.")
+    print("\nRun 'mavica-swaptest log' to record results for each combination.")
 
 
 def cmd_log(db, args):
@@ -83,11 +82,11 @@ def cmd_log(db, args):
     else:
         print("=== Log Test Result ===\n")
 
-        print("Cameras:", ", ".join(f"[{i+1}] {c}" for i, c in enumerate(cameras)))
+        print("Cameras:", ", ".join(f"[{i + 1}] {c}" for i, c in enumerate(cameras)))
         ci = int(input("Camera #: ")) - 1
         camera = cameras[ci]
 
-        print("Disks:", ", ".join(f"[{i+1}] {d}" for i, d in enumerate(disks)))
+        print("Disks:", ", ".join(f"[{i + 1}] {d}" for i, d in enumerate(disks)))
         di = int(input("Disk #: ")) - 1
         disk = disks[di]
 
@@ -185,7 +184,7 @@ def cmd_report(db, _args):
         cam_total = len(cam_results)
         if cam_total > 0 and cam_fails == cam_total and cam_total >= 2:
             print(f"  >>> ALL disks fail with {camera} — this camera likely has a bad write head.")
-            print(f"      Clean the head with IPA, or the drive mechanism may need service.\n")
+            print("      Clean the head with IPA, or the drive mechanism may need service.\n")
         elif cam_fails > 0:
             print(f"  {camera}: {cam_fails}/{cam_total} failures")
 
@@ -211,7 +210,9 @@ def cmd_report(db, _args):
     if single_fails:
         print("  Isolated failures (only this specific combo fails):")
         for c, d in single_fails:
-            print(f"    {c} + {d} — may be a head alignment mismatch. Try re-formatting the disk in this camera.")
+            print(
+                f"    {c} + {d} — may be a head alignment mismatch. Try re-formatting the disk in this camera."
+            )
 
 
 def cmd_status(db, _args):
@@ -238,9 +239,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Cross-camera swap test tracker for Mavica troubleshooting"
     )
-    parser.add_argument(
-        "--db", default=DEFAULT_DB, help="Test database file (JSON)"
-    )
+    parser.add_argument("--db", default=DEFAULT_DB, help="Test database file (JSON)")
     subparsers = parser.add_subparsers(dest="command")
 
     setup_p = subparsers.add_parser("setup", help="Set up cameras and disks")

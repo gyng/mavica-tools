@@ -7,19 +7,18 @@ import tempfile
 import pytest
 
 from mavica_tools.fat12 import (
-    read_fat12,
-    read_directory,
-    get_cluster_chain,
-    extract_file,
-    list_files,
-    extract_with_names,
-    FileEntry,
-    SECTOR_SIZE,
+    DATA_START_SECTOR,
     FAT_OFFSET,
-    SECTORS_PER_FAT,
     FATS_COUNT,
     ROOT_DIR_ENTRIES,
-    DATA_START_SECTOR,
+    SECTOR_SIZE,
+    SECTORS_PER_FAT,
+    extract_file,
+    extract_with_names,
+    get_cluster_chain,
+    list_files,
+    read_directory,
+    read_fat12,
 )
 from mavica_tools.format import create_disk_image
 
@@ -128,7 +127,7 @@ class TestReadDirectory:
         assert entries == []
 
     def test_reads_file_entry(self, tmp_dir):
-        file_data = b"\xff\xd8\xff\xe0" + b"\xAB" * 100
+        file_data = b"\xff\xd8\xff\xe0" + b"\xab" * 100
         path = _make_test_image(tmp_dir, [("MVC-001 ", "JPG", file_data, 2)])
         with open(path, "rb") as f:
             data = f.read()
@@ -182,7 +181,7 @@ class TestGetClusterChain:
 
 class TestExtractFile:
     def test_extract_single_cluster(self, tmp_dir):
-        file_data = b"\xff\xd8\xff\xe0" + b"\xAB" * 100
+        file_data = b"\xff\xd8\xff\xe0" + b"\xab" * 100
         path = _make_test_image(tmp_dir, [("MVC-001 ", "JPG", file_data, 2)])
         with open(path, "rb") as f:
             data = f.read()
@@ -197,10 +196,13 @@ class TestExtractFile:
 
 class TestListFiles:
     def test_list_files(self, tmp_dir):
-        path = _make_test_image(tmp_dir, [
-            ("MVC-001 ", "JPG", b"\xff" * 50, 2),
-            ("MVC-002 ", "JPG", b"\xff" * 80, 3),
-        ])
+        path = _make_test_image(
+            tmp_dir,
+            [
+                ("MVC-001 ", "JPG", b"\xff" * 50, 2),
+                ("MVC-002 ", "JPG", b"\xff" * 80, 3),
+            ],
+        )
         files = list_files(path)
         assert len(files) == 2
         names = [f.name for f in files]
@@ -215,7 +217,7 @@ class TestListFiles:
 
 class TestExtractWithNames:
     def test_extract_preserves_names(self, tmp_dir):
-        file_data = b"\xff\xd8" + b"\xAB" * 100
+        file_data = b"\xff\xd8" + b"\xab" * 100
         img_path = _make_test_image(tmp_dir, [("MVC-001 ", "JPG", file_data, 2)])
         output_dir = os.path.join(tmp_dir, "output")
 

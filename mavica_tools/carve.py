@@ -10,16 +10,13 @@ Mavica cameras write standard JFIF JPEGs, so we look for:
 
 import argparse
 import os
-import struct
-import sys
-
 
 JPEG_SOI = b"\xff\xd8\xff"
 JPEG_EOI = b"\xff\xd9"
 
 # Mavica image size bounds (sanity check)
-MIN_JPEG_SIZE = 1024         # 1KB — smallest plausible Mavica JPEG
-MAX_JPEG_SIZE = 300 * 1024   # 300KB — largest plausible Mavica JPEG on a 1.44MB disk
+MIN_JPEG_SIZE = 1024  # 1KB — smallest plausible Mavica JPEG
+MAX_JPEG_SIZE = 300 * 1024  # 300KB — largest plausible Mavica JPEG on a 1.44MB disk
 
 
 def find_jpegs(data):
@@ -133,15 +130,12 @@ def carve_jpegs(image_path, output_dir):
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Carve JPEG images from Mavica floppy disk images"
-    )
+    parser = argparse.ArgumentParser(description="Carve JPEG images from Mavica floppy disk images")
     parser.add_argument("image", help="Disk image file (raw .img)")
+    parser.add_argument("-o", "--output", default="carved_images", help="Output directory")
     parser.add_argument(
-        "-o", "--output", default="carved_images", help="Output directory"
-    )
-    parser.add_argument(
-        "--preview", action="store_true",
+        "--preview",
+        action="store_true",
         help="Show carved images after extraction (from local output dir)",
     )
     args = parser.parse_args()
@@ -151,6 +145,7 @@ def main():
     if args.preview and extracted:
         print()
         from mavica_tools.terminal_image import show_images
+
         show_images(extracted, max_images=8)
 
 

@@ -1,13 +1,12 @@
 """Disk checker screen — test if a floppy is safe for camera use."""
 
-import os
 import platform
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, RichLog, ProgressBar
 from textual.containers import Horizontal, VerticalScroll
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, ProgressBar, RichLog, Static
 from textual.worker import get_current_worker
 
 from mavica_tools.multipass import TOTAL_SECTORS
@@ -49,6 +48,7 @@ class DiskCheckScreen(Screen):
 
     def on_screen_suspend(self) -> None:
         from textual.screen import ModalScreen
+
         top = self.app.screen
         if isinstance(top, ModalScreen):
             return
@@ -75,9 +75,14 @@ class DiskCheckScreen(Screen):
                 yield Button("Quick (q)", variant="warning", id="btn-quick")
                 yield Button("Write Test", variant="error", id="btn-write")
                 yield Static("  [dim][red]Erases all data!")
-            yield Static("[dim]  Full: read every sector (~2 min) · Quick: spot-check sampled tracks (~20 sec)[/]\n", id="help-text")
+            yield Static(
+                "[dim]  Full: read every sector (~2 min) · Quick: spot-check sampled tracks (~20 sec)[/]\n",
+                id="help-text",
+            )
             with Horizontal(classes="button-row"):
-                yield ProgressBar(total=TOTAL_SECTORS, show_percentage=True, show_eta=True, id="progress")
+                yield ProgressBar(
+                    total=TOTAL_SECTORS, show_percentage=True, show_eta=True, id="progress"
+                )
                 yield Button("Stop", variant="error", id="btn-stop", disabled=True)
             yield DefragMap(id="defrag-map")
             yield Static("", id="verdict")
@@ -143,6 +148,7 @@ class DiskCheckScreen(Screen):
     async def _run_write_preflight(self, device: str) -> None:
         """Read disk to show files, then confirm and run write test."""
         import asyncio
+
         from mavica_tools.diskcheck import check_read_only
 
         worker = get_current_worker()
@@ -173,6 +179,7 @@ class DiskCheckScreen(Screen):
         def on_metadata_ready(data_bytes):
             try:
                 from mavica_tools.fat12 import file_sector_map_from_data
+
                 boundaries = file_sector_map_from_data(data_bytes)
                 if boundaries:
                     self.app.call_from_thread(defrag.set_file_boundaries, boundaries)
@@ -181,7 +188,8 @@ class DiskCheckScreen(Screen):
 
         try:
             result = await asyncio.to_thread(
-                check_read_only, device,
+                check_read_only,
+                device,
                 on_sector=on_sector,
                 on_metadata_ready=on_metadata_ready,
             )
@@ -271,7 +279,8 @@ class DiskCheckScreen(Screen):
 
         def on_metadata_ready(data_bytes):
             try:
-                from mavica_tools.fat12 import file_sector_map_from_data, bad_sectors_from_fat
+                from mavica_tools.fat12 import bad_sectors_from_fat, file_sector_map_from_data
+
                 boundaries = file_sector_map_from_data(data_bytes)
                 if boundaries:
                     self.app.call_from_thread(defrag.set_file_boundaries, boundaries)
@@ -292,13 +301,18 @@ class DiskCheckScreen(Screen):
         try:
             if write:
                 from mavica_tools.diskcheck import check_write_verify
+
                 result = await asyncio.to_thread(
-                    check_write_verify, device, on_sector=on_sector,
+                    check_write_verify,
+                    device,
+                    on_sector=on_sector,
                 )
             else:
                 from mavica_tools.diskcheck import check_read_only
+
                 result = await asyncio.to_thread(
-                    check_read_only, device,
+                    check_read_only,
+                    device,
                     on_sector=on_sector,
                     on_metadata_ready=on_metadata_ready if not write else None,
                     quick=quick,
@@ -349,18 +363,15 @@ class DiskCheckScreen(Screen):
 
         if result.safe:
             verdict_widget.update(
-                f"\n  [bold white on green]  PASS  [/]  "
-                f"[bold green]{result.headline}[/]\n"
+                f"\n  [bold white on green]  PASS  [/]  [bold green]{result.headline}[/]\n"
             )
         elif "CAUTION" in result.headline:
             verdict_widget.update(
-                f"\n  [bold black on yellow]  CAUTION  [/]  "
-                f"[bold #ffaa00]{result.headline}[/]\n"
+                f"\n  [bold black on yellow]  CAUTION  [/]  [bold #ffaa00]{result.headline}[/]\n"
             )
         else:
             verdict_widget.update(
-                f"\n  [bold white on red]  FAIL  [/]  "
-                f"[bold red]{result.headline}[/]\n"
+                f"\n  [bold white on red]  FAIL  [/]  [bold red]{result.headline}[/]\n"
             )
 
         # Stats
@@ -398,7 +409,8 @@ class DiskCheckScreen(Screen):
         # Diagnosis
         if result.diagnosis:
             from mavica_tools.diagnose import format_diagnosis
-            log.write(f"\n[bold]Diagnosis:[/]")
+
+            log.write("\n[bold]Diagnosis:[/]")
             log.write(format_diagnosis(result.diagnosis, rich=True))
 
     def _reset_buttons(self) -> None:

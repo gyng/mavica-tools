@@ -1,18 +1,28 @@
 """Repair screen — salvage pixels from corrupt JPEGs."""
 
-import os
 import glob as globmod
+import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog, ProgressBar, Switch
 from textual.containers import Horizontal
+from textual.screen import Screen
+from textual.widgets import (
+    Button,
+    DataTable,
+    Footer,
+    Header,
+    Input,
+    ProgressBar,
+    RichLog,
+    Static,
+    Switch,
+)
 from textual.worker import get_current_worker
 
 from mavica_tools.repair import repair_jpeg
-from mavica_tools.tui.widgets.image_preview import ImagePreview
 from mavica_tools.tui.widgets.file_picker import FilePicker
+from mavica_tools.tui.widgets.image_preview import ImagePreview
 
 
 class RepairScreen(Screen):
@@ -27,7 +37,10 @@ class RepairScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Static("[bold #ffaa00]JPEG Repair[/]  [dim]Salvage pixels from corrupt files[/]\n", id="title-bar")
+        yield Static(
+            "[bold #ffaa00]JPEG Repair[/]  [dim]Salvage pixels from corrupt files[/]\n",
+            id="title-bar",
+        )
         yield Static("  [bold]Source[/]")
         with Horizontal(classes="input-row"):
             yield Input(
@@ -56,8 +69,12 @@ class RepairScreen(Screen):
             yield ImagePreview(id="preview-original", classes="preview-pane")
             yield ImagePreview(id="preview-repaired", classes="preview-pane")
         with Horizontal(classes="button-row"):
-            yield Button("Next: Add Photo Info", variant="success", id="btn-next-stamp", disabled=True)
-            yield Button("Next: Export & Share", variant="default", id="btn-next-export", disabled=True)
+            yield Button(
+                "Next: Add Photo Info", variant="success", id="btn-next-stamp", disabled=True
+            )
+            yield Button(
+                "Next: Export & Share", variant="default", id="btn-next-export", disabled=True
+            )
             yield Button("Open Folder", variant="default", id="btn-open-folder", disabled=True)
         yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
@@ -89,12 +106,14 @@ class RepairScreen(Screen):
             output_dir = self.query_one("#output-dir", Input).value.strip()
             if output_dir and os.path.isdir(output_dir):
                 from mavica_tools.utils import open_directory
+
                 open_directory(output_dir)
 
     def action_browse(self) -> None:
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#source-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(
                 extensions=(".jpg", ".jpeg"),

@@ -13,24 +13,24 @@ Sector states:
   conflict  — different data across passes (magenta)
 """
 
-from textual.widget import Widget
-from textual.reactive import reactive
 from rich.text import Text
+from textual.reactive import reactive
+from textual.widget import Widget
 
 TOTAL_SECTORS = 2880
 DEFAULT_COLS = 60
 
 # Block characters and colors for each state
 STATE_STYLE = {
-    "waiting":   ("░", "#333333"),
-    "reading":   ("▓", "#ffffff"),
-    "good":      ("▓", "#33ff33"),
+    "waiting": ("░", "#333333"),
+    "reading": ("▓", "#ffffff"),
+    "good": ("▓", "#33ff33"),
     "recovered": ("▓", "#33aaff"),
-    "bad":       ("▓", "#ff3333"),
-    "marked":    ("▓", "#ff8800"),   # marked bad in FAT but readable
+    "bad": ("▓", "#ff3333"),
+    "marked": ("▓", "#ff8800"),  # marked bad in FAT but readable
     "marked_bad": ("▓", "#ff3333"),  # marked bad AND failed to read
-    "conflict":  ("▓", "#ff33ff"),
-    "blank":     ("▓", "#ff3333"),   # alias for bad
+    "conflict": ("▓", "#ff33ff"),
+    "blank": ("▓", "#ff3333"),  # alias for bad
 }
 
 
@@ -73,9 +73,11 @@ class DefragMap(Widget):
         """Update a single sector's state."""
         if 0 <= index < TOTAL_SECTORS:
             # Clear previous "reading" indicator only when moving to a different sector
-            if (self._current_sector >= 0
-                    and self._current_sector != index
-                    and self._cells[self._current_sector] == "reading"):
+            if (
+                self._current_sector >= 0
+                and self._current_sector != index
+                and self._cells[self._current_sector] == "reading"
+            ):
                 self._cells[self._current_sector] = "waiting"
 
             self._cells[index] = state
@@ -131,9 +133,7 @@ class DefragMap(Widget):
         # Header
         if self._pass_num > 0:
             text.append(f"  Pass {self._pass_num}  ", style="bold")
-        text.append(
-            "░ waiting  ", style="#333333"
-        )
+        text.append("░ waiting  ", style="#333333")
         text.append("▓ reading  ", style="#ffffff")
         text.append("▓ good  ", style="#33ff33")
         text.append("▓ recovered  ", style="#33aaff")
@@ -143,21 +143,27 @@ class DefragMap(Widget):
 
         # File colors — cycle for visual distinction between files
         _FILE_COLORS = [
-            "#ffaa00", "#00ccff", "#ff66cc", "#66ff66",
-            "#ffff44", "#cc88ff", "#ff8844", "#44ffcc",
+            "#ffaa00",
+            "#00ccff",
+            "#ff66cc",
+            "#66ff66",
+            "#ffff44",
+            "#cc88ff",
+            "#ff8844",
+            "#44ffcc",
         ]
 
         # Sector state as background color — shows progress under filename text
         _STATE_BG = {
-            "good":       "#1a6b1a",
-            "recovered":  "#1a4a6b",
-            "reading":    "#666666",
-            "waiting":    "#1a1a1a",
-            "bad":        "#6b1a1a",
-            "marked":     "#6b4400",
+            "good": "#1a6b1a",
+            "recovered": "#1a4a6b",
+            "reading": "#666666",
+            "waiting": "#1a1a1a",
+            "bad": "#6b1a1a",
+            "marked": "#6b4400",
             "marked_bad": "#6b1a1a",
-            "blank":      "#6b1a1a",
-            "conflict":   "#6b1a6b",
+            "blank": "#6b1a1a",
+            "conflict": "#6b1a6b",
         }
 
         # Build sector -> overlay info for filename text on grid
@@ -229,7 +235,9 @@ class DefragMap(Widget):
         # Stats
         good = self._cells.count("good")
         recovered = self._cells.count("recovered")
-        bad = self._cells.count("bad") + self._cells.count("blank") + self._cells.count("marked_bad")
+        bad = (
+            self._cells.count("bad") + self._cells.count("blank") + self._cells.count("marked_bad")
+        )
         marked = self._cells.count("marked")
         waiting = self._cells.count("waiting")
         reading = self._cells.count("reading")
@@ -244,10 +252,7 @@ class DefragMap(Widget):
                 parts += f", {bad} bad"
             if marked:
                 parts += f", {marked} marked"
-            text.append(
-                f"\n  {done}/{TOTAL_SECTORS} sectors ({pct:.0f}%)  [{parts}]",
-                style="dim"
-            )
+            text.append(f"\n  {done}/{TOTAL_SECTORS} sectors ({pct:.0f}%)  [{parts}]", style="dim")
 
         # File boundary legend with details
         if self._file_boundaries:
@@ -258,7 +263,11 @@ class DefragMap(Widget):
                 size_kb = len(sectors) * 512 / 1024
                 start_offset = sectors[0] * 512
                 # Count how many sectors are good/recovered vs bad
-                file_good = sum(1 for s in sectors if s < len(self._cells) and self._cells[s] in ("good", "recovered"))
+                file_good = sum(
+                    1
+                    for s in sectors
+                    if s < len(self._cells) and self._cells[s] in ("good", "recovered")
+                )
                 file_total = len(sectors)
                 health = f"{100 * file_good // file_total}%" if file_total else "?"
                 fc = _FILE_COLORS[fi % len(_FILE_COLORS)]

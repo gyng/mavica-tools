@@ -6,7 +6,7 @@ from io import BytesIO
 
 import pytest
 
-from mavica_tools.repair import repair_jpeg, repair_files
+from mavica_tools.repair import repair_files, repair_jpeg
 
 # We need Pillow to create real test JPEGs
 PIL = pytest.importorskip("PIL")
@@ -69,7 +69,7 @@ class TestRepairJpeg:
         jpeg_data = make_real_jpeg(width=128, height=96)
         # Insert a sector failure (512 zeros) in the middle
         mid = len(jpeg_data) // 2
-        corrupted = jpeg_data[:mid] + b"\x00" * 600 + jpeg_data[mid + 600:]
+        corrupted = jpeg_data[:mid] + b"\x00" * 600 + jpeg_data[mid + 600 :]
         path = write_file(tmp_dir, "sector_fail.jpg", corrupted)
         out_path = os.path.join(tmp_dir, "sector_repaired.png")
 

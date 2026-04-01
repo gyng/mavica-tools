@@ -10,8 +10,12 @@ import sys
 from dataclasses import dataclass, field
 
 from mavica_tools.multipass import (
-    read_sectors, SECTOR_SIZE, SECTORS_PER_TRACK, HEADS, TRACKS,
-    TOTAL_SECTORS, DISK_SIZE,
+    HEADS,
+    SECTOR_SIZE,
+    SECTORS_PER_TRACK,
+    TOTAL_SECTORS,
+    TRACKS,
+    read_sectors,
 )
 
 # Track 0 holds boot sector, FAT, root directory — critical for camera use
@@ -21,6 +25,7 @@ CRITICAL_SECTORS = set(range(0, 33))
 @dataclass
 class DiskCheckResult:
     """Result of a disk check."""
+
     headline: str = ""
     safe: bool = False
     bad_sectors: set = field(default_factory=set)
@@ -59,8 +64,7 @@ def verdict(result: DiskCheckResult) -> DiskCheckResult:
         result.safe = False
     elif total_bad <= 5:
         result.headline = (
-            f"CAUTION -- {total_bad} bad sector(s) in data area. "
-            f"Camera may lose some photos."
+            f"CAUTION -- {total_bad} bad sector(s) in data area. Camera may lose some photos."
         )
         result.safe = False
     else:
@@ -80,8 +84,8 @@ def _quick_check_sectors(seed: int = 42) -> set[int]:
     rng = random.Random(seed)
     sectors = set(range(0, 36))  # Track 0 (both heads)
 
-    inner = list(range(1, 27))   # tracks 1-26
-    middle = list(range(27, 54)) # tracks 27-53
+    inner = list(range(1, 27))  # tracks 1-26
+    middle = list(range(27, 54))  # tracks 27-53
     outer = list(range(54, 80))  # tracks 54-79
 
     sampled = rng.sample(inner, 3) + rng.sample(middle, 4) + rng.sample(outer, 3)
@@ -92,10 +96,10 @@ def _quick_check_sectors(seed: int = 42) -> set[int]:
     return sectors
 
 
-def check_read_only(device, on_sector=None, on_metadata_ready=None,
-                    quick=False) -> DiskCheckResult:
+def check_read_only(device, on_sector=None, on_metadata_ready=None, quick=False) -> DiskCheckResult:
     """Read-only disk check. Returns DiskCheckResult with verdict."""
     import time
+
     t_start = time.monotonic()
     only_sectors = _quick_check_sectors() if quick else None
 
@@ -130,6 +134,7 @@ def check_read_only(device, on_sector=None, on_metadata_ready=None,
     has_fs = False
     try:
         from mavica_tools.fat12 import file_sector_map_from_data
+
         boundaries = file_sector_map_from_data(bytes(data))
         if boundaries:
             has_fs = True
@@ -153,6 +158,7 @@ def check_read_only(device, on_sector=None, on_metadata_ready=None,
     # Run diagnostics (always — shows "all good" for clean disks too)
     try:
         from mavica_tools.diagnose import diagnose_errors
+
         sector_status = []
         for s in range(TOTAL_SECTORS):
             if only_sectors and s not in only_sectors:
@@ -204,7 +210,11 @@ def _write_verify_unix(device, on_sector=None):
                 for si in range(SECTORS_PER_TRACK):
                     s = track_start + si
                     expected = pattern[si * SECTOR_SIZE : (si + 1) * SECTOR_SIZE]
-                    actual = readback[si * SECTOR_SIZE : (si + 1) * SECTOR_SIZE] if len(readback) >= (si + 1) * SECTOR_SIZE else b""
+                    actual = (
+                        readback[si * SECTOR_SIZE : (si + 1) * SECTOR_SIZE]
+                        if len(readback) >= (si + 1) * SECTOR_SIZE
+                        else b""
+                    )
 
                     if actual == expected:
                         if on_sector:
@@ -238,7 +248,10 @@ def _write_verify_win32(device, on_sector=None):
         device,
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_READ | FILE_SHARE_WRITE,
-        None, OPEN_EXISTING, 0, None,
+        None,
+        OPEN_EXISTING,
+        0,
+        None,
     )
     if handle == ctypes.c_void_p(-1).value:
         err = ctypes.get_last_error() or kernel32.GetLastError()
@@ -254,13 +267,20 @@ def _write_verify_win32(device, on_sector=None):
 
     try:
         import time as _time
+
         dummy = wt.DWORD(0)
 
         locked = False
         for attempt in range(5):
             locked = kernel32.DeviceIoControl(
-                handle, FSCTL_LOCK_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_LOCK_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             if locked:
                 break
@@ -268,19 +288,39 @@ def _write_verify_win32(device, on_sector=None):
 
         if not locked:
             kernel32.DeviceIoControl(
-                handle, FSCTL_DISMOUNT_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_DISMOUNT_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             locked = kernel32.DeviceIoControl(
-                handle, FSCTL_LOCK_VOLUME,
-                None, 0, None, 0, ctypes.byref(dummy), None,
+                handle,
+                FSCTL_LOCK_VOLUME,
+                None,
+                0,
+                None,
+                0,
+                ctypes.byref(dummy),
+                None,
             )
             if not locked:
-                raise OSError("Cannot lock volume. Close Explorer and any programs using the disk, then retry.")
+                raise OSError(
+                    "Cannot lock volume. Close Explorer and any programs using the disk, then retry."
+                )
 
         kernel32.DeviceIoControl(
-            handle, FSCTL_DISMOUNT_VOLUME,
-            None, 0, None, 0, ctypes.byref(dummy), None,
+            handle,
+            FSCTL_DISMOUNT_VOLUME,
+            None,
+            0,
+            None,
+            0,
+            ctypes.byref(dummy),
+            None,
         )
 
         for track in range(TRACKS):
@@ -316,7 +356,11 @@ def _write_verify_win32(device, on_sector=None):
                 for si in range(SECTORS_PER_TRACK):
                     s = track_start + si
                     expected = pattern[si * SECTOR_SIZE : (si + 1) * SECTOR_SIZE]
-                    actual = readback[si * SECTOR_SIZE : (si + 1) * SECTOR_SIZE] if len(readback) >= (si + 1) * SECTOR_SIZE else b""
+                    actual = (
+                        readback[si * SECTOR_SIZE : (si + 1) * SECTOR_SIZE]
+                        if len(readback) >= (si + 1) * SECTOR_SIZE
+                        else b""
+                    )
 
                     if actual == expected:
                         if on_sector:
@@ -328,8 +372,14 @@ def _write_verify_win32(device, on_sector=None):
                             on_sector(s, "bad")
 
         kernel32.DeviceIoControl(
-            handle, FSCTL_UNLOCK_VOLUME,
-            None, 0, None, 0, ctypes.byref(dummy), None,
+            handle,
+            FSCTL_UNLOCK_VOLUME,
+            None,
+            0,
+            None,
+            0,
+            ctypes.byref(dummy),
+            None,
         )
     finally:
         kernel32.CloseHandle(handle)
@@ -343,17 +393,22 @@ def check_write_verify(device, on_sector=None) -> DiskCheckResult:
     WARNING: Destroys all data on the disk.
     """
     import time
+
     t_start = time.monotonic()
     from mavica_tools.format import _validate_device_path
+
     error = _validate_device_path(device)
     if error:
-        return verdict(DiskCheckResult(
-            headline=f"FAIL -- {error}",
-            bad_sectors=set(range(TOTAL_SECTORS)),
-            tested_sectors=0,
-        ))
+        return verdict(
+            DiskCheckResult(
+                headline=f"FAIL -- {error}",
+                bad_sectors=set(range(TOTAL_SECTORS)),
+                tested_sectors=0,
+            )
+        )
 
     import platform
+
     system = platform.system()
     bad = set()
     write_errors = 0
@@ -365,24 +420,30 @@ def check_write_verify(device, on_sector=None) -> DiskCheckResult:
         else:
             bad, write_errors, read_errors = _write_verify_unix(device, on_sector)
     except PermissionError:
-        return verdict(DiskCheckResult(
-            headline="FAIL -- Cannot write to device (write-protected or no permission)",
-            bad_sectors=set(range(TOTAL_SECTORS)),
-            tested_sectors=0,
-        ))
+        return verdict(
+            DiskCheckResult(
+                headline="FAIL -- Cannot write to device (write-protected or no permission)",
+                bad_sectors=set(range(TOTAL_SECTORS)),
+                tested_sectors=0,
+            )
+        )
     except OSError as e:
         msg = str(e)
         if "write-protect" in msg.lower() or "read-only" in msg.lower():
-            return verdict(DiskCheckResult(
-                headline="FAIL -- Disk is write-protected",
+            return verdict(
+                DiskCheckResult(
+                    headline="FAIL -- Disk is write-protected",
+                    bad_sectors=set(range(TOTAL_SECTORS)),
+                    tested_sectors=0,
+                )
+            )
+        return verdict(
+            DiskCheckResult(
+                headline=f"FAIL -- {e}",
                 bad_sectors=set(range(TOTAL_SECTORS)),
                 tested_sectors=0,
-            ))
-        return verdict(DiskCheckResult(
-            headline=f"FAIL -- {e}",
-            bad_sectors=set(range(TOTAL_SECTORS)),
-            tested_sectors=0,
-        ))
+            )
+        )
 
     elapsed = time.monotonic() - t_start
 
@@ -398,10 +459,8 @@ def check_write_verify(device, on_sector=None) -> DiskCheckResult:
     # Run diagnostics (always — shows "all good" for clean disks too)
     try:
         from mavica_tools.diagnose import diagnose_errors
-        sector_status = [
-            "blank" if s in bad else "good"
-            for s in range(TOTAL_SECTORS)
-        ]
+
+        sector_status = ["blank" if s in bad else "good" for s in range(TOTAL_SECTORS)]
         result.diagnosis = diagnose_errors(sector_status=sector_status)
     except Exception:
         pass
@@ -413,7 +472,11 @@ def print_result(result: DiskCheckResult) -> None:
     """Print disk check results to stdout."""
     from mavica_tools.fun import health_bar
 
-    good_pct = 100 * (result.tested_sectors - len(result.bad_sectors)) / result.tested_sectors if result.tested_sectors else 0
+    good_pct = (
+        100 * (result.tested_sectors - len(result.bad_sectors)) / result.tested_sectors
+        if result.tested_sectors
+        else 0
+    )
 
     print(f"\n  {result.headline}\n")
     print(health_bar(good_pct))
@@ -441,27 +504,30 @@ def print_result(result: DiskCheckResult) -> None:
 
     if result.diagnosis:
         from mavica_tools.diagnose import format_diagnosis
-        print(f"\n  Diagnosis:")
+
+        print("\n  Diagnosis:")
         print(format_diagnosis(result.diagnosis, rich=False))
 
     print()
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Check if a floppy disk is safe for camera use"
-    )
+    parser = argparse.ArgumentParser(description="Check if a floppy disk is safe for camera use")
     parser.add_argument("device", help="Floppy device (e.g. /dev/fd0, \\\\.\\A:)")
     parser.add_argument(
-        "--quick", action="store_true",
+        "--quick",
+        action="store_true",
         help="Quick spot check (track 0 + sampled tracks)",
     )
     parser.add_argument(
-        "--write", action="store_true",
+        "--write",
+        action="store_true",
         help="Destructive write-verify test (DESTROYS ALL DATA)",
     )
     parser.add_argument(
-        "-y", "--yes", action="store_true",
+        "-y",
+        "--yes",
+        action="store_true",
         help="Skip confirmation for destructive tests",
     )
     args = parser.parse_args()

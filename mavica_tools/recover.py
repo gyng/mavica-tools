@@ -11,10 +11,10 @@ import os
 import platform
 import sys
 
-from mavica_tools.multipass import merge_passes, SECTOR_SIZE, DISK_SIZE
-from mavica_tools.fat12 import parse_disk_image, extract_with_names, list_files
 from mavica_tools.carve import carve_jpegs
 from mavica_tools.check import check_jpeg_structure
+from mavica_tools.fat12 import extract_with_names, list_files
+from mavica_tools.multipass import DISK_SIZE, SECTOR_SIZE, merge_passes
 from mavica_tools.repair import repair_jpeg
 
 
@@ -53,8 +53,10 @@ def recover_from_images(image_paths: list[str], output_dir: str, use_fat: bool =
 
     good_sectors = sector_status.count("good") + sector_status.count("recovered")
     total_sectors = len(sector_status)
-    print(f"  Sectors: {good_sectors}/{total_sectors} readable "
-          f"({100 * good_sectors / total_sectors:.1f}%)")
+    print(
+        f"  Sectors: {good_sectors}/{total_sectors} readable "
+        f"({100 * good_sectors / total_sectors:.1f}%)"
+    )
 
     # Step 2: Extract files
     extracted_dir = os.path.join(output_dir, "extracted")
@@ -133,7 +135,7 @@ def recover_from_images(image_paths: list[str], output_dir: str, use_fat: bool =
         print("\n[4/4] No repairs needed — all files are OK!")
 
     # Summary
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"Recovery complete: {output_dir}/")
     print(f"  Total:    {summary['total_files']}")
     print(f"  Good:     {summary['good']}")
@@ -147,7 +149,6 @@ def recover_from_images(image_paths: list[str], output_dir: str, use_fat: bool =
 def recover_from_device(device: str, output_dir: str, passes: int = 5):
     """Full recovery from a floppy device: read + extract + check + repair."""
     import subprocess
-    import time
 
     os.makedirs(output_dir, exist_ok=True)
     system = platform.system()
@@ -168,9 +169,15 @@ def recover_from_device(device: str, output_dir: str, passes: int = 5):
                 print(f"read {len(data):,} bytes")
             else:
                 result = subprocess.run(
-                    ["dd", f"if={device}", f"of={img_path}",
-                     f"bs={SECTOR_SIZE}", "conv=noerror,sync"],
-                    capture_output=True, text=True,
+                    [
+                        "dd",
+                        f"if={device}",
+                        f"of={img_path}",
+                        f"bs={SECTOR_SIZE}",
+                        "conv=noerror,sync",
+                    ],
+                    capture_output=True,
+                    text=True,
                 )
                 errors = result.stderr.lower().count("error")
                 print(f"{'clean' if not errors else f'{errors} error(s)'}")
@@ -206,13 +213,17 @@ def main():
     # From device
     dev_parser = subparsers.add_parser("device", help="Recover from floppy device")
     dev_parser.add_argument("device", help="Floppy device path")
-    dev_parser.add_argument("-o", "--output", default="mavica_out/recovery", help="Output directory")
+    dev_parser.add_argument(
+        "-o", "--output", default="mavica_out/recovery", help="Output directory"
+    )
     dev_parser.add_argument("-n", "--passes", type=int, default=5, help="Number of read passes")
 
     # From existing images
     img_parser = subparsers.add_parser("images", help="Recover from existing disk images")
     img_parser.add_argument("images", nargs="+", help="Disk image files")
-    img_parser.add_argument("-o", "--output", default="mavica_out/recovery", help="Output directory")
+    img_parser.add_argument(
+        "-o", "--output", default="mavica_out/recovery", help="Output directory"
+    )
     img_parser.add_argument("--no-fat", action="store_true", help="Skip FAT12, carve directly")
 
     args = parser.parse_args()

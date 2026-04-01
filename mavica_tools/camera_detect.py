@@ -8,22 +8,57 @@ Uses multiple heuristics:
 5. Filename patterns (MVC-NNN vs PICT0NNN)
 """
 
-import os
 import glob as globmod
+import os
 from dataclasses import dataclass
 
-from mavica_tools.mavica_db import MAVICA_SPECS, MODELS
-
+from mavica_tools.mavica_db import MAVICA_SPECS
 
 # Which models produce which companion file types
 # FD7x series introduced .411 thumbnails
 # FD8x series added .htm index pages and .mov video
-_HAS_411 = {"fd71", "fd73", "fd75", "fd83", "fd85", "fd87", "fd88",
-            "fd90", "fd91", "fd92", "fd95", "fd97", "fd100", "fd200"}
-_HAS_HTM = {"fd83", "fd85", "fd87", "fd88", "fd90", "fd91", "fd92",
-            "fd95", "fd97", "fd100", "fd200"}
-_HAS_MOV = {"fd83", "fd85", "fd87", "fd88", "fd90", "fd91", "fd92",
-            "fd95", "fd97", "fd100", "fd200"}
+_HAS_411 = {
+    "fd71",
+    "fd73",
+    "fd75",
+    "fd83",
+    "fd85",
+    "fd87",
+    "fd88",
+    "fd90",
+    "fd91",
+    "fd92",
+    "fd95",
+    "fd97",
+    "fd100",
+    "fd200",
+}
+_HAS_HTM = {
+    "fd83",
+    "fd85",
+    "fd87",
+    "fd88",
+    "fd90",
+    "fd91",
+    "fd92",
+    "fd95",
+    "fd97",
+    "fd100",
+    "fd200",
+}
+_HAS_MOV = {
+    "fd83",
+    "fd85",
+    "fd87",
+    "fd88",
+    "fd90",
+    "fd91",
+    "fd92",
+    "fd95",
+    "fd97",
+    "fd100",
+    "fd200",
+}
 
 # Resolution -> set of models (from DB — many resolutions are now unique)
 _RES_MAP: dict[tuple[int, int], set[str]] = {}
@@ -35,10 +70,11 @@ for _k, _v in MAVICA_SPECS.items():
 @dataclass
 class DetectionResult:
     """Result of camera auto-detection."""
-    model: str | None          # Best-guess model shorthand (e.g. "fd7"), None if unknown
-    confidence: str            # "exact", "likely", "guess", "unknown"
-    candidates: list[str]      # All plausible models (may be >1)
-    reason: str                # Human-readable explanation of how it was detected
+
+    model: str | None  # Best-guess model shorthand (e.g. "fd7"), None if unknown
+    confidence: str  # "exact", "likely", "guess", "unknown"
+    candidates: list[str]  # All plausible models (may be >1)
+    reason: str  # Human-readable explanation of how it was detected
 
 
 def detect_camera(files: list[str]) -> DetectionResult:
@@ -75,18 +111,22 @@ def detect_camera(files: list[str]) -> DetectionResult:
         if not has_411:
             has_411 = bool(globmod.glob(os.path.join(companion_dir, "*.411")))
         if not has_htm:
-            has_htm = bool(globmod.glob(os.path.join(companion_dir, "*.htm")) or
-                          globmod.glob(os.path.join(companion_dir, "*.HTM")))
+            has_htm = bool(
+                globmod.glob(os.path.join(companion_dir, "*.htm"))
+                or globmod.glob(os.path.join(companion_dir, "*.HTM"))
+            )
         if not has_mov:
-            has_mov = bool(globmod.glob(os.path.join(companion_dir, "*.mov")) or
-                          globmod.glob(os.path.join(companion_dir, "*.MOV")))
+            has_mov = bool(
+                globmod.glob(os.path.join(companion_dir, "*.mov"))
+                or globmod.glob(os.path.join(companion_dir, "*.MOV"))
+            )
 
-    # 4. Filename pattern
-    has_mvc = any(f.startswith("mvc") for f in all_files_lower)
-    has_pict = any(f.startswith("pict") for f in all_files_lower)
+    # 4. Filename pattern (reserved for future scoring)
+    _has_mvc = any(f.startswith("mvc") for f in all_files_lower)
+    _has_pict = any(f.startswith("pict") for f in all_files_lower)
 
-    # 5. Average JPEG file size
-    avg_size = _avg_file_size(jpegs)
+    # 5. Average JPEG file size (reserved for future scoring)
+    _avg_size = _avg_file_size(jpegs)
 
     # Build candidate set
     candidates = set(MAVICA_SPECS.keys())
@@ -129,7 +169,9 @@ def detect_camera(files: list[str]) -> DetectionResult:
         model = sorted_candidates[0]
         spec = MAVICA_SPECS[model]
         return DetectionResult(
-            model, "likely", sorted_candidates,
+            model,
+            "likely",
+            sorted_candidates,
             f"Detected {spec['model']}: {', '.join(reasons)}",
         )
 
@@ -139,7 +181,9 @@ def detect_camera(files: list[str]) -> DetectionResult:
     spec = MAVICA_SPECS[model]
     reason_str = ", ".join(reasons) if reasons else "resolution match"
     return DetectionResult(
-        model, "guess", sorted_candidates,
+        model,
+        "guess",
+        sorted_candidates,
         f"Best guess {spec['model']} (also possible: "
         f"{', '.join(MAVICA_SPECS[c]['model'] for c in sorted_candidates[1:])}). "
         f"Based on: {reason_str}",
@@ -167,12 +211,16 @@ def _check_exif(jpegs: list[str]) -> DetectionResult | None:
             for key, spec in MAVICA_SPECS.items():
                 if key in model_lower or spec["model"].lower() in model_lower:
                     return DetectionResult(
-                        key, "exact", [key],
+                        key,
+                        "exact",
+                        [key],
                         f"EXIF says {model_str} (from {os.path.basename(path)})",
                     )
             # Has EXIF but not a known Mavica model
             return DetectionResult(
-                None, "exact", [],
+                None,
+                "exact",
+                [],
                 f"EXIF camera: {model_str} (not a known Mavica model)",
             )
         except Exception:

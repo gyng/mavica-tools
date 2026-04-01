@@ -7,7 +7,6 @@ import glob
 import os
 from datetime import datetime
 
-
 MAVICA_EXTENSIONS = (".jpg", ".jpeg", ".411")
 
 # Default root output directory — all tool outputs go under here
@@ -149,10 +148,13 @@ def format_eta(start_time: float, current: int, total: int) -> str:
 def print_progress(current: int, total: int, start_time: float, label: str = "") -> None:
     """Print a progress line with ETA to stderr, overwriting the current line."""
     import sys
+
     pct = 100 * current / total if total else 0
     eta = format_eta(start_time, current, total)
     prefix = f"  {label} " if label else "  "
-    print(f"\r{prefix}{current}/{total} ({pct:.0f}%) {eta}    ", end="", file=sys.stderr, flush=True)
+    print(
+        f"\r{prefix}{current}/{total} ({pct:.0f}%) {eta}    ", end="", file=sys.stderr, flush=True
+    )
     if current >= total:
         print(file=sys.stderr)  # newline when done
 

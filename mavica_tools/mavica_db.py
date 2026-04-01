@@ -6,25 +6,25 @@ autodetection, and UI.
 
 import csv
 import os
-from dataclasses import dataclass, field
-from fractions import Fraction
+from dataclasses import dataclass
 
 
 @dataclass
 class MavicaModel:
     """Parsed camera model from the database."""
-    key: str                    # e.g. "fd7", "cd300"
-    model: str                  # e.g. "Sony Mavica MVC-FD7"
+
+    key: str  # e.g. "fd7", "cd300"
+    model: str  # e.g. "Sony Mavica MVC-FD7"
     year: int
     megapixels: float
     resolution: tuple[int, int]  # (width, height)
     interlaced: bool
     optical_zoom: float
-    focal_length_mm: float      # min focal length
+    focal_length_mm: float  # min focal length
     focal_length_max_mm: float  # max focal length
-    focal_length_35mm: int      # estimated 35mm equivalent (from min)
-    aperture_max: float         # widest aperture (smallest f-number)
-    aperture_min: float         # narrowest aperture at tele end
+    focal_length_35mm: int  # estimated 35mm equivalent (from min)
+    aperture_max: float  # widest aperture (smallest f-number)
+    aperture_min: float  # narrowest aperture at tele end
     manual_focus: bool
     macro: bool
     exposure_modes: str
@@ -35,15 +35,15 @@ class MavicaModel:
     steadyshot: bool
     picture_effects: bool
     multi_mode: bool
-    thread_size: float | None   # filter thread in mm, None if none
-    sensor_size: str            # e.g. "1/4", "1/2.7"
-    media: str                  # e.g. "Floppy only", "CD", "Floppy & MS slot"
-    fd_speed: str               # e.g. "1x", "4x", "" for CD models
+    thread_size: float | None  # filter thread in mm, None if none
+    sensor_size: str  # e.g. "1/4", "1/2.7"
+    media: str  # e.g. "Floppy only", "CD", "Floppy & MS slot"
+    fd_speed: str  # e.g. "1x", "4x", "" for CD models
     usb: bool
     pics_per_disk: int
     manual_url: str
-    iso: int = 100              # all Mavicas are ISO 100
-    flash: bool = True          # all models have flash
+    iso: int = 100  # all Mavicas are ISO 100
+    flash: bool = True  # all models have flash
 
 
 def _parse_aperture(s: str) -> tuple[float, float]:
@@ -181,7 +181,7 @@ for _k, _m in MODELS.items():
         "model": _m.model,
         "year": _m.year,
         "resolution": _m.resolution,
-        "sensor": f"{_m.sensor_size}\" CCD",
+        "sensor": f'{_m.sensor_size}" CCD',
         "focal_length_mm": _m.focal_length_mm,
         "focal_length_35mm": _m.focal_length_35mm,
         "aperture_max": _m.aperture_max,

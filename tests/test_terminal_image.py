@@ -2,7 +2,6 @@
 
 import os
 import tempfile
-from io import StringIO
 from unittest.mock import patch
 
 import pytest
@@ -11,10 +10,10 @@ PIL = pytest.importorskip("PIL")
 from PIL import Image
 
 from mavica_tools.terminal_image import (
+    _halfblock_display,
     detect_protocol,
     show_image,
     show_images,
-    _halfblock_display,
 )
 
 
@@ -75,7 +74,7 @@ class TestHalfblockDisplay:
 
         _halfblock_display(data, width=10)
         captured = capsys.readouterr()
-        lines = [l for l in captured.out.split("\n") if l.strip()]
+        lines = [line for line in captured.out.split("\n") if line.strip()]
         # Each line should be about 10 chars of content (plus ANSI codes)
         assert len(lines) > 0
 

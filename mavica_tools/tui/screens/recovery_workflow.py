@@ -7,9 +7,9 @@ import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, RichLog
 from textual.containers import Horizontal
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, Input, RichLog, Static
 
 
 class RecoveryWorkflowScreen(Screen):
@@ -22,8 +22,7 @@ class RecoveryWorkflowScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
-            "[bold #ffaa00]Repair & Recovery[/]  "
-            "[dim]For damaged floppies and corrupt photos[/]\n",
+            "[bold #ffaa00]Repair & Recovery[/]  [dim]For damaged floppies and corrupt photos[/]\n",
             id="title-bar",
         )
         yield Static("", id="breadcrumb")
@@ -35,7 +34,11 @@ class RecoveryWorkflowScreen(Screen):
 
         yield Static("  [bold]Output Directory[/]", classes="section-title")
         with Horizontal(classes="input-row"):
-            yield Input(value="mavica_out/recovery", placeholder="Where to save recovered files", id="base-dir")
+            yield Input(
+                value="mavica_out/recovery",
+                placeholder="Where to save recovered files",
+                id="base-dir",
+            )
 
         yield Static("\n  [bold #ff3333]Step 1: Image the disk[/]")
         yield Static(
@@ -56,14 +59,14 @@ class RecoveryWorkflowScreen(Screen):
             yield Button("Carve from Raw", variant="warning", id="btn-carve", disabled=True)
 
         yield Static("\n  [bold #33ff33]Step 3: Check & repair[/]")
-        yield Static(
-            "  [dim]Scan for corruption and attempt to salvage partial images.[/]"
-        )
+        yield Static("  [dim]Scan for corruption and attempt to salvage partial images.[/]")
         with Horizontal(classes="button-row"):
             yield Button("Check for Damage", variant="success", id="btn-check", disabled=True)
             yield Button("Repair Images", variant="warning", id="btn-repair", disabled=True)
 
-        yield Static("\n  [dim]After recovery, go back and use [bold]Import & Tag[/dim] to add metadata and export.[/]")
+        yield Static(
+            "\n  [dim]After recovery, go back and use [bold]Import & Tag[/dim] to add metadata and export.[/]"
+        )
 
         yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
@@ -97,9 +100,7 @@ class RecoveryWorkflowScreen(Screen):
                 parts.append(f"[bold #ffaa00]\u25cf {label}[/bold #ffaa00]")
             else:
                 parts.append(f"[dim]\u25cb {label}[/dim]")
-        self.query_one("#breadcrumb", Static).update(
-            "  " + "  \u2500\u25b6  ".join(parts)
-        )
+        self.query_one("#breadcrumb", Static).update("  " + "  \u2500\u25b6  ".join(parts))
 
     def _check_existing(self) -> None:
         base = self.query_one("#base-dir", Input).value.strip()
@@ -123,6 +124,7 @@ class RecoveryWorkflowScreen(Screen):
         log = self.query_one("#log", RichLog)
         try:
             from mavica_tools.fat12 import list_files
+
             files = list_files(merged, include_deleted=True)
             if not files:
                 log.write("  [dim]No files found in FAT12 filesystem.[/]")

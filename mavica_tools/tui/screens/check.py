@@ -1,13 +1,13 @@
 """Check screen — batch JPEG corruption checker."""
 
-import os
 import glob as globmod
+import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog, ProgressBar
 from textual.containers import Horizontal
+from textual.screen import Screen
+from textual.widgets import Button, DataTable, Footer, Header, Input, ProgressBar, RichLog, Static
 from textual.worker import get_current_worker
 
 from mavica_tools.check import check_jpeg_structure
@@ -70,6 +70,7 @@ class CheckScreen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#source-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(
                 extensions=(".jpg", ".jpeg"),
@@ -159,9 +160,13 @@ class CheckScreen(Screen):
 
         if self._bad_files:
             self.query_one("#btn-repair", Button).disabled = False
-            log.write(f"[bold #33ff33]Next:[/] Click [bold]Repair Bad Files[/] to salvage corrupt images.")
+            log.write(
+                "[bold #33ff33]Next:[/] Click [bold]Repair Bad Files[/] to salvage corrupt images."
+            )
         elif self._good_files:
-            log.write("[bold #33ff33]All photos OK![/] Click [bold]Stamp Metadata[/] to add camera info.")
+            log.write(
+                "[bold #33ff33]All photos OK![/] Click [bold]Stamp Metadata[/] to add camera info."
+            )
         if self._good_files:
             self.query_one("#btn-stamp", Button).disabled = False
 

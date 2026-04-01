@@ -7,9 +7,9 @@ pixels per character cell.
 
 import os
 
-from textual.widget import Widget
-from textual.reactive import reactive
 from rich.text import Text
+from textual.reactive import reactive
+from textual.widget import Widget
 
 
 def _render_half_blocks(img, text, target_w, target_h, pad_left: int = 0):
@@ -60,6 +60,7 @@ def inline_thumbnail(path: str, width: int = 2) -> str:
         return ""
     try:
         from PIL import Image
+
         img = Image.open(path).convert("RGB")
         # Resize to width x 2 pixels (2 rows → 1 row of half-blocks)
         # LANCZOS for downscaling — best quality for shrinking photos to tiny thumbnails
@@ -126,6 +127,7 @@ class ImagePreview(Widget):
 
     async def _load_image(self, path: str) -> None:
         import asyncio
+
         try:
             rendered = await asyncio.to_thread(self._render_image, path)
             if self._last_path == path:
@@ -147,6 +149,7 @@ class ImagePreview(Widget):
         if self._loading:
             frames = ["|", "/", "-", "\\"]
             import time
+
             frame = frames[int(time.time() * 4) % len(frames)]
             text = Text()
             text.append(f"  {frame} ", style="bold #ffaa00")

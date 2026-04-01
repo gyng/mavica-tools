@@ -53,7 +53,7 @@ def rename_file(original_name: str, index: int, template: str) -> str:
     # Handle format specs like {n:03d}
     result = template
     # Replace {n:FORMAT} patterns
-    result = re.sub(r'\{n:([^}]+)\}', lambda m: format(index, m.group(1)), result)
+    result = re.sub(r"\{n:([^}]+)\}", lambda m: format(index, m.group(1)), result)
     result = result.replace("{n}", str(index))
     result = result.replace("{name}", base)
     result = result.replace("{ext}", ext)
@@ -71,7 +71,7 @@ def apply_watermark(img, text: str, position: str = "bottom-right"):
     Mimics the amber-on-black date imprint from 90s cameras.
     Returns a modified copy.
     """
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import ImageDraw, ImageFont
 
     img = img.copy()
     draw = ImageDraw.Draw(img)
@@ -79,10 +79,10 @@ def apply_watermark(img, text: str, position: str = "bottom-right"):
     # Use a small built-in font
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 14)
-    except (OSError, IOError):
+    except OSError:
         try:
             font = ImageFont.truetype("C:\\Windows\\Fonts\\consola.ttf", 14)
-        except (OSError, IOError):
+        except OSError:
             font = ImageFont.load_default()
 
     # Measure text
@@ -130,10 +130,10 @@ def add_border(img, caption: str = "", border_size: int = 20):
         draw = ImageDraw.Draw(bordered)
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 12)
-        except (OSError, IOError):
+        except OSError:
             try:
                 font = ImageFont.truetype("C:\\Windows\\Fonts\\consola.ttf", 12)
-            except (OSError, IOError):
+            except OSError:
                 font = ImageFont.load_default()
 
         draw.text(
@@ -179,12 +179,14 @@ def make_contact_sheet(
 
     try:
         font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 10)
-        title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 14)
-    except (OSError, IOError):
+        title_font = ImageFont.truetype(
+            "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf", 14
+        )
+    except OSError:
         try:
             font = ImageFont.truetype("C:\\Windows\\Fonts\\consola.ttf", 10)
             title_font = ImageFont.truetype("C:\\Windows\\Fonts\\consolab.ttf", 14)
-        except (OSError, IOError):
+        except OSError:
             font = ImageFont.load_default()
             title_font = font
 
@@ -282,9 +284,7 @@ def export_images(
                 out_name = original_name
 
             # Determine output path
-            out_path = organize_path(
-                os.path.join(input_dir, out_name), organize, output_dir
-            )
+            out_path = organize_path(os.path.join(input_dir, out_name), organize, output_dir)
             os.makedirs(os.path.dirname(out_path), exist_ok=True)
 
             img = Image.open(filepath)
@@ -335,17 +335,23 @@ def main():
     parser.add_argument("input_dir", help="Directory containing recovered images")
     parser.add_argument("-o", "--output", default="mavica_out/exported", help="Output directory")
     parser.add_argument(
-        "--organize", choices=["flat", "date", "year"], default="flat",
+        "--organize",
+        choices=["flat", "date", "year"],
+        default="flat",
         help="Folder structure (default: flat)",
     )
     parser.add_argument(
-        "--rename", choices=["original", "template"], default="original",
+        "--rename",
+        choices=["original", "template"],
+        default="original",
         help="Naming scheme",
     )
     parser.add_argument("--template", default="mavica-{n:03d}", help="Rename template")
     parser.add_argument("--resize", help="Resize output (e.g., 1280x960)")
     parser.add_argument(
-        "--upscale", choices=["nearest", "lanczos"], default="nearest",
+        "--upscale",
+        choices=["nearest", "lanczos"],
+        default="nearest",
         help="Upscale method (default: nearest — preserves pixel aesthetic)",
     )
     parser.add_argument("--watermark", help="Watermark text (e.g., 'Shot on Mavica FD7')")

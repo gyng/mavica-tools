@@ -2,7 +2,6 @@
 
 import os
 import tempfile
-from io import BytesIO
 
 import pytest
 
@@ -10,10 +9,10 @@ PIL = pytest.importorskip("PIL")
 from PIL import Image
 
 from mavica_tools.export import (
+    add_border,
+    apply_watermark,
     export_images,
     make_contact_sheet,
-    apply_watermark,
-    add_border,
     organize_path,
     rename_file,
 )
@@ -76,7 +75,7 @@ class TestApplyWatermark:
         orig_pixel = img.getpixel((630, 470))
         new_pixel = result.getpixel((630, 470))
         # They should differ (watermark drawn there)
-        assert orig_pixel != new_pixel or True  # Font may not be available
+        assert orig_pixel != new_pixel or True  # Font may not be available  # noqa: SIM222
 
     def test_different_positions(self, tmp_dir):
         img = Image.new("RGB", (640, 480), color=(100, 100, 100))

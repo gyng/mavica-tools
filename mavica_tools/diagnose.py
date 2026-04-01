@@ -9,11 +9,13 @@ Floppy geometry: 80 tracks, 2 heads (sides A/B), 18 sectors per track = 2880 sec
 """
 
 from dataclasses import dataclass, field
-from mavica_tools.multipass import (
-    identify_bad_sectors, read_image_file,
-    SECTORS_PER_TRACK, HEADS, TRACKS, TOTAL_SECTORS,
-)
 
+from mavica_tools.multipass import (
+    HEADS,
+    SECTORS_PER_TRACK,
+    TRACKS,
+    identify_bad_sectors,
+)
 
 SECTORS_PER_CYLINDER = SECTORS_PER_TRACK * HEADS  # 36
 
@@ -33,11 +35,12 @@ def sector_in_track(sector_idx: int) -> int:
 @dataclass
 class DriveDiagnosis:
     """Result of analyzing multi-pass read error patterns."""
-    headline: str                    # One-line summary
-    confidence: str                  # "likely", "possible", "uncertain"
-    evidence: list[str] = field(default_factory=list)    # Bullet points
+
+    headline: str  # One-line summary
+    confidence: str  # "likely", "possible", "uncertain"
+    evidence: list[str] = field(default_factory=list)  # Bullet points
     suggestions: list[str] = field(default_factory=list)  # Actionable steps
-    stats: dict = field(default_factory=dict)             # Raw numbers
+    stats: dict = field(default_factory=dict)  # Raw numbers
 
 
 def analyze_passes(image_paths: list[str]) -> list[set[int]]:
@@ -101,7 +104,9 @@ def diagnose_errors(
     if total_bad < 10:
         diagnosis.headline = "Minor damage"
         diagnosis.confidence = "likely"
-        diagnosis.evidence.append(f"Only {total_bad} bad sector(s) — too few to diagnose a pattern.")
+        diagnosis.evidence.append(
+            f"Only {total_bad} bad sector(s) — too few to diagnose a pattern."
+        )
         diagnosis.suggestions.append("Try a few more passes to recover the remaining sectors.")
         return diagnosis
 
@@ -126,13 +131,13 @@ def diagnose_errors(
         if ratio >= 3:
             scores["drive_alignment"] += 2
             diagnosis.evidence.append(
-                f"Side {worse_side} has {max(h0,h1)} bad sectors vs {min(h0,h1)} on the other side "
+                f"Side {worse_side} has {max(h0, h1)} bad sectors vs {min(h0, h1)} on the other side "
                 f"({ratio:.1f}x asymmetry). This suggests a head alignment or contamination issue."
             )
         elif ratio >= 2:
             scores["drive_alignment"] += 1
             diagnosis.evidence.append(
-                f"Side {worse_side} has moderately more errors ({max(h0,h1)} vs {min(h0,h1)})."
+                f"Side {worse_side} has moderately more errors ({max(h0, h1)} vs {min(h0, h1)})."
             )
     elif h0 == 0 or h1 == 0:
         if total_bad > 20:
@@ -183,10 +188,14 @@ def diagnose_errors(
     if dead_track_sides:
         # Check if they're contiguous
         dead_tracks_only = sorted(set(t for t, h in dead_track_sides))
-        contiguous = all(
-            dead_tracks_only[i] + 1 == dead_tracks_only[i + 1]
-            for i in range(len(dead_tracks_only) - 1)
-        ) if len(dead_tracks_only) > 1 else True
+        contiguous = (
+            all(
+                dead_tracks_only[i] + 1 == dead_tracks_only[i + 1]
+                for i in range(len(dead_tracks_only) - 1)
+            )
+            if len(dead_tracks_only) > 1
+            else True
+        )
 
         if len(dead_track_sides) >= 5 and contiguous:
             scores["mechanical"] += 3
@@ -295,9 +304,7 @@ def diagnose_errors(
 
     if best == "drive_alignment":
         diagnosis.headline = "Try a different floppy drive"
-        diagnosis.suggestions.append(
-            "The error pattern suggests drive head alignment issues."
-        )
+        diagnosis.suggestions.append("The error pattern suggests drive head alignment issues.")
         diagnosis.suggestions.append(
             "Different USB floppy drives have different head alignment — "
             "a disk that fails on one drive may read fine on another."
@@ -310,17 +317,14 @@ def diagnose_errors(
     elif best == "mechanical":
         diagnosis.headline = "Drive mechanical issue"
         diagnosis.suggestions.append(
-            "The drive appears unable to seek to certain tracks. "
-            "Try a different floppy drive."
+            "The drive appears unable to seek to certain tracks. Try a different floppy drive."
         )
         diagnosis.suggestions.append(
             "If multiple drives fail on the same tracks, the disk media is damaged."
         )
     elif best == "dirty_head":
         diagnosis.headline = "Clean the drive head"
-        diagnosis.suggestions.append(
-            "Random scattered errors suggest a dirty read head."
-        )
+        diagnosis.suggestions.append("Random scattered errors suggest a dirty read head.")
         diagnosis.suggestions.append(
             "Clean the drive head with isopropyl alcohol on a cotton swab, "
             "let it dry, then try again."
@@ -355,7 +359,9 @@ def format_diagnosis(diag: DriveDiagnosis, rich: bool = False) -> str:
         conf_color = {"likely": "red", "possible": "#ffaa00", "uncertain": "dim"}.get(
             diag.confidence, "dim"
         )
-        lines.append(f"  [bold {conf_color}]{diag.headline}[/] [{conf_color}]({diag.confidence})[/]")
+        lines.append(
+            f"  [bold {conf_color}]{diag.headline}[/] [{conf_color}]({diag.confidence})[/]"
+        )
         lines.append("")
         for e in diag.evidence:
             lines.append(f"    [dim]{e}[/]")

@@ -13,9 +13,9 @@ import tempfile
 import pytest
 
 PIL = pytest.importorskip("PIL")
-from PIL import Image
 from io import BytesIO
 
+from PIL import Image
 
 MAVICA = [sys.executable, "-m", "mavica_tools"]
 
@@ -24,7 +24,10 @@ def run(args, timeout=30, **kwargs):
     """Run a mavica CLI command and return the result."""
     return subprocess.run(
         MAVICA + args,
-        capture_output=True, text=True, timeout=timeout, **kwargs,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        **kwargs,
     )
 
 
@@ -38,11 +41,14 @@ def make_jpeg(directory, name="MVC-001.JPG", width=640, height=480):
 
 def make_disk_image(directory, name="disk.img", jpeg_data=None):
     """Create a FAT12 disk image with an embedded JPEG."""
-    from mavica_tools.format import create_disk_image
     from mavica_tools.fat12 import (
-        FAT_OFFSET, FATS_COUNT, SECTORS_PER_FAT,
-        DATA_START_SECTOR, SECTOR_SIZE,
+        DATA_START_SECTOR,
+        FAT_OFFSET,
+        FATS_COUNT,
+        SECTOR_SIZE,
+        SECTORS_PER_FAT,
     )
+    from mavica_tools.format import create_disk_image
 
     disk = bytearray(create_disk_image("TEST"))
 
@@ -74,9 +80,9 @@ def make_disk_image(directory, name="disk.img", jpeg_data=None):
 
     # Copy FAT2
     fat2_offset = fat_offset + SECTORS_PER_FAT * SECTOR_SIZE
-    disk[fat2_offset : fat2_offset + SECTORS_PER_FAT * SECTOR_SIZE] = (
-        disk[fat_offset : fat_offset + SECTORS_PER_FAT * SECTOR_SIZE]
-    )
+    disk[fat2_offset : fat2_offset + SECTORS_PER_FAT * SECTOR_SIZE] = disk[
+        fat_offset : fat_offset + SECTORS_PER_FAT * SECTOR_SIZE
+    ]
 
     # Directory entry
     root_offset = (FAT_OFFSET + FATS_COUNT * SECTORS_PER_FAT) * SECTOR_SIZE
@@ -104,6 +110,7 @@ def tmp_dir():
 
 # ─── Help & basic CLI ────────────────────────────────────────────────────
 
+
 class TestCLIBasics:
     def test_help(self):
         r = run(["--help"])
@@ -122,6 +129,7 @@ class TestCLIBasics:
 
 
 # ─── mavica import ───────────────────────────────────────────────────────
+
 
 class TestImportCLI:
     def test_import_from_directory(self, tmp_dir):
@@ -175,6 +183,7 @@ class TestImportCLI:
 
 # ─── mavica check ────────────────────────────────────────────────────────
 
+
 class TestCheckCLI:
     def test_check_good_files(self, tmp_dir):
         make_jpeg(tmp_dir, "good.jpg")
@@ -203,6 +212,7 @@ class TestCheckCLI:
 
 # ─── mavica carve ────────────────────────────────────────────────────────
 
+
 class TestCarveCLI:
     def test_carve_from_disk_image(self, tmp_dir):
         img_path = make_disk_image(tmp_dir)
@@ -217,6 +227,7 @@ class TestCarveCLI:
 
     def test_carve_empty_image(self, tmp_dir):
         from mavica_tools.multipass import DISK_SIZE
+
         path = os.path.join(tmp_dir, "empty.img")
         with open(path, "wb") as f:
             f.write(b"\x00" * DISK_SIZE)
@@ -227,6 +238,7 @@ class TestCarveCLI:
 
 
 # ─── mavica repair ───────────────────────────────────────────────────────
+
 
 class TestRepairCLI:
     def test_repair_good_jpeg(self, tmp_dir):
@@ -245,6 +257,7 @@ class TestRepairCLI:
 
 # ─── mavica stamp ────────────────────────────────────────────────────────
 
+
 class TestStampCLI:
     def test_stamp_with_model(self, tmp_dir):
         path = make_jpeg(tmp_dir, "photo.jpg")
@@ -259,6 +272,7 @@ class TestStampCLI:
 
 
 # ─── mavica fat12 ────────────────────────────────────────────────────────
+
 
 class TestFat12CLI:
     def test_fat12_ls(self, tmp_dir):
@@ -277,6 +291,7 @@ class TestFat12CLI:
 
 # ─── mavica format ───────────────────────────────────────────────────────
 
+
 class TestFormatCLI:
     def test_format_image(self, tmp_dir):
         out = os.path.join(tmp_dir, "blank.img")
@@ -288,6 +303,7 @@ class TestFormatCLI:
 
 
 # ─── mavica export ───────────────────────────────────────────────────────
+
 
 class TestExportCLI:
     def test_export_flat(self, tmp_dir):
@@ -316,17 +332,21 @@ class TestExportCLI:
 
 # ─── mavica detect ───────────────────────────────────────────────────────
 
+
 class TestDetectCLI:
     def test_detect_runs(self):
         # Mock subprocess.run inside detect to avoid triggering real floppy hardware
         r = subprocess.run(
             [
-                sys.executable, "-c",
+                sys.executable,
+                "-c",
                 "from unittest.mock import patch, MagicMock; "
                 "patch('mavica_tools.detect.subprocess.run', side_effect=FileNotFoundError()).start(); "
                 "from mavica_tools.detect import main; main()",
             ],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         assert r.returncode == 0
         assert "detection" in r.stdout.lower() or "drive" in r.stdout.lower()
@@ -334,24 +354,33 @@ class TestDetectCLI:
 
 # ─── mavica multipass merge ──────────────────────────────────────────────
 
+
 class TestMultipassCLI:
     def test_merge_images(self, tmp_dir):
         # Create two identical pass images
         img_path = make_disk_image(tmp_dir, "pass_01.img")
         import shutil
+
         shutil.copy(img_path, os.path.join(tmp_dir, "pass_02.img"))
 
         merged = os.path.join(tmp_dir, "merged.img")
-        r = run(["multipass", "merge",
-                 os.path.join(tmp_dir, "pass_01.img"),
-                 os.path.join(tmp_dir, "pass_02.img"),
-                 "-o", merged])
+        r = run(
+            [
+                "multipass",
+                "merge",
+                os.path.join(tmp_dir, "pass_01.img"),
+                os.path.join(tmp_dir, "pass_02.img"),
+                "-o",
+                merged,
+            ]
+        )
         assert r.returncode == 0
         assert os.path.exists(merged)
         assert "health" in r.stdout.lower() or "Sector" in r.stdout
 
 
 # ─── mavica history ──────────────────────────────────────────────────────
+
 
 class TestHistoryCLI:
     def test_history_view_empty(self, tmp_dir):
@@ -360,6 +389,7 @@ class TestHistoryCLI:
 
 
 # ─── Full pipeline: import → check → stamp → export ─────────────────────
+
 
 class TestFullPipeline:
     def test_photographer_workflow(self, tmp_dir):
@@ -384,9 +414,17 @@ class TestFullPipeline:
 
         # 4. Export with watermark
         export_dir = os.path.join(tmp_dir, "export")
-        r = run(["export", photos, "-o", export_dir,
-                 "--watermark", "Shot on Mavica FD7",
-                 "--contact-sheet"])
+        r = run(
+            [
+                "export",
+                photos,
+                "-o",
+                export_dir,
+                "--watermark",
+                "Shot on Mavica FD7",
+                "--contact-sheet",
+            ]
+        )
         assert r.returncode == 0
 
         # 5. Verify everything exists
@@ -445,7 +483,17 @@ class TestFullPipeline:
 
         # Export with rename
         export_dir = os.path.join(tmp_dir, "export")
-        r = run(["export", extract_dir, "-o", export_dir,
-                 "--rename", "template", "--template", "mavica-{n:03d}"])
+        r = run(
+            [
+                "export",
+                extract_dir,
+                "-o",
+                export_dir,
+                "--rename",
+                "template",
+                "--template",
+                "mavica-{n:03d}",
+            ]
+        )
         assert r.returncode == 0
         assert os.path.exists(os.path.join(export_dir, "mavica-001.JPG"))

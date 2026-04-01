@@ -19,6 +19,7 @@ from mavica_tools.utils import get_photo_timestamp as _utils_get_timestamp
 @dataclass
 class GpsPoint:
     """A GPS trackpoint."""
+
     lat: float
     lon: float
     alt: float | None
@@ -28,6 +29,7 @@ class GpsPoint:
 @dataclass
 class GpsMatch:
     """A photo matched to a GPS point."""
+
     photo_path: str
     point: GpsPoint
     offset_seconds: float  # Time difference between photo and GPS point
@@ -151,6 +153,7 @@ def match_photos_to_track(
         return [None] * len(photo_paths)
 
     import bisect
+
     track_times = [p.time for p in track_points]
 
     results = []
@@ -277,15 +280,14 @@ def generate_map_html(matches: list[GpsMatch], output_path: str, title: str = ""
         time_str = m.point.time.strftime("%Y-%m-%d %H:%M:%S") if m.point.time else ""
         popup = f"{name}<br>{time_str}<br>{m.point.lat:.6f}, {m.point.lon:.6f}"
         markers_js.append(
-            f'L.marker([{m.point.lat}, {m.point.lon}]).addTo(map)'
-            f'.bindPopup("{popup}");'
+            f'L.marker([{m.point.lat}, {m.point.lon}]).addTo(map).bindPopup("{popup}");'
         )
 
     html = f"""<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>{escape(title or 'Mavica Photo Map')}</title>
+<title>{escape(title or "Mavica Photo Map")}</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
@@ -296,7 +298,7 @@ h1 {{ color:#33ff33; padding:10px; margin:0; font-size:16px; }}
 </style>
 </head>
 <body>
-<h1>{escape(title or 'Mavica Photo Map')}</h1>
+<h1>{escape(title or "Mavica Photo Map")}</h1>
 <div class="info">{len(valid)} photo(s) mapped</div>
 <div id="map"></div>
 <script>
@@ -305,7 +307,7 @@ L.tileLayer('https://{{s}}.tile.openstreetmap.org/{{z}}/{{x}}/{{y}}.png', {{
     attribution: '&copy; OpenStreetMap contributors'
 }}).addTo(map);
 {chr(10).join(markers_js)}
-var group = L.featureGroup([{','.join(f'L.marker([{m.point.lat},{m.point.lon}])' for m in valid)}]);
+var group = L.featureGroup([{",".join(f"L.marker([{m.point.lat},{m.point.lon}])" for m in valid)}]);
 map.fitBounds(group.getBounds().pad(0.1));
 </script>
 </body>
@@ -327,9 +329,7 @@ def merge_tracks(gpx_paths: list[str]) -> list[GpsPoint]:
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Merge GPS track data into recovered Mavica JPEGs"
-    )
+    parser = argparse.ArgumentParser(description="Merge GPS track data into recovered Mavica JPEGs")
     subparsers = parser.add_subparsers(dest="command")
 
     # Merge GPS into photos
@@ -337,7 +337,8 @@ def main():
     merge_p.add_argument("photos", help="Directory of JPEG files")
     merge_p.add_argument("gpx", nargs="+", help="GPX track file(s)")
     merge_p.add_argument(
-        "--tolerance", default="5m",
+        "--tolerance",
+        default="5m",
         help="Max time difference (e.g., 5m, 30s, 1h). Default: 5m",
     )
     merge_p.add_argument("--use-mtime", action="store_true", help="Use file mtime instead of EXIF")
@@ -380,7 +381,8 @@ def main():
         print(f"Found {len(files)} photo(s)\n")
 
         matches = match_photos_to_track(
-            files, track,
+            files,
+            track,
             tolerance_seconds=tolerance,
             use_mtime=args.use_mtime,
             interpolate=not args.no_interpolate,
@@ -397,8 +399,11 @@ def main():
                     print(f"  MATCH {name}: {loc} ({offset})")
                 else:
                     ok, msg = stamp_gps_exif(
-                        path, match.point.lat, match.point.lon,
-                        match.point.alt, match.point.time,
+                        path,
+                        match.point.lat,
+                        match.point.lon,
+                        match.point.alt,
+                        match.point.time,
                     )
                     status = "OK" if ok else "FAIL"
                     print(f"  {status}  {name}: {loc} ({offset})")
@@ -420,26 +425,41 @@ def main():
         for path in files:
             try:
                 from PIL import Image
+
                 img = Image.open(path)
                 exif = img.getexif()
                 gps_info = exif.get(0x8825)
                 if gps_info:
                     lat_ref = gps_info.get(0x0001, "N")
-                    lat_dms = gps_info.get(0x0002, ((0,1),(0,1),(0,1)))
+                    lat_dms = gps_info.get(0x0002, ((0, 1), (0, 1), (0, 1)))
                     lon_ref = gps_info.get(0x0003, "E")
-                    lon_dms = gps_info.get(0x0004, ((0,1),(0,1),(0,1)))
+                    lon_dms = gps_info.get(0x0004, ((0, 1), (0, 1), (0, 1)))
 
-                    lat = lat_dms[0][0]/lat_dms[0][1] + lat_dms[1][0]/(lat_dms[1][1]*60) + lat_dms[2][0]/(lat_dms[2][1]*3600)
-                    lon = lon_dms[0][0]/lon_dms[0][1] + lon_dms[1][0]/(lon_dms[1][1]*60) + lon_dms[2][0]/(lon_dms[2][1]*3600)
+                    lat = (
+                        lat_dms[0][0] / lat_dms[0][1]
+                        + lat_dms[1][0] / (lat_dms[1][1] * 60)
+                        + lat_dms[2][0] / (lat_dms[2][1] * 3600)
+                    )
+                    lon = (
+                        lon_dms[0][0] / lon_dms[0][1]
+                        + lon_dms[1][0] / (lon_dms[1][1] * 60)
+                        + lon_dms[2][0] / (lon_dms[2][1] * 3600)
+                    )
 
-                    if lat_ref == "S": lat = -lat
-                    if lon_ref == "W": lon = -lon
+                    if lat_ref == "S":
+                        lat = -lat
+                    if lon_ref == "W":
+                        lon = -lon
 
-                    matches.append(GpsMatch(
-                        photo_path=path,
-                        point=GpsPoint(lat=lat, lon=lon, alt=None, time=datetime.now(tz=timezone.utc)),
-                        offset_seconds=0,
-                    ))
+                    matches.append(
+                        GpsMatch(
+                            photo_path=path,
+                            point=GpsPoint(
+                                lat=lat, lon=lon, alt=None, time=datetime.now(tz=timezone.utc)
+                            ),
+                            offset_seconds=0,
+                        )
+                    )
             except Exception:
                 pass
 

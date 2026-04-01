@@ -5,7 +5,7 @@ import tempfile
 
 import pytest
 
-from mavica_tools.carve import find_jpegs, carve_jpegs, MIN_JPEG_SIZE, MAX_JPEG_SIZE
+from mavica_tools.carve import MIN_JPEG_SIZE, carve_jpegs, find_jpegs
 
 
 def make_fake_jpeg(size=2048):

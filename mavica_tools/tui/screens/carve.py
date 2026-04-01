@@ -4,14 +4,14 @@ import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog, ProgressBar
 from textual.containers import Horizontal
+from textual.screen import Screen
+from textual.widgets import Button, DataTable, Footer, Header, Input, ProgressBar, RichLog, Static
 from textual.worker import get_current_worker
 
 from mavica_tools.carve import find_jpegs
-from mavica_tools.tui.widgets.image_preview import ImagePreview
 from mavica_tools.tui.widgets.file_picker import FilePicker
+from mavica_tools.tui.widgets.image_preview import ImagePreview
 
 
 class CarveScreen(Screen):
@@ -26,7 +26,10 @@ class CarveScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Static("[bold #ffaa00]JPEG Carver[/]  [dim]Extract images from raw disk images[/]\n", id="title-bar")
+        yield Static(
+            "[bold #ffaa00]JPEG Carver[/]  [dim]Extract images from raw disk images[/]\n",
+            id="title-bar",
+        )
         yield Static("  [bold]Disk Image[/]")
         with Horizontal(classes="input-row"):
             yield Input(
@@ -72,6 +75,7 @@ class CarveScreen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#image-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(
                 extensions=(".img", ".bin", ".raw"),
@@ -144,7 +148,7 @@ class CarveScreen(Screen):
 
         log.write(f"[green]{len(jpegs)} image(s) extracted to {output_dir}/[/]")
         log.write("[dim]Select a row to preview the image.[/]")
-        log.write(f"[bold #33ff33]Next:[/] Click [bold]Check All[/] to scan for corruption.")
+        log.write("[bold #33ff33]Next:[/] Click [bold]Check All[/] to scan for corruption.")
         self.query_one("#btn-check", Button).disabled = False
         self._reset_button()
 

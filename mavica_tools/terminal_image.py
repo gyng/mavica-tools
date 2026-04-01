@@ -54,7 +54,7 @@ def _kitty_display(image_bytes: bytes, width: int | None = None) -> None:
 
     # Kitty protocol: split into chunks of 4096
     chunk_size = 4096
-    chunks = [b64[i:i + chunk_size] for i in range(0, len(b64), chunk_size)]
+    chunks = [b64[i : i + chunk_size] for i in range(0, len(b64), chunk_size)]
 
     for i, chunk in enumerate(chunks):
         is_last = i == len(chunks) - 1
@@ -130,7 +130,7 @@ def _sixel_display(image_bytes: bytes, width: int | None = None) -> None:
                     for bit in range(6):
                         y = band_y + bit
                         if y < h and pixels[y * w + x] == color:
-                            sixel_val |= (1 << bit)
+                            sixel_val |= 1 << bit
                     out.append(chr(63 + sixel_val))
                 out.append("$")  # Carriage return
             out.append("-")  # New line
@@ -174,11 +174,7 @@ def _halfblock_display(image_bytes: bytes, width: int | None = None) -> None:
                     br, bg, bb = pixels[x, y + 1]
                 else:
                     br, bg, bb = 0, 0, 0
-                line.append(
-                    f"\033[38;2;{tr};{tg};{tb}m"
-                    f"\033[48;2;{br};{bg};{bb}m"
-                    "\u2580"
-                )
+                line.append(f"\033[38;2;{tr};{tg};{tb}m\033[48;2;{br};{bg};{bb}m\u2580")
             print("".join(line) + "\033[0m")
 
     except ImportError:
@@ -215,6 +211,7 @@ def show_image(
     if label:
         try:
             from PIL import Image
+
             img = Image.open(path)
             w, h = img.size
             size_kb = os.path.getsize(path) / 1024

@@ -5,13 +5,17 @@ import platform
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, RichLog, ProgressBar
 from textual.containers import Horizontal
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, Input, ProgressBar, RichLog, Static
 from textual.worker import get_current_worker
 
-from mavica_tools.multipass import merge_passes, read_pass_sectored, identify_bad_sectors, DISK_SIZE, SECTOR_SIZE, TOTAL_SECTORS
-from mavica_tools.tui.widgets.sector_map import SectorMap
+from mavica_tools.multipass import (
+    TOTAL_SECTORS,
+    identify_bad_sectors,
+    merge_passes,
+    read_pass_sectored,
+)
 from mavica_tools.tui.widgets.defrag_map import DefragMap
 from mavica_tools.tui.widgets.file_picker import FilePicker
 
@@ -50,6 +54,7 @@ class MultipassScreen(Screen):
         # vs actually navigating away. Modal overlays push onto the stack
         # but the screen below stays mounted.
         from textual.screen import ModalScreen
+
         top = self.app.screen
         if isinstance(top, ModalScreen):
             return  # Don't interrupt work for overlays
@@ -59,7 +64,10 @@ class MultipassScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        yield Static("[bold #ffaa00]Multi-Pass Floppy Imager[/]  [dim]Merge best sectors from multiple reads[/]\n", id="title-bar")
+        yield Static(
+            "[bold #ffaa00]Multi-Pass Floppy Imager[/]  [dim]Merge best sectors from multiple reads[/]\n",
+            id="title-bar",
+        )
 
         system = platform.system()
         if system == "Windows":
@@ -69,7 +77,9 @@ class MultipassScreen(Screen):
 
         yield Static("  [bold]Device[/]  /  [bold]Passes[/]  /  [bold]Output Dir[/]")
         with Horizontal(classes="input-row"):
-            yield Input(value=_default_floppy_device(), placeholder="Device or image path", id="device-path")
+            yield Input(
+                value=_default_floppy_device(), placeholder="Device or image path", id="device-path"
+            )
             yield Input(value="5", placeholder="Passes", id="pass-count")
             yield Input(value="mavica_out/disk_images", placeholder="Output dir", id="output-dir")
         with Horizontal(classes="button-row"):
@@ -82,8 +92,12 @@ class MultipassScreen(Screen):
         yield Static("", id="sector-summary")
         yield Static("", id="next-step")
         with Horizontal(classes="button-row"):
-            yield Button("Next: Extract with Names", variant="success", id="btn-next-fat12", disabled=True)
-            yield Button("Next: Carve from Raw", variant="warning", id="btn-next-carve", disabled=True)
+            yield Button(
+                "Next: Extract with Names", variant="success", id="btn-next-fat12", disabled=True
+            )
+            yield Button(
+                "Next: Carve from Raw", variant="warning", id="btn-next-carve", disabled=True
+            )
             yield Button("Open Folder", variant="default", id="btn-open-folder", disabled=True)
         yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
@@ -108,6 +122,7 @@ class MultipassScreen(Screen):
             output_dir = self.query_one("#output-dir", Input).value.strip()
             if output_dir and os.path.isdir(output_dir):
                 from mavica_tools.utils import open_directory
+
                 open_directory(output_dir)
 
     def action_browse(self) -> None:
@@ -115,6 +130,7 @@ class MultipassScreen(Screen):
             if path:
                 self.query_one("#output-dir", Input).value = os.path.dirname(path) or "."
                 self._start_merge_from_dir(os.path.dirname(path) or ".")
+
         self.app.push_screen(
             FilePicker(
                 extensions=(".img",),
@@ -187,14 +203,17 @@ class MultipassScreen(Screen):
                 if self._stop_requested or worker.is_cancelled:
                     raise _StopRequested()
                 self.app.call_from_thread(defrag.update_sector, idx, state)
-                sectors_read[0] += 1
-                if sectors_read[0] % 50 == 0:
-                    self.app.call_from_thread(progress.update, progress=(_p - 1) * TOTAL_SECTORS + idx)
+                sectors_read[0] += 1  # noqa: B023
+                if sectors_read[0] % 50 == 0:  # noqa: B023
+                    self.app.call_from_thread(
+                        progress.update, progress=(_p - 1) * TOTAL_SECTORS + idx
+                    )
 
             def on_metadata_ready(data_bytes):
                 """Called from worker thread once FAT12 metadata sectors are read."""
                 try:
                     from mavica_tools.fat12 import file_sector_map_from_data
+
                     boundaries = file_sector_map_from_data(data_bytes)
                     if boundaries:
                         self.app.call_from_thread(defrag.set_file_boundaries, boundaries)
@@ -207,7 +226,10 @@ class MultipassScreen(Screen):
 
             try:
                 img_path, errors = await asyncio.to_thread(
-                    read_pass_sectored, device, p, output_dir,
+                    read_pass_sectored,
+                    device,
+                    p,
+                    output_dir,
                     on_sector=on_sector,
                     on_metadata_ready=on_metadata_ready if p == 1 else None,
                     skip_sectors=skip,
@@ -217,7 +239,7 @@ class MultipassScreen(Screen):
                 # Update good sectors and check for improvement
                 bad = await asyncio.to_thread(identify_bad_sectors, img_path)
                 new_good = (set(range(TOTAL_SECTORS)) - bad) - good_sectors
-                good_sectors |= (set(range(TOTAL_SECTORS)) - bad)
+                good_sectors |= set(range(TOTAL_SECTORS)) - bad
 
                 if errors:
                     log.write(f"  Pass {p}: [#ffaa00]{errors} error(s)[/]")
@@ -240,25 +262,33 @@ class MultipassScreen(Screen):
                     else:
                         stale_count += 1
                         remaining = TOTAL_SECTORS - len(good_sectors)
-                        log.write(f"    [dim]no new sectors recovered ({stale_count}/2), {remaining} still bad[/]")
+                        log.write(
+                            f"    [dim]no new sectors recovered ({stale_count}/2), {remaining} still bad[/]"
+                        )
 
                 # Adaptive stop: 2 consecutive stale passes
                 if stale_count >= 2 and p < passes:
-                    log.write(f"  [bold]Stopping early:[/] no improvement in last 2 passes")
+                    log.write("  [bold]Stopping early:[/] no improvement in last 2 passes")
                     break
 
             except _StopRequested:
                 partial = os.path.join(output_dir, f"pass_{p:02d}.img")
                 if os.path.exists(partial) and os.path.getsize(partial) > 0:
                     image_paths.append(partial)
-                log.write(f"[yellow]Stopped during pass {p}. Merging {len(image_paths)} pass(es)...[/]")
+                log.write(
+                    f"[yellow]Stopped during pass {p}. Merging {len(image_paths)} pass(es)...[/]"
+                )
                 break
 
             except FileNotFoundError:
                 log.write(f"  [red]Device not found: {device}[/]")
                 if system == "Windows":
-                    log.write("  [dim]Check that the floppy drive is connected and disk is inserted.[/]")
-                    log.write(r"  [dim]Windows device path should be \\.\A: — run as Administrator.[/]")
+                    log.write(
+                        "  [dim]Check that the floppy drive is connected and disk is inserted.[/]"
+                    )
+                    log.write(
+                        r"  [dim]Windows device path should be \\.\A: — run as Administrator.[/]"
+                    )
                 elif system == "Darwin":
                     log.write("  [dim]Check 'diskutil list' for the correct device path.[/]")
                 else:
@@ -329,6 +359,7 @@ class MultipassScreen(Screen):
         # Overlay file boundaries from FAT12
         try:
             from mavica_tools.fat12 import file_sector_map
+
             boundaries = file_sector_map(merged_path)
             if boundaries:
                 defrag.set_file_boundaries(boundaries)
@@ -337,7 +368,11 @@ class MultipassScreen(Screen):
                 log.write("  [#ffaa00]No files found in FAT12 filesystem[/]")
         except Exception as e:
             log.write(f"  [#ffaa00]FAT12 unreadable ({e})[/]")
-            self.notify("FAT12 damaged — file overlay unavailable. Try Carve from Raw.", severity="warning", timeout=5)
+            self.notify(
+                "FAT12 damaged — file overlay unavailable. Try Carve from Raw.",
+                severity="warning",
+                timeout=5,
+            )
 
         total = len(sector_status)
         good = sector_status.count("good")
@@ -345,13 +380,12 @@ class MultipassScreen(Screen):
         blank = sector_status.count("blank")
         conflict = sector_status.count("conflict")
 
-        from mavica_tools.fun import health_bar_rich, sector_sparkline_rich, recovery_suggestions
+        from mavica_tools.fun import health_bar_rich, recovery_suggestions, sector_sparkline_rich
 
         readable_pct = 100 * (good + recovered) / total if total else 0
 
         self.query_one("#sector-summary", Static).update(
-            health_bar_rich(readable_pct) + "\n"
-            + sector_sparkline_rich(sector_status) + "\n\n"
+            health_bar_rich(readable_pct) + "\n" + sector_sparkline_rich(sector_status) + "\n\n"
             f"  [bold]Sectors:[/] {total} total — "
             f"[green]{good} good ({100 * good / total:.1f}%)[/]  "
             f"[#33aaff]{recovered} recovered[/]  "
@@ -369,12 +403,13 @@ class MultipassScreen(Screen):
         if blank > 0:
             try:
                 from mavica_tools.diagnose import diagnose_errors, format_diagnosis
+
                 diag = diagnose_errors(
                     pass_image_paths=pass_image_paths,
                     sector_status=sector_status,
                 )
                 if diag.evidence:
-                    log.write(f"\n[bold]Diagnosis:[/]")
+                    log.write("\n[bold]Diagnosis:[/]")
                     log.write(format_diagnosis(diag, rich=True))
             except Exception:
                 pass  # Diagnostics are best-effort

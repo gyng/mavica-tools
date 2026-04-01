@@ -7,19 +7,19 @@ import tempfile
 import pytest
 
 PIL = pytest.importorskip("PIL")
-from PIL import Image
 from io import BytesIO
 
-from mavica_tools.recover import recover_from_images
-from mavica_tools.format import create_disk_image
+from PIL import Image
+
 from mavica_tools.fat12 import (
-    SECTOR_SIZE,
+    DATA_START_SECTOR,
     FAT_OFFSET,
     FATS_COUNT,
+    SECTOR_SIZE,
     SECTORS_PER_FAT,
-    ROOT_DIR_ENTRIES,
-    DATA_START_SECTOR,
 )
+from mavica_tools.format import create_disk_image
+from mavica_tools.recover import recover_from_images
 
 
 @pytest.fixture
@@ -66,9 +66,9 @@ def _make_disk_with_jpeg(tmp_dir, jpeg_data):
 
     # Copy FAT to FAT2
     fat2_offset = fat_offset + SECTORS_PER_FAT * SECTOR_SIZE
-    image[fat2_offset : fat2_offset + SECTORS_PER_FAT * SECTOR_SIZE] = (
-        image[fat_offset : fat_offset + SECTORS_PER_FAT * SECTOR_SIZE]
-    )
+    image[fat2_offset : fat2_offset + SECTORS_PER_FAT * SECTOR_SIZE] = image[
+        fat_offset : fat_offset + SECTORS_PER_FAT * SECTOR_SIZE
+    ]
 
     # Write directory entry
     root_offset = (FAT_OFFSET + FATS_COUNT * SECTORS_PER_FAT) * SECTOR_SIZE
@@ -110,6 +110,7 @@ class TestRecoverFromImages:
         # Write JPEG directly into a raw disk image (not via FAT12)
         # so the carver can find it by markers
         from mavica_tools.multipass import DISK_SIZE
+
         disk = bytearray(DISK_SIZE)
         # Place JPEG after boot sector area
         offset = 33 * SECTOR_SIZE
@@ -144,3 +145,61 @@ class TestRecoverFromImages:
 
         recover_from_images([img_path], output_dir)
         assert os.path.isdir(output_dir)
+
+
+class TestRecoverFromFixtures:
+    """Recovery tests using real Mavica disk image fixtures."""
+
+    def test_recover_from_fixture_disk_image(self, tmp_dir, fixture_disk_image):
+        """FAT12 recovery from good disk image should extract all files."""
+        output_dir = os.path.join(tmp_dir, "recovery")
+        summary = recover_from_images([fixture_disk_image], output_dir, use_fat=True)
+
+        assert summary["total_files"] >= 3  # at least 3 JPEGs
+        assert summary["merged_path"] is not None
+
+    def test_carve_from_fixture_disk_image(self, tmp_dir, fixture_disk_image):
+        """JPEG carving from good disk image should find all 3 photos."""
+        output_dir = os.path.join(tmp_dir, "recovery")
+        summary = recover_from_images([fixture_disk_image], output_dir, use_fat=False)
+
+        assert summary["extraction_method"] == "carve"
+        assert summary["total_files"] >= 3
+
+    def test_recover_from_bad_sectors_disk(self, tmp_dir):
+        """Recovery from disk with zeroed sector should still extract files."""
+        from mavica_tools.check import check_jpeg_structure
+        from mavica_tools.fat12 import extract_with_names
+
+        bad_disk = os.path.join(os.path.dirname(__file__), "fixtures", "disk_bad_sectors.img")
+        output_dir = os.path.join(tmp_dir, "extracted")
+        results = extract_with_names(bad_disk, output_dir)
+
+        assert len(results) == 6  # all files still extractable
+
+        # Find the damaged JPEG (MVC-006F.JPG) and check it
+        for name, path, size, deleted in results:
+            if name == "MVC-006F.JPG":
+                check = check_jpeg_structure(path)
+                assert any("zero-byte" in issue for issue in check["issues"])
+                break
+        else:
+            pytest.fail("MVC-006F.JPG not found in extracted files")
+
+    def test_recover_from_truncated_disk(self, tmp_dir):
+        """Recovery from disk with truncated JPEG data."""
+        from mavica_tools.check import check_jpeg_structure
+        from mavica_tools.fat12 import extract_with_names
+
+        trunc_disk = os.path.join(os.path.dirname(__file__), "fixtures", "disk_truncated.img")
+        output_dir = os.path.join(tmp_dir, "extracted")
+        results = extract_with_names(trunc_disk, output_dir)
+
+        # MVC-002F.JPG should be extracted but damaged
+        for name, path, size, deleted in results:
+            if name == "MVC-002F.JPG":
+                check = check_jpeg_structure(path)
+                assert len(check["issues"]) > 0  # should have issues
+                break
+        else:
+            pytest.fail("MVC-002F.JPG not found in extracted files")

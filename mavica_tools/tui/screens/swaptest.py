@@ -4,11 +4,11 @@ import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog
 from textual.containers import Horizontal
+from textual.screen import Screen
+from textual.widgets import Button, DataTable, Footer, Header, Input, RichLog, Static
 
-from mavica_tools.swaptest import load_db, save_db, DEFAULT_DB
+from mavica_tools.swaptest import DEFAULT_DB, load_db, save_db
 
 
 class SwapTestScreen(Screen):
@@ -25,9 +25,7 @@ class SwapTestScreen(Screen):
             "[dim]Isolate faulty camera, disk, or drive[/]\n",
             id="title-bar",
         )
-        yield Static(
-            "  [dim]Test each camera+disk combo to find the culprit.[/]\n"
-        )
+        yield Static("  [dim]Test each camera+disk combo to find the culprit.[/]\n")
         yield Static("  [bold]Cameras[/]")
         with Horizontal(classes="input-row"):
             yield Input(
@@ -120,10 +118,16 @@ class SwapTestScreen(Screen):
             return
 
         from datetime import datetime
-        self._db["tests"].append({
-            "camera": camera, "disk": disk, "result": result,
-            "notes": "", "timestamp": datetime.now().isoformat(),
-        })
+
+        self._db["tests"].append(
+            {
+                "camera": camera,
+                "disk": disk,
+                "result": result,
+                "notes": "",
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         save_db(self._db, self._db_path)
 
         symbol = {"ok": "[green]OK[/]", "partial": "[#ffaa00]PARTIAL[/]", "fail": "[red]FAIL[/]"}

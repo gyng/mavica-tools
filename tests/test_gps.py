@@ -10,15 +10,15 @@ PIL = pytest.importorskip("PIL")
 from PIL import Image
 
 from mavica_tools.gps import (
-    parse_gpx,
-    match_photos_to_track,
-    stamp_gps_exif,
-    generate_map_html,
-    merge_tracks,
-    GpsPoint,
     GpsMatch,
+    GpsPoint,
     _decimal_to_dms,
     _interpolate_point,
+    generate_map_html,
+    match_photos_to_track,
+    merge_tracks,
+    parse_gpx,
+    stamp_gps_exif,
 )
 
 
@@ -40,8 +40,10 @@ def make_gpx(tmp_dir, name="track.gpx", points=None):
 
     gpx_content = '<?xml version="1.0"?>\n<gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><trkseg>\n'
     for lat, lon, alt, time in points:
-        gpx_content += f'<trkpt lat="{lat}" lon="{lon}"><ele>{alt}</ele><time>{time}</time></trkpt>\n'
-    gpx_content += '</trkseg></trk>\n</gpx>'
+        gpx_content += (
+            f'<trkpt lat="{lat}" lon="{lon}"><ele>{alt}</ele><time>{time}</time></trkpt>\n'
+        )
+    gpx_content += "</trkseg></trk>\n</gpx>"
 
     path = os.path.join(tmp_dir, name)
     with open(path, "w") as f:
@@ -81,7 +83,9 @@ class TestParseGpx:
     def test_empty_gpx(self, tmp_dir):
         path = os.path.join(tmp_dir, "empty.gpx")
         with open(path, "w") as f:
-            f.write('<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"></gpx>')
+            f.write(
+                '<?xml version="1.0"?><gpx version="1.1" xmlns="http://www.topografix.com/GPX/1/1"></gpx>'
+            )
         points = parse_gpx(path)
         assert points == []
 
@@ -89,9 +93,11 @@ class TestParseGpx:
         """GPX files without namespace should still parse."""
         path = os.path.join(tmp_dir, "nons.gpx")
         with open(path, "w") as f:
-            f.write('<?xml version="1.0"?><gpx><trk><trkseg>'
-                     '<trkpt lat="47.0" lon="-122.0"><time>2001-07-04T10:00:00Z</time></trkpt>'
-                     '</trkseg></trk></gpx>')
+            f.write(
+                '<?xml version="1.0"?><gpx><trk><trkseg>'
+                '<trkpt lat="47.0" lon="-122.0"><time>2001-07-04T10:00:00Z</time></trkpt>'
+                "</trkseg></trk></gpx>"
+            )
         points = parse_gpx(path)
         assert len(points) == 1
 
@@ -145,8 +151,12 @@ class TestMatchPhotos:
 
 class TestInterpolate:
     def test_midpoint(self):
-        p1 = GpsPoint(lat=47.0, lon=-122.0, alt=0, time=datetime(2001, 7, 4, 10, 0, tzinfo=timezone.utc))
-        p2 = GpsPoint(lat=48.0, lon=-123.0, alt=100, time=datetime(2001, 7, 4, 10, 10, tzinfo=timezone.utc))
+        p1 = GpsPoint(
+            lat=47.0, lon=-122.0, alt=0, time=datetime(2001, 7, 4, 10, 0, tzinfo=timezone.utc)
+        )
+        p2 = GpsPoint(
+            lat=48.0, lon=-123.0, alt=100, time=datetime(2001, 7, 4, 10, 10, tzinfo=timezone.utc)
+        )
         mid_time = datetime(2001, 7, 4, 10, 5, tzinfo=timezone.utc)
         result = _interpolate_point(p1, p2, mid_time)
         assert result.lat == pytest.approx(47.5)
@@ -178,11 +188,11 @@ class TestStampGps:
 
     def test_graceful_without_piexif(self, tmp_dir, monkeypatch):
         """stamp_gps_exif should fail gracefully if piexif is not installed."""
-        import mavica_tools.gps as gps_mod
-        import importlib
 
         # Simulate piexif missing by making import fail
-        original_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+        original_import = (
+            __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
+        )
 
         def mock_import(name, *args, **kwargs):
             if name == "piexif":
@@ -201,12 +211,20 @@ class TestStampGps:
 
 class TestMergeTracks:
     def test_merge_two_gpx(self, tmp_dir):
-        gpx1 = make_gpx(tmp_dir, "day1.gpx", [
-            (47.0, -122.0, 0, "2001-07-04T10:00:00Z"),
-        ])
-        gpx2 = make_gpx(tmp_dir, "day2.gpx", [
-            (47.1, -122.1, 0, "2001-07-05T10:00:00Z"),
-        ])
+        gpx1 = make_gpx(
+            tmp_dir,
+            "day1.gpx",
+            [
+                (47.0, -122.0, 0, "2001-07-04T10:00:00Z"),
+            ],
+        )
+        gpx2 = make_gpx(
+            tmp_dir,
+            "day2.gpx",
+            [
+                (47.1, -122.1, 0, "2001-07-05T10:00:00Z"),
+            ],
+        )
         track = merge_tracks([gpx1, gpx2])
         assert len(track) == 2
         assert track[0].time < track[1].time

@@ -4,22 +4,29 @@ Standalone screen for tagging photos with camera model, date/timezone,
 and description. Can be launched from the home screen or post-import.
 """
 
-import os
 import glob as globmod
+import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import (
-    Header, Footer, Static, Input, Button, DataTable, RichLog, ProgressBar, Select,
+    Button,
+    DataTable,
+    Footer,
+    Header,
+    Input,
+    ProgressBar,
+    RichLog,
+    Select,
+    Static,
 )
-from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.worker import get_current_worker
 
-from mavica_tools.stamp import stamp_jpeg, MAVICA_SPECS
-from mavica_tools.tui.widgets.image_preview import ImagePreview, inline_thumbnail
+from mavica_tools.stamp import MAVICA_SPECS, stamp_jpeg
 from mavica_tools.tui.widgets.file_picker import FilePicker
-
+from mavica_tools.tui.widgets.image_preview import ImagePreview, inline_thumbnail
 
 # Build camera model options: ("Sony Mavica MVC-FD7", "fd7"), ...
 _CAMERA_OPTIONS = [
@@ -128,8 +135,7 @@ class StampScreen(Screen):
         yield Header()
         with VerticalScroll():
             yield Static(
-                "[bold #ffaa00]Stamp Metadata[/]  "
-                "[dim]Add EXIF to bare Mavica JPEGs[/]\n",
+                "[bold #ffaa00]Stamp Metadata[/]  [dim]Add EXIF to bare Mavica JPEGs[/]\n",
                 id="title-bar",
             )
 
@@ -229,6 +235,7 @@ class StampScreen(Screen):
     def _find_latest_import(self) -> str | None:
         """Find the most recent import_* dir with JPEGs in mavica_out/."""
         import glob as globmod
+
         out_dir = "mavica_out"
         if not os.path.isdir(out_dir):
             self.notify("No mavica_out/ directory found", severity="warning")
@@ -238,10 +245,12 @@ class StampScreen(Screen):
             path = os.path.join(out_dir, name)
             if os.path.isdir(path) and name.startswith("import_"):
                 # Check for JPEGs
-                jpegs = globmod.glob(os.path.join(path, "*.jpg")) + \
-                        globmod.glob(os.path.join(path, "*.JPG")) + \
-                        globmod.glob(os.path.join(path, "*.jpeg")) + \
-                        globmod.glob(os.path.join(path, "*.JPEG"))
+                jpegs = (
+                    globmod.glob(os.path.join(path, "*.jpg"))
+                    + globmod.glob(os.path.join(path, "*.JPG"))
+                    + globmod.glob(os.path.join(path, "*.jpeg"))
+                    + globmod.glob(os.path.join(path, "*.JPEG"))
+                )
                 if jpegs:
                     candidates.append((os.path.getmtime(path), path, len(jpegs)))
         if not candidates:
@@ -259,6 +268,7 @@ class StampScreen(Screen):
         """Match the system timezone to the closest Select option."""
         try:
             from datetime import datetime, timezone
+
             local_offset = datetime.now(timezone.utc).astimezone().utcoffset()
             offset_hours = local_offset.total_seconds() / 3600
 
@@ -316,7 +326,9 @@ class StampScreen(Screen):
         src_dir = source if os.path.isdir(source) else os.path.dirname(source)
         skipped = 0
         if src_dir and os.path.isdir(src_dir):
-            total_files = sum(1 for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f)))
+            total_files = sum(
+                1 for f in os.listdir(src_dir) if os.path.isfile(os.path.join(src_dir, f))
+            )
             skipped = total_files - len(files)
 
         # Auto-detect camera model
@@ -358,6 +370,7 @@ class StampScreen(Screen):
         """Check if a file has any camera EXIF tags."""
         try:
             from PIL import Image
+
             exif = Image.open(path).getexif()
             return bool(exif and (exif.get(0x010F) or exif.get(0x0110)))
         except Exception:
@@ -383,9 +396,7 @@ class StampScreen(Screen):
             select.value = result.model
 
         # Toast with explanation
-        if result.confidence == "exact":
-            self.notify(result.reason, severity="information")
-        elif result.confidence == "likely":
+        if result.confidence == "exact" or result.confidence == "likely":
             self.notify(result.reason, severity="information")
         elif result.confidence == "guess":
             self.notify(result.reason, severity="warning")
@@ -396,6 +407,7 @@ class StampScreen(Screen):
         """Read existing EXIF summary from a file."""
         try:
             from PIL import Image
+
             img = Image.open(path)
             exif = img.getexif()
             if not exif:
@@ -438,10 +450,12 @@ class StampScreen(Screen):
             parts.append(f"[bold #ffaa00]{self._date_overrides[row]}[/]")
         elif date_val == "auto":
             from mavica_tools.utils import get_photo_date
+
             d = get_photo_date(self._files[row])
             parts.append(d if d else "file date")
         elif date_val == "today":
             from datetime import date as _date
+
             parts.append(_date.today().isoformat())
 
         desc = self.query_one("#desc-input", Input).value.strip()
@@ -514,9 +528,12 @@ class StampScreen(Screen):
 
     def on_select_changed(self, event: Select.Changed) -> None:
         """Refresh preview column when camera/date/timezone changes."""
-        if event.select.id in ("camera-model-select", "date-select", "timezone-select", "exif-mode-select"):
-            if self._files:
-                self._refresh_file_list()
+        if (
+            event.select.id
+            in ("camera-model-select", "date-select", "timezone-select", "exif-mode-select")
+            and self._files
+        ):
+            self._refresh_file_list()
 
     def _gather_jpegs(self, source: str) -> list[str]:
         """Gather JPEG files from a path."""
@@ -570,6 +587,7 @@ class StampScreen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#source-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(
                 extensions=(".jpg", ".jpeg"),
@@ -581,6 +599,7 @@ class StampScreen(Screen):
 
     def action_open_source(self) -> None:
         from mavica_tools.utils import open_directory
+
         source = self.query_one("#source-path", Input).value.strip()
         if source:
             d = source if os.path.isdir(source) else os.path.dirname(source)
@@ -609,18 +628,18 @@ class StampScreen(Screen):
     def _edit_date(self, row: int) -> None:
         """Open a detail modal for this file — shows all fields, allows date edit."""
         from textual.screen import ModalScreen
-        from textual.containers import Vertical as V
 
         filepath = self._files[row]
         name = os.path.basename(filepath)
         current_date = self._date_overrides.get(row, "")
         if not current_date:
             from mavica_tools.utils import get_photo_date
+
             current_date = get_photo_date(filepath) or ""
 
         # Build detail info
         current_exif = self._get_current_exif(filepath)
-        new_preview = self._build_new_preview(row)
+        self._build_new_preview(row)  # triggers side-effect
         try:
             size_str = f"{os.path.getsize(filepath):,} bytes"
         except OSError:
@@ -637,29 +656,34 @@ class StampScreen(Screen):
             date_preview = self._date_overrides[row]
         elif date_val == "auto":
             from mavica_tools.utils import get_photo_timestamp
+
             ts = get_photo_timestamp(filepath)
             if ts:
                 date_preview = ts.strftime("%Y-%m-%d %H:%M:%S")
             else:
                 # Fall back to file mtime
                 from datetime import datetime as _dt
+
                 mtime = os.path.getmtime(filepath)
                 date_preview = _dt.fromtimestamp(mtime).strftime("%Y-%m-%d %H:%M:%S")
         elif date_val == "today":
             from datetime import datetime as _dt
+
             date_preview = _dt.now().strftime("%Y-%m-%d %H:%M:%S")
         else:
             date_preview = None
 
         if model:
             from mavica_tools.mavica_db import MODELS
+
             m = MODELS.get(model)
             if m:
                 from fractions import Fraction
+
                 fl = Fraction(m.focal_length_mm).limit_denominator(100)
                 ap = Fraction(m.aperture_max).limit_denominator(100)
                 exif_lines = [
-                    f"  Make             [bold]SONY[/]",
+                    "  Make             [bold]SONY[/]",
                     f"  Model            [bold]{m.model.upper()}[/]",
                     f"  FocalLength      [bold]{fl} mm[/]",
                     f"  FocalLengthIn35  [bold]{m.focal_length_35mm} mm[/]",
@@ -668,10 +692,10 @@ class StampScreen(Screen):
                     f"  ISOSpeedRatings  [bold]{m.iso}[/]",
                     f"  PixelXDimension  [bold]{m.resolution[0]}[/]",
                     f"  PixelYDimension  [bold]{m.resolution[1]}[/]",
-                    f"  ColorSpace       [bold]sRGB[/]",
-                    f"  SensingMethod    [bold]One-chip color area[/]",
-                    f"  ExposureProgram  [bold]Auto[/]",
-                    f"  MeteringMode     [bold]Multi-segment[/]",
+                    "  ColorSpace       [bold]sRGB[/]",
+                    "  SensingMethod    [bold]One-chip color area[/]",
+                    "  ExposureProgram  [bold]Auto[/]",
+                    "  MeteringMode     [bold]Multi-segment[/]",
                     f"  Flash            [bold]{'Has flash' if m.flash else 'No flash'}[/]",
                 ]
         if date_preview:
@@ -712,7 +736,9 @@ class StampScreen(Screen):
                         yield Static(f"[bold #ffaa00]{name}[/]  [dim]{size_str}[/]\n")
                         yield Static(f"  [dim]Current:[/]  {current_exif}\n")
                         if exif_lines:
-                            yield Static(f"  [bold #ffaa00]EXIF tags to write ({len(exif_lines)}):[/]")
+                            yield Static(
+                                f"  [bold #ffaa00]EXIF tags to write ({len(exif_lines)}):[/]"
+                            )
                             for line in exif_lines:
                                 yield Static(line)
                             yield Static("")
@@ -776,6 +802,7 @@ class StampScreen(Screen):
             date = None
         elif date_val == "today":
             from datetime import date as _date
+
             date = _date.today().strftime("%Y-%m-%d")
         else:
             date = "auto"
@@ -792,9 +819,15 @@ class StampScreen(Screen):
             exclusive=True,
         )
 
-    async def _do_stamp(self, source: str, model: str | None, date: str | None,
-                         desc: str | None, tz: str | None,
-                         exif_mode: str = "overwrite") -> None:
+    async def _do_stamp(
+        self,
+        source: str,
+        model: str | None,
+        date: str | None,
+        desc: str | None,
+        tz: str | None,
+        exif_mode: str = "overwrite",
+    ) -> None:
         worker = get_current_worker()
         table = self.query_one("#results-table", DataTable)
         log = self.query_one("#log", RichLog)
@@ -859,6 +892,7 @@ class StampScreen(Screen):
                 # stamp_jpeg always overwrites, so skip if camera already set
                 try:
                     from PIL import Image
+
                     existing = Image.open(filepath).getexif()
                     if existing.get(0x0110) and model:
                         # Already has model — skip camera tags, only add missing date/desc
@@ -871,8 +905,11 @@ class StampScreen(Screen):
                             continue
                         # Has model but missing date — stamp date only
                         ok, result_path, msg = stamp_jpeg(
-                            filepath, None,
-                            model=None, date=file_date, description=desc,
+                            filepath,
+                            None,
+                            model=None,
+                            date=file_date,
+                            description=desc,
                             overwrite=True,
                         )
                         if ok:
@@ -895,8 +932,11 @@ class StampScreen(Screen):
             file_date = self._date_overrides.get(i, effective_date)
 
             ok, result_path, msg = stamp_jpeg(
-                filepath, None,
-                model=model, date=file_date, description=desc,
+                filepath,
+                None,
+                model=model,
+                date=file_date,
+                description=desc,
                 overwrite=True,
             )
 
@@ -923,7 +963,9 @@ class StampScreen(Screen):
         status.update(f"  [bold #33ff33]Done![/] {summary}")
         log.write(f"\n[bold]Results:[/] {summary}")
         if success:
-            log.write("[bold #33ff33]Next:[/] Use [bold]Export & Share[/] to organize and create contact sheets.")
+            log.write(
+                "[bold #33ff33]Next:[/] Use [bold]Export & Share[/] to organize and create contact sheets."
+            )
         self._reset_button()
 
     def _reset_button(self) -> None:

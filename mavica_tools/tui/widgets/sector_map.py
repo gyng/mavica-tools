@@ -1,8 +1,8 @@
 """Visual sector health map widget."""
 
-from textual.widget import Widget
-from textual.reactive import reactive
 from rich.text import Text
+from textual.reactive import reactive
+from textual.widget import Widget
 
 SECTORS_PER_TRACK = 18
 HEADS = 2

@@ -4,10 +4,9 @@ import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog
 from textual.containers import Horizontal
-from textual.worker import get_current_worker
+from textual.screen import Screen
+from textual.widgets import Button, DataTable, Footer, Header, Input, RichLog, Static
 
 from mavica_tools.tui.widgets.file_picker import FilePicker
 from mavica_tools.tui.widgets.image_preview import ImagePreview
@@ -26,8 +25,7 @@ class Fat12Screen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Static(
-            "[bold #ffaa00]FAT12 Browser[/]  "
-            "[dim]View files with original Mavica names[/]\n",
+            "[bold #ffaa00]FAT12 Browser[/]  [dim]View files with original Mavica names[/]\n",
             id="title-bar",
         )
         yield Static("  [bold]Disk Image[/]")
@@ -72,6 +70,7 @@ class Fat12Screen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#image-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(extensions=(".img", ".bin", ".raw"), title="Select disk image"),
             on_selected,
@@ -98,7 +97,9 @@ class Fat12Screen(Screen):
             files = list_files(path, include_deleted=self._include_deleted)
         except Exception as e:
             log.write(f"[red]Filesystem damaged:[/] {e}")
-            log.write("[bold #33ff33]Next:[/] Go back and use [bold]Carve from Raw[/] (key [bold]c[/]) — it extracts JPEGs without needing a working filesystem.")
+            log.write(
+                "[bold #33ff33]Next:[/] Go back and use [bold]Carve from Raw[/] (key [bold]c[/]) — it extracts JPEGs without needing a working filesystem."
+            )
             return
 
         self._files_data = files
@@ -109,7 +110,9 @@ class Fat12Screen(Screen):
 
         for f in files:
             status = "[red]DEL[/]" if f.is_deleted else "[green]OK[/]"
-            table.add_row(status, f.name, f"{f.size:,}", f"0x{f.byte_offset:06X}", f.date_str, f.time_str)
+            table.add_row(
+                status, f.name, f"{f.size:,}", f"0x{f.byte_offset:06X}", f.date_str, f.time_str
+            )
 
         total = sum(f.size for f in files if not f.is_deleted)
         log.write(f"{len(files)} file(s), {total:,} bytes total")

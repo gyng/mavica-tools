@@ -6,18 +6,16 @@ is the camera, the disk, or the PC floppy drive.
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Button, RichLog
 from textual.containers import Horizontal, Vertical
-
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, RichLog, Static
 
 # Decision tree nodes
 # Each node: (question, [(answer_text, next_node_or_result), ...])
 TREE = {
     "start": {
         "question": (
-            "Do your Mavica photos show on the camera's LCD\n"
-            "  but fail to transfer to your PC?"
+            "Do your Mavica photos show on the camera's LCD\n  but fail to transfer to your PC?"
         ),
         "answers": [
             ("Yes — shows on camera, fails on PC", "pc_vs_camera"),
@@ -27,8 +25,7 @@ TREE = {
     },
     "pc_vs_camera": {
         "question": (
-            "Have you tried reading the floppy in a\n"
-            "  different PC floppy drive (USB or internal)?"
+            "Have you tried reading the floppy in a\n  different PC floppy drive (USB or internal)?"
         ),
         "answers": [
             ("Yes — works on the other drive", "result_pc_drive"),
@@ -49,8 +46,7 @@ TREE = {
     },
     "camera_issue": {
         "question": (
-            "Do photos from your OTHER Mavica camera\n"
-            "  (on the same disk) also look bad?"
+            "Do photos from your OTHER Mavica camera\n  (on the same disk) also look bad?"
         ),
         "answers": [
             ("Yes — both cameras produce bad images", "result_bad_disk"),
@@ -60,8 +56,7 @@ TREE = {
     },
     "pc_drive_test": {
         "question": (
-            "Can your PC read other floppy disks\n"
-            "  (non-Mavica, like DOS formatted disks)?"
+            "Can your PC read other floppy disks\n  (non-Mavica, like DOS formatted disks)?"
         ),
         "answers": [
             ("Yes — other disks read fine", "head_or_disk"),
@@ -111,7 +106,7 @@ TREE = {
             "[bold #ffaa00]Likely cause: Dirty write head on your Mavica[/]\n\n"
             "  The camera's write head is dirty or misaligned.\n\n"
             "  [bold]Clean it:[/]\n"
-            "  1. Get a 3.5\" floppy head cleaning disk (wet type)\n"
+            '  1. Get a 3.5" floppy head cleaning disk (wet type)\n'
             "  2. Apply 99%% isopropyl alcohol (not 70%%!)\n"
             "  3. Insert into the Mavica and let it 'read' for 10-15 seconds\n"
             "  4. Alternatively, gently clean the head with a cotton swab + IPA\n\n"
@@ -125,7 +120,7 @@ TREE = {
         "result": (
             "[bold #ffaa00]When in doubt, clean everything[/]\n\n"
             "  [bold]Camera head:[/]\n"
-            "  - Use a wet-type 3.5\" cleaning disk with 99%% IPA\n"
+            '  - Use a wet-type 3.5" cleaning disk with 99%% IPA\n'
             "  - Or cotton swab + IPA directly on the head\n\n"
             "  [bold]PC floppy drive:[/]\n"
             "  - Same cleaning disk method\n"
@@ -161,9 +156,13 @@ class TroubleshootScreen(Screen):
         yield Static("", id="result-text")
         with Horizontal(classes="button-row"):
             yield Button("Start Over", variant="default", id="btn-restart")
-            yield Button("Re-test After Cleaning", variant="warning", id="btn-retest", disabled=True)
+            yield Button(
+                "Re-test After Cleaning", variant="warning", id="btn-retest", disabled=True
+            )
             yield Button("Open Swap Test", variant="default", id="btn-swaptest", disabled=True)
-            yield Button("Open Multi-Pass Read", variant="success", id="btn-multipass", disabled=True)
+            yield Button(
+                "Open Multi-Pass Read", variant="success", id="btn-multipass", disabled=True
+            )
         yield RichLog(id="log", markup=True, wrap=True)
         yield Footer()
 
@@ -193,9 +192,7 @@ class TroubleshootScreen(Screen):
         elif "question" in node:
             # Show question with answer buttons
             result_widget.update("")
-            question_widget.update(
-                f"\n  [bold]{node['question']}[/]\n"
-            )
+            question_widget.update(f"\n  [bold]{node['question']}[/]\n")
             for i, (text, _target) in enumerate(node["answers"]):
                 btn = Button(text, variant="default", id=f"btn-answer-{i}")
                 buttons_container.mount(btn)

@@ -1,18 +1,18 @@
 """Thumbnail .411 viewer/converter screen."""
 
-import os
 import glob as globmod
+import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.screen import Screen
-from textual.widgets import Header, Footer, Static, Input, Button, DataTable, RichLog, Select
 from textual.containers import Horizontal
+from textual.screen import Screen
+from textual.widgets import Button, DataTable, Footer, Header, Input, RichLog, Select, Static
 from textual.worker import get_current_worker
 
 from mavica_tools.thumb411 import convert_411, decode_411_to_image
-from mavica_tools.tui.widgets.image_preview import ImagePreview
 from mavica_tools.tui.widgets.file_picker import FilePicker
+from mavica_tools.tui.widgets.image_preview import ImagePreview
 
 
 class Thumb411Screen(Screen):
@@ -74,14 +74,18 @@ class Thumb411Screen(Screen):
         # Source row
         with Horizontal(classes="input-row"):
             yield Static("  [bold]In[/] ", classes="row-label")
-            yield Input(value="mavica_out/photos", placeholder=".411 file or directory...", id="source-path")
+            yield Input(
+                value="mavica_out/photos", placeholder=".411 file or directory...", id="source-path"
+            )
             yield Button("Browse", id="btn-browse")
             yield Button("Open", id="btn-open-source")
 
         # Output row
         with Horizontal(classes="input-row"):
             yield Static(" [bold]Out[/] ", classes="row-label")
-            yield Input(value="mavica_out/thumbnails", placeholder="Output directory", id="output-dir")
+            yield Input(
+                value="mavica_out/thumbnails", placeholder="Output directory", id="output-dir"
+            )
             yield Button("Browse", id="btn-browse-out")
             yield Button("Open", id="btn-open-folder")
             yield Select[str](
@@ -132,6 +136,7 @@ class Thumb411Screen(Screen):
 
     def action_open_input(self) -> None:
         from mavica_tools.utils import open_directory
+
         source = self.query_one("#source-path", Input).value.strip()
         if source:
             d = source if os.path.isdir(source) else os.path.dirname(source)
@@ -141,6 +146,7 @@ class Thumb411Screen(Screen):
 
     def action_open_output(self) -> None:
         from mavica_tools.utils import open_directory
+
         output_dir = os.path.abspath(self.query_one("#output-dir", Input).value.strip())
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
@@ -171,6 +177,7 @@ class Thumb411Screen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         from mavica_tools.utils import open_directory
+
         if event.button.id == "btn-browse":
             self.action_browse()
         elif event.button.id == "btn-browse-out":
@@ -237,6 +244,7 @@ class Thumb411Screen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#source-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(
                 extensions=(".411",),
@@ -250,6 +258,7 @@ class Thumb411Screen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#output-dir", Input).value = path
+
         self.app.push_screen(
             FilePicker(
                 title="Select output directory",
@@ -269,7 +278,6 @@ class Thumb411Screen(Screen):
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         """Toggle selection on Enter."""
         self._toggle_row(event.cursor_row)
-
 
     def on_data_table_cell_selected(self, event: DataTable.CellSelected) -> None:
         """Toggle selection on cell click."""
@@ -316,7 +324,9 @@ class Thumb411Screen(Screen):
 
     def _update_convert_label(self) -> None:
         n = len(self._selected)
-        self.query_one("#btn-convert", Button).label = f"Convert {n} {'file' if n == 1 else 'files'}" if n else "Convert"
+        self.query_one("#btn-convert", Button).label = (
+            f"Convert {n} {'file' if n == 1 else 'files'}" if n else "Convert"
+        )
 
     def _toggle_all(self, select: bool) -> None:
         if select:
@@ -396,7 +406,9 @@ class Thumb411Screen(Screen):
         fmt = self.query_one("#output-format", Select).value or "png"
 
         # Only convert selected files
-        to_convert = [(i, self._results[i][0]) for i in sorted(self._selected) if i < len(self._results)]
+        to_convert = [
+            (i, self._results[i][0]) for i in sorted(self._selected) if i < len(self._results)
+        ]
         if not to_convert:
             log.write("[red]No files selected.[/]")
             self._reset_button()
@@ -422,7 +434,7 @@ class Thumb411Screen(Screen):
                 convert_411(filepath, out_path, fmt)
                 self._results[i] = (filepath, out_path)
                 success += 1
-            except Exception as e:
+            except Exception:
                 self._results[i] = (filepath, None)
                 fail += 1
 

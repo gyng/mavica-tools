@@ -1,17 +1,17 @@
 """Tests for fun extras — visualizations, stats, trivia."""
 
 from mavica_tools.fun import (
+    TRIVIA,
+    disk_age_text,
+    disk_stats_text,
     floppy_art,
     health_bar,
     health_bar_rich,
-    disk_age_text,
-    disk_stats_text,
-    recovery_suggestions,
     random_trivia,
-    trivia_for_context,
+    recovery_suggestions,
     sector_sparkline,
     sector_sparkline_rich,
-    TRIVIA,
+    trivia_for_context,
 )
 
 
@@ -57,6 +57,7 @@ class TestHealthBar:
 class TestDiskAge:
     def test_recent(self):
         from datetime import datetime
+
         today = datetime.now().strftime("%Y-%m-%d")
         result = disk_age_text(today)
         assert "Fresh" in result or "less than" in result

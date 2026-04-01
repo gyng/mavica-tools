@@ -5,22 +5,29 @@ Also supports "next disk" flow for batch importing a stack of floppies.
 Stamping/tagging is handled by the separate Stamp screen.
 """
 
-import os
 import glob as globmod
+import os
 
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import (
-    Header, Footer, Static, Input, Button, DataTable, RichLog, ProgressBar,
+    Button,
+    DataTable,
+    Footer,
+    Header,
+    Input,
+    ProgressBar,
+    RichLog,
+    Static,
 )
-from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.worker import get_current_worker
 
-from mavica_tools.tui.widgets.image_preview import ImagePreview
-from mavica_tools.tui.widgets.file_picker import FilePicker
 from mavica_tools.tui.widgets.defrag_map import DefragMap
 from mavica_tools.tui.widgets.drive_input import DriveInput
+from mavica_tools.tui.widgets.file_picker import FilePicker
+from mavica_tools.tui.widgets.image_preview import ImagePreview
 
 
 class ImportWorkflowScreen(Screen):
@@ -116,7 +123,9 @@ class ImportWorkflowScreen(Screen):
             # Post-import actions
             with Horizontal(classes="button-row"):
                 yield Button("Stamp Photos", variant="warning", id="btn-stamp", disabled=True)
-                yield Button("Open in Export", variant="default", id="btn-open-export", disabled=True)
+                yield Button(
+                    "Open in Export", variant="default", id="btn-open-export", disabled=True
+                )
                 yield Button("Add GPS Track", variant="default", id="btn-gps", disabled=True)
                 yield Button("Contact Sheet", variant="default", id="btn-contact", disabled=True)
 
@@ -136,6 +145,7 @@ class ImportWorkflowScreen(Screen):
     def _regenerate_output_dir(self) -> None:
         """Set output dir to a fresh timestamped path."""
         from datetime import datetime as _dt
+
         ts = _dt.now().strftime("%Y-%m-%d_%H%M%S")
         self.query_one("#output-dir", Input).value = f"mavica_out/import_{ts}"
 
@@ -152,6 +162,7 @@ class ImportWorkflowScreen(Screen):
         if source.lower().endswith(".img") and os.path.isfile(source):
             try:
                 from mavica_tools.fat12 import file_sector_map
+
                 boundaries = file_sector_map(source)
                 defrag.set_file_boundaries(boundaries)
             except Exception:
@@ -163,6 +174,7 @@ class ImportWorkflowScreen(Screen):
 
         # Mounted directory — try to find the raw device behind it
         import platform
+
         device = None
         system = platform.system()
         if system == "Windows":
@@ -187,6 +199,7 @@ class ImportWorkflowScreen(Screen):
             with open(device, "rb") as fh:
                 data = fh.read(33 * 512)  # FAT12 metadata area
             from mavica_tools.fat12 import file_sector_map_from_data
+
             boundaries = file_sector_map_from_data(data)
             if boundaries:
                 defrag.set_file_boundaries(boundaries)
@@ -225,6 +238,7 @@ class ImportWorkflowScreen(Screen):
 
     def action_open_output(self) -> None:
         from mavica_tools.utils import open_directory
+
         output_dir = os.path.abspath(self.query_one("#output-dir", Input).value.strip())
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
@@ -234,6 +248,7 @@ class ImportWorkflowScreen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#output-dir", Input).value = path
+
         self.app.push_screen(
             FilePicker(
                 title="Select output directory",
@@ -251,6 +266,7 @@ class ImportWorkflowScreen(Screen):
         if path.lower().endswith(".411"):
             try:
                 from mavica_tools.thumb411 import decode_411_to_image
+
                 img = decode_411_to_image(path)
                 # Nearest neighbor for upscaling — preserves the blocky pixel art look of 64x48 thumbnails
                 upscaled = img.resize((256, 192), resample=0)
@@ -305,7 +321,7 @@ class ImportWorkflowScreen(Screen):
         table = self.query_one("#results-table", DataTable)
         progress = self.query_one("#progress", ProgressBar)
         status = self.query_one("#status", Static)
-        defrag = self.query_one("#defrag-map", DefragMap)
+        self.query_one("#defrag-map", DefragMap)  # ensure widget exists
         output_dir = self.query_one("#output-dir", Input).value.strip() or "photos"
 
         table.clear()
@@ -366,9 +382,12 @@ class ImportWorkflowScreen(Screen):
                     total_bytes += fsize
                     size_kb = fsize / 1024
                     from mavica_tools.utils import get_photo_date
+
                     date = get_photo_date(dest) or ""
 
-                    table.add_row(str(i + 1 - failed), os.path.basename(dest), f"{size_kb:.0f}KB", date)
+                    table.add_row(
+                        str(i + 1 - failed), os.path.basename(dest), f"{size_kb:.0f}KB", date
+                    )
                     progress.update(progress=i + 1)
 
                     # Live speed in status bar
@@ -376,8 +395,7 @@ class ImportWorkflowScreen(Screen):
                     if elapsed > 0:
                         speed = total_bytes / 1024 / elapsed
                         status.update(
-                            f"  [bold]Copying...[/] {i + 1}/{len(files)}  "
-                            f"[dim]{speed:.1f} KB/s[/]"
+                            f"  [bold]Copying...[/] {i + 1}/{len(files)}  [dim]{speed:.1f} KB/s[/]"
                         )
 
                 if failed:
@@ -389,8 +407,11 @@ class ImportWorkflowScreen(Screen):
 
             try:
                 from mavica_tools.fat12 import extract_with_names
+
                 results = await asyncio.to_thread(
-                    extract_with_names, source, output_dir,
+                    extract_with_names,
+                    source,
+                    output_dir,
                 )
                 progress.update(total=len(results), progress=0)
 
@@ -404,6 +425,7 @@ class ImportWorkflowScreen(Screen):
             except Exception as e:
                 log.write(f"  [#ffaa00]FAT12 failed ({e}), trying JPEG carve...[/]")
                 from mavica_tools.carve import carve_jpegs
+
                 carved = await asyncio.to_thread(carve_jpegs, source, output_dir)
                 self._imported_files = carved
                 progress.update(total=len(carved), progress=len(carved))
@@ -415,9 +437,11 @@ class ImportWorkflowScreen(Screen):
 
         self._finish_import(output_dir, t_start, total_bytes, stopped=False)
 
-    def _finish_import(self, output_dir: str,
-                       t_start: float, total_bytes: int, stopped: bool) -> None:
+    def _finish_import(
+        self, output_dir: str, t_start: float, total_bytes: int, stopped: bool
+    ) -> None:
         import time
+
         log = self.query_one("#log", RichLog)
         status = self.query_one("#status", Static)
 
@@ -450,9 +474,10 @@ class ImportWorkflowScreen(Screen):
                 f"  Saved to [bold]{output_dir}/[/]"
             )
             log.write(f"\n[bold #33ff33]{count} photo(s) imported[/]  {stats}")
-            log.write(f"[dim]Use 'Stamp Photos' to add EXIF metadata.[/]")
+            log.write("[dim]Use 'Stamp Photos' to add EXIF metadata.[/]")
 
             from mavica_tools.fun import random_trivia
+
             log.write(f"\n  [dim italic]{random_trivia()}[/]")
 
         # Preview first photo
@@ -471,6 +496,7 @@ class ImportWorkflowScreen(Screen):
     def _open_stamp(self) -> None:
         """Push to stamp screen with imported files pre-filled."""
         from mavica_tools.tui.screens.stamp_screen import StampScreen
+
         screen = StampScreen()
         # Point to the disk subdir if we have imported files
         if self._imported_files:
@@ -487,6 +513,7 @@ class ImportWorkflowScreen(Screen):
         log = self.query_one("#log", RichLog)
 
         from mavica_tools.export import make_contact_sheet
+
         path = os.path.join(output_dir, "contact_sheet.jpg")
         make_contact_sheet(
             self._imported_files,
@@ -504,7 +531,8 @@ class ImportWorkflowScreen(Screen):
 
         # Eject animation in the log
         from mavica_tools.fun import floppy_art
-        log.write(f"\n{'\u2500' * 40}")
+
+        log.write("\n" + "\u2500" * 40)
         log.write(floppy_art("EJECT", small=True))
         log.write("\n[bold]Ready for next disk.[/] Insert floppy and press F2 to Import.")
 
@@ -519,7 +547,13 @@ class ImportWorkflowScreen(Screen):
         self._regenerate_output_dir()
 
         # Disable post-import buttons
-        for btn_id in ("#btn-next-disk", "#btn-stamp", "#btn-open-export", "#btn-gps", "#btn-contact"):
+        for btn_id in (
+            "#btn-next-disk",
+            "#btn-stamp",
+            "#btn-open-export",
+            "#btn-gps",
+            "#btn-contact",
+        ):
             self.query_one(btn_id, Button).disabled = True
 
         self._imported_files = []

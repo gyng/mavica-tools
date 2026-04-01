@@ -8,12 +8,12 @@ import pytest
 PIL = pytest.importorskip("PIL")
 
 from mavica_tools.thumb411 import (
+    THUMB_HEIGHT,
     THUMB_SIZE,
     THUMB_WIDTH,
-    THUMB_HEIGHT,
+    convert_411,
     decode_411,
     decode_411_to_image,
-    convert_411,
 )
 
 
@@ -86,6 +86,7 @@ class TestConvert411:
             assert out.endswith(".png")
             assert os.path.exists(out)
             from PIL import Image
+
             img = Image.open(out)
             assert img.size == (64, 48)
             img.close()
@@ -110,10 +111,12 @@ class TestConvert411:
 class TestGatherMavicaFiles:
     def test_gathers_411_files(self):
         from mavica_tools.utils import gather_mavica_files
+
         with tempfile.TemporaryDirectory() as d:
             make_411(d, "MVC-001.411")
             # Also create a JPEG
             from PIL import Image
+
             img = Image.new("RGB", (10, 10))
             img.save(os.path.join(d, "MVC-001.JPG"), "JPEG")
 

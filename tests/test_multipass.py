@@ -62,7 +62,7 @@ class TestReadImageFile:
 
     def test_short_image_is_padded(self, tmp_dir):
         path = os.path.join(tmp_dir, "short.img")
-        data = b"\xAB" * 1000
+        data = b"\xab" * 1000
         with open(path, "wb") as f:
             f.write(data)
         result = read_image_file(path)
@@ -82,10 +82,7 @@ class TestReadImageFile:
 class TestMergePasses:
     def test_all_good_passes_agree(self, tmp_dir):
         """Three identical good passes should produce all 'good' sectors."""
-        paths = [
-            make_disk_image(tmp_dir, f"pass{i}.img", good_sector)
-            for i in range(3)
-        ]
+        paths = [make_disk_image(tmp_dir, f"pass{i}.img", good_sector) for i in range(3)]
         merged, status = merge_passes(paths)
         assert len(merged) == DISK_SIZE
         assert all(s == "good" for s in status)
@@ -95,10 +92,7 @@ class TestMergePasses:
 
     def test_all_blank_produces_blank_status(self, tmp_dir):
         """All-zero passes should produce 'blank' sectors."""
-        paths = [
-            make_disk_image(tmp_dir, f"pass{i}.img", blank_sector)
-            for i in range(3)
-        ]
+        paths = [make_disk_image(tmp_dir, f"pass{i}.img", blank_sector) for i in range(3)]
         merged, status = merge_passes(paths)
         assert all(s == "blank" for s in status)
         assert merged == b"\x00" * DISK_SIZE
