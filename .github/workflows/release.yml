@@ -49,25 +49,11 @@ jobs:
         run: |
           ./dist/mavica${{ matrix.ext }} --help
 
-      - name: Create archive (Unix)
-        if: runner.os != 'Windows'
-        run: |
-          cd dist
-          tar czf ../${{ matrix.artifact }}.tar.gz mavica${{ matrix.ext }}
-
-      - name: Create archive (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Compress-Archive -Path dist/mavica${{ matrix.ext }} -DestinationPath ${{ matrix.artifact }}.zip
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
-          path: |
-            ${{ matrix.artifact }}.tar.gz
-            ${{ matrix.artifact }}.zip
+          path: dist/mavica${{ matrix.ext }}
 
   release:
     needs: build
@@ -77,24 +63,29 @@ jobs:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
 
+      - name: Rename binaries
+        run: |
+          mv mavica-tools-windows/mavica.exe mavica-windows.exe
+          mv mavica-tools-mac/mavica mavica-mac
+          mv mavica-tools-linux/mavica mavica-linux
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            mavica-tools-windows/*.zip
-            mavica-tools-mac/*.tar.gz
-            mavica-tools-linux/*.tar.gz
+            mavica-windows.exe
+            mavica-mac
+            mavica-linux
           body: |
             ## mavica-tools ${{ github.ref_name }}
 
-            Download the binary for your platform:
-            - **Windows**: `mavica-tools-windows.zip` — unzip, run `mavica.exe`
-            - **macOS**: `mavica-tools-mac.tar.gz` — extract, run `./mavica`
-            - **Linux**: `mavica-tools-linux.tar.gz` — extract, run `./mavica`
+            Download the binary for your platform — single file, no install needed:
+            - **Windows**: `mavica-windows.exe`
+            - **macOS**: `mavica-mac` (run `chmod +x mavica-mac` first)
+            - **Linux**: `mavica-linux` (run `chmod +x mavica-linux` first)
 
-            Or install via pip/uv:
+            Or install via pip/uv (Python 3.14+):
             ```bash
-            uv tool install mavica-tools
             pip install mavica-tools
             ```
 
