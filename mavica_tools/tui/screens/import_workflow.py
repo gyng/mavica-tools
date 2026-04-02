@@ -308,7 +308,7 @@ class ImportWorkflowScreen(Screen):
             try:
                 from mavica_tools.fat12 import parse_disk_image
 
-                files, fat, data = parse_disk_image(source)
+                files, _fat, _data = parse_disk_image(source)
                 for f in files:
                     table.add_row("", f.name, f"{f.size / 1024:.1f} KB", f.date_str)
                     # Construct a fake path for preview ordering

@@ -157,7 +157,7 @@ def main():
 
         # Read and analyze the image
         print(f"Analyzing {args.image}...")
-        merged, status = merge_passes([args.image])
+        _merged, status = merge_passes([args.image])
         snapshot = record_snapshot(args.label, status, notes=args.notes)
         print(f"Recorded: {snapshot.disk_label} — {snapshot.readable_pct:.1f}% readable")
         print(

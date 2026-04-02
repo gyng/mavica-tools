@@ -324,7 +324,7 @@ class TestFixtureGpx:
 
         # Stamp GPS
         m = matches[0]
-        ok, msg = stamp_gps_exif(photo, m.point.lat, m.point.lon, m.point.alt, m.point.time)
+        ok, _msg = stamp_gps_exif(photo, m.point.lat, m.point.lon, m.point.alt, m.point.time)
         assert ok
 
         # Read back and verify coordinates

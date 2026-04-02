@@ -41,7 +41,7 @@ class TestRepairJpeg:
         path = write_file(tmp_dir, "valid.jpg", jpeg_data)
         out_path = os.path.join(tmp_dir, "valid_repaired.png")
 
-        ok, result_path, msg = repair_jpeg(path, out_path)
+        ok, result_path, _msg = repair_jpeg(path, out_path)
         assert ok is True
         assert result_path == out_path
         assert os.path.exists(out_path)
@@ -59,7 +59,7 @@ class TestRepairJpeg:
         path = write_file(tmp_dir, "truncated.jpg", truncated)
         out_path = os.path.join(tmp_dir, "truncated_repaired.png")
 
-        ok, result_path, msg = repair_jpeg(path, out_path)
+        ok, _result_path, _msg = repair_jpeg(path, out_path)
         # Should succeed via strategy 1 (Pillow truncation tolerance)
         assert ok is True
         assert os.path.exists(out_path)
@@ -73,7 +73,7 @@ class TestRepairJpeg:
         path = write_file(tmp_dir, "sector_fail.jpg", corrupted)
         out_path = os.path.join(tmp_dir, "sector_repaired.png")
 
-        ok, result_path, msg = repair_jpeg(path, out_path)
+        ok, _result_path, _msg = repair_jpeg(path, out_path)
         # Should recover at least partially
         if ok:
             assert os.path.exists(out_path)
@@ -83,7 +83,7 @@ class TestRepairJpeg:
         path = write_file(tmp_dir, "fake.jpg", b"this is not a jpeg")
         out_path = os.path.join(tmp_dir, "fake_repaired.png")
 
-        ok, result_path, msg = repair_jpeg(path, out_path)
+        ok, _result_path, msg = repair_jpeg(path, out_path)
         assert ok is False
         assert "Not a JPEG" in msg
 
@@ -92,7 +92,7 @@ class TestRepairJpeg:
         path = write_file(tmp_dir, "tiny.jpg", b"\xff\xd8")
         out_path = os.path.join(tmp_dir, "tiny_repaired.png")
 
-        ok, result_path, msg = repair_jpeg(path, out_path)
+        ok, _result_path, _msg = repair_jpeg(path, out_path)
         assert ok is False
 
     def test_default_output_path(self, tmp_dir):
@@ -100,7 +100,7 @@ class TestRepairJpeg:
         jpeg_data = make_real_jpeg()
         path = write_file(tmp_dir, "photo.jpg", jpeg_data)
 
-        ok, result_path, msg = repair_jpeg(path)
+        ok, result_path, _msg = repair_jpeg(path)
         assert ok is True
         assert result_path.endswith("_repaired.png")
         assert "photo" in result_path

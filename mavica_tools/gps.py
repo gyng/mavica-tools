@@ -430,7 +430,7 @@ def main():
                 if args.dry_run:
                     print(f"  MATCH {name}: {loc} ({offset})")
                 else:
-                    ok, msg = stamp_gps_exif(
+                    ok, _msg = stamp_gps_exif(
                         path,
                         match.point.lat,
                         match.point.lon,

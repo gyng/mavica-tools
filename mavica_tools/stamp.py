@@ -225,7 +225,7 @@ def stamp_files(
 
         out_path = os.path.join(output_dir, name) if output_dir else None
 
-        ok, result_path, msg = stamp_jpeg(
+        ok, _result_path, msg = stamp_jpeg(
             path,
             out_path,
             model=model,

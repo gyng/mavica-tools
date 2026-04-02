@@ -104,7 +104,7 @@ class TestEndToEndRecovery:
         extract_dir = os.path.join(tmp_dir, "extracted")
         results = extract_with_names(img_path, extract_dir)
         assert len(results) == 1
-        name, path, size, deleted = results[0]
+        name, path, _size, _deleted = results[0]
         assert name == "MVC-001.JPG"
 
         # Check
@@ -112,7 +112,7 @@ class TestEndToEndRecovery:
         assert check_result["has_soi"] is True
 
         # Stamp
-        ok, stamped_path, msg = stamp_jpeg(path, model="fd7", date="2001-07-04", overwrite=True)
+        ok, _stamped_path, _msg = stamp_jpeg(path, model="fd7", date="2001-07-04", overwrite=True)
         assert ok is True
 
         # Verify EXIF
@@ -147,7 +147,7 @@ class TestEndToEndRecovery:
 
         # Repair
         repaired_path = os.path.join(tmp_dir, "repaired.png")
-        ok, rpath, msg = repair_jpeg(carved[0], repaired_path)
+        ok, rpath, _msg = repair_jpeg(carved[0], repaired_path)
         # May or may not succeed depending on truncation point
         if ok:
             assert os.path.exists(rpath)
@@ -172,7 +172,7 @@ class TestEndToEndRecovery:
             f.write(pass2)
 
         # Merge
-        merged, status = merge_passes([p1_path, p2_path])
+        merged, _status = merge_passes([p1_path, p2_path])
         assert len(merged) == DISK_SIZE
 
         # Write merged
@@ -222,12 +222,12 @@ class TestRealPhotoFixtures:
         jpeg_results = [(n, p, s, d) for n, p, s, d in results if n.endswith(".JPG")]
         assert len(jpeg_results) == 5
 
-        name, path, size, deleted = jpeg_results[0]
+        _name, path, _size, _deleted = jpeg_results[0]
         check_result = check_jpeg_structure(path)
         assert check_result["has_soi"] is True
         assert check_result["valid"] is True
 
-        ok, stamped_path, msg = stamp_jpeg(path, model="fd7", date="2001-07-04", overwrite=True)
+        ok, _stamped_path, _msg = stamp_jpeg(path, model="fd7", date="2001-07-04", overwrite=True)
         assert ok is True
         img = Image.open(path)
         exif = img.getexif()
@@ -281,7 +281,7 @@ class TestRealPhotoFixtures:
 
                 # Attempt repair
                 repaired_path = os.path.join(tmp_dir, "repaired.jpg")
-                ok, rpath, msg = repair_jpeg(path, repaired_path)
+                _ok, _rpath, _msg = repair_jpeg(path, repaired_path)
                 # Repair may or may not succeed, but should not crash
                 break
         else:
@@ -298,7 +298,7 @@ class TestEdgeCases:
         result = check_jpeg_structure(path)
         assert result["valid"] is False
 
-        ok, _, msg = repair_jpeg(path)
+        ok, _, _msg = repair_jpeg(path)
         assert ok is False
 
     def test_exactly_one_sector_jpeg(self, tmp_dir):

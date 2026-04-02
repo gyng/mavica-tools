@@ -906,7 +906,7 @@ class StampScreen(Screen):
                             progress.update(progress=progress_idx + 1)
                             continue
                         # Has model but missing date — stamp date only
-                        ok, result_path, msg = stamp_jpeg(
+                        ok, _result_path, msg = stamp_jpeg(
                             filepath,
                             None,
                             model=None,
@@ -933,7 +933,7 @@ class StampScreen(Screen):
             # Use per-file date override if set, otherwise global date
             file_date = self._date_overrides.get(i, effective_date)
 
-            ok, result_path, msg = stamp_jpeg(
+            ok, _result_path, msg = stamp_jpeg(
                 filepath,
                 None,
                 model=model,

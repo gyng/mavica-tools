@@ -223,7 +223,7 @@ class TestExtractWithNames:
 
         results = extract_with_names(img_path, output_dir)
         assert len(results) == 1
-        name, path, size, deleted = results[0]
+        name, path, _size, deleted = results[0]
         assert name == "MVC-001.JPG"
         assert os.path.exists(path)
         assert os.path.basename(path) == "MVC-001.JPG"

@@ -774,7 +774,7 @@ class GpsScreen(Screen):
             if match:
                 matched += 1
                 if not dry_run:
-                    ok, msg = stamp_gps_exif(
+                    ok, _msg = stamp_gps_exif(
                         filepath,
                         match.point.lat,
                         match.point.lon,

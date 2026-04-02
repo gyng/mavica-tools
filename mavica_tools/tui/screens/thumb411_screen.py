@@ -273,7 +273,7 @@ class Thumb411Screen(Screen):
         if event.cursor_row is None:
             return
         if self._results and event.cursor_row < len(self._results):
-            src, out = self._results[event.cursor_row]
+            src, _out = self._results[event.cursor_row]
             self._show_411_preview(src)
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:

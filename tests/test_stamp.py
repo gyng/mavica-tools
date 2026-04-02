@@ -46,7 +46,7 @@ class TestStampJpeg:
         path = make_jpeg(tmp_dir)
         out = os.path.join(tmp_dir, "stamped.jpg")
 
-        ok, result_path, msg = stamp_jpeg(path, out, model="fd7")
+        ok, _result_path, _msg = stamp_jpeg(path, out, model="fd7")
         assert ok is True
         assert os.path.exists(out)
 
@@ -148,7 +148,7 @@ class TestStampJpeg:
         with open(path, "wb") as f:
             f.write(b"not a jpeg")
 
-        ok, _, msg = stamp_jpeg(path, model="fd7")
+        ok, _, _msg = stamp_jpeg(path, model="fd7")
         assert ok is False
 
     def test_all_model_shorthands_resolve(self):

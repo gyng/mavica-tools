@@ -63,7 +63,7 @@ class TestFindJpegs:
         data = b"\xff\xd8\xff\xe0" + body
         results = find_jpegs(data)
         assert len(results) == 1
-        offset, length, truncated = results[0]
+        offset, _length, truncated = results[0]
         assert offset == 0
         assert truncated is True
 
