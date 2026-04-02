@@ -188,25 +188,30 @@ class TestStampGps:
 
     def test_graceful_without_piexif(self, tmp_dir, monkeypatch):
         """stamp_gps_exif should fail gracefully if piexif is not installed."""
-
-        # Simulate piexif missing by making import fail
-        original_import = (
-            __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
-        )
-
-        def mock_import(name, *args, **kwargs):
-            if name == "piexif":
-                raise ImportError("mocked")
-            return original_import(name, *args, **kwargs)
+        import sys
 
         path = os.path.join(tmp_dir, "photo.jpg")
         img = Image.new("RGB", (640, 480))
         img.save(path, "JPEG")
 
-        monkeypatch.setattr("builtins.__import__", mock_import)
-        ok, msg = stamp_gps_exif(path, 47.0, -122.0)
-        assert ok is False
-        assert "piexif" in msg.lower()
+        # Remove piexif from module cache so the import inside stamp_gps_exif
+        # actually calls __import__ again
+        saved = sys.modules.pop("piexif", None)
+        try:
+            original_import = __import__
+
+            def mock_import(name, *args, **kwargs):
+                if name == "piexif":
+                    raise ImportError("mocked")
+                return original_import(name, *args, **kwargs)
+
+            monkeypatch.setattr("builtins.__import__", mock_import)
+            ok, msg = stamp_gps_exif(path, 47.0, -122.0)
+            assert ok is False
+            assert "piexif" in msg.lower()
+        finally:
+            if saved is not None:
+                sys.modules["piexif"] = saved
 
 
 class TestMergeTracks:
