@@ -30,8 +30,18 @@ SECTIONS = [
     {
         "header": "Recovery",
         "tools": [
-            ("7", "multipass", "Image Disk", "Read a damaged floppy multiple times, keep best data"),
-            ("8", "recover_image", "Recover Image", "Extract photos from a disk image (FAT12 + carve)"),
+            (
+                "7",
+                "multipass",
+                "Image Disk",
+                "Read a damaged floppy multiple times, keep best data",
+            ),
+            (
+                "8",
+                "recover_image",
+                "Recover Image",
+                "Extract photos from a disk image (FAT12 + carve)",
+            ),
             ("9", "repair", "Check & Repair", "Scan photos for damage, then fix what's broken"),
             (None, "flux", "Flux Recovery", "Greaseweazle/KryoFlux raw flux capture"),
         ],

@@ -64,9 +64,9 @@ async def setup_import_workflow(app, pilot):
     await pilot.pause()
 
 
-
 async def setup_multipass(app, pilot):
     from mavica_tools.tui.widgets.defrag_map import DefragMap
+
     device_input = app.screen.query_one("#device-path", Input)
     device_input.value = "/dev/fd0"
     app.screen.query_one("#output-dir", Input).value = "mavica_out/disk_images"
@@ -102,10 +102,23 @@ async def setup_recover_image(app, pilot):
     screen.query_one("#image-path", Input).value = "mavica_out/disk_images/merged.img"
     screen.query_one("#output-dir", Input).value = "mavica_out/recovered/"
     table = screen.query_one("#results-table", DataTable)
-    table.add_row("[green]\u25cf[/]", "[green]OK[/]", "MVC-001.JPG", "94,208", "0x008400", "2001-07-04")
-    table.add_row("[green]\u25cf[/]", "[green]OK[/]", "MVC-002.JPG", "87,552", "0x01DA00", "2001-07-04")
-    table.add_row("[green]\u25cf[/]", "[green]OK[/]", "MVC-003.JPG", "91,136", "0x033200", "2001-07-04")
-    table.add_row("[dim]\u25cb[/]", "[red]DEL[/]", "[dim]MVC-004.JPG[/]", "[dim]88,320[/]", "[dim]0x049200[/]", "[dim]2001-07-04[/]")
+    table.add_row(
+        "[green]\u25cf[/]", "[green]OK[/]", "MVC-001.JPG", "94,208", "0x008400", "2001-07-04"
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "[green]OK[/]", "MVC-002.JPG", "87,552", "0x01DA00", "2001-07-04"
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "[green]OK[/]", "MVC-003.JPG", "91,136", "0x033200", "2001-07-04"
+    )
+    table.add_row(
+        "[dim]\u25cb[/]",
+        "[red]DEL[/]",
+        "[dim]MVC-004.JPG[/]",
+        "[dim]88,320[/]",
+        "[dim]0x049200[/]",
+        "[dim]2001-07-04[/]",
+    )
 
     # Show a real photo in the preview
     fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-006F.JPG")
@@ -126,24 +139,39 @@ async def setup_stamp(app, pilot):
     table = screen.query_one("#results-table", DataTable)
     table.clear()
     table.add_row(
-        "[green]\u25cf[/]", "MVC-001.JPG", "94KB",
-        "[dim]No EXIF[/]", "Sony Mavica MVC-FD7 | 2001-07-04",
+        "[green]\u25cf[/]",
+        "MVC-001.JPG",
+        "94KB",
+        "[dim]No EXIF[/]",
+        "Sony Mavica MVC-FD7 | 2001-07-04",
     )
     table.add_row(
-        "[green]\u25cf[/]", "MVC-002.JPG", "88KB",
-        "[dim]No EXIF[/]", "Sony Mavica MVC-FD7 | 2001-07-04",
+        "[green]\u25cf[/]",
+        "MVC-002.JPG",
+        "88KB",
+        "[dim]No EXIF[/]",
+        "Sony Mavica MVC-FD7 | 2001-07-04",
     )
     table.add_row(
-        "[green]\u25cf[/]", "MVC-003.JPG", "91KB",
-        "[dim]No EXIF[/]", "Sony Mavica MVC-FD7 | 2001-07-04",
+        "[green]\u25cf[/]",
+        "MVC-003.JPG",
+        "91KB",
+        "[dim]No EXIF[/]",
+        "Sony Mavica MVC-FD7 | 2001-07-04",
     )
     table.add_row(
-        "[green]\u25cf[/]", "MVC-004.JPG", "87KB",
-        "Sony | FD7 | 2001-07-04", "[dim]skip (has EXIF)[/]",
+        "[green]\u25cf[/]",
+        "MVC-004.JPG",
+        "87KB",
+        "Sony | FD7 | 2001-07-04",
+        "[dim]skip (has EXIF)[/]",
     )
     table.add_row(
-        "[green]\u25cf[/]", "MVC-005.JPG", "93KB",
-        "[dim]No EXIF[/]", "Sony Mavica MVC-FD7 | 2001-07-04",
+        "[green]\u25cf[/]",
+        "MVC-005.JPG",
+        "93KB",
+        "[dim]No EXIF[/]",
+        "Sony Mavica MVC-FD7 | 2001-07-04",
     )
 
     # Set camera model
@@ -156,6 +184,7 @@ async def setup_stamp(app, pilot):
 
     # Show a real photo in the preview
     from mavica_tools.tui.widgets.image_preview import ImagePreview
+
     fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-002F.JPG")
     if os.path.exists(fixture_jpg):
         screen.query_one("#preview", ImagePreview).image_path = fixture_jpg
@@ -187,7 +216,6 @@ async def setup_format(app, pilot):
     await pilot.pause()
 
 
-
 async def setup_gps(app, pilot):
     from mavica_tools.tui.widgets.track_map import TrackMap
 
@@ -205,18 +233,45 @@ async def setup_gps(app, pilot):
     table.clear()
     table.columns.clear()
     table.add_columns("", "Filename", "Size", "Date", "Location", "Offset")
-    table.add_row("[green]\u25cf[/]", "MVC-001.JPG", "94KB", "07-04 10:30", "[green]35.681, 139.767[/] [dim](o)[/]", "12s")
-    table.add_row("[green]\u25cf[/]", "MVC-002.JPG", "88KB", "07-04 10:35", "[green]35.682, 139.768[/]", "8s")
-    table.add_row("[green]\u25cf[/]", "MVC-003.JPG", "91KB", "07-04 10:41", "[green]35.684, 139.770[/]", "23s")
-    table.add_row("[green]\u25cf[/]", "MVC-004.JPG", "87KB", "07-04 10:48", "[green]35.686, 139.772[/]", "45s")
-    table.add_row("[dim]\u25cb[/]", "[dim]MVC-005.JPG[/]", "[dim]93KB[/]", "[dim]07-04 10:55[/]", "[dim]-[/]", "[dim]-[/]")
-    table.add_row("[green]\u25cf[/]", "MVC-006.JPG", "90KB", "07-04 11:02", "[green]35.689, 139.775[/]", "18s")
-    table.add_row("[green]\u25cf[/]", "MVC-007.JPG", "86KB", "07-04 11:08", "[green]35.690, 139.776[/]", "31s")
-    table.add_row("[green]\u25cf[/]", "MVC-008.JPG", "95KB", "07-04 11:15", "[green]35.692, 139.778[/]", "9s")
+    table.add_row(
+        "[green]\u25cf[/]",
+        "MVC-001.JPG",
+        "94KB",
+        "07-04 10:30",
+        "[green]35.681, 139.767[/] [dim](o)[/]",
+        "12s",
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "MVC-002.JPG", "88KB", "07-04 10:35", "[green]35.682, 139.768[/]", "8s"
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "MVC-003.JPG", "91KB", "07-04 10:41", "[green]35.684, 139.770[/]", "23s"
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "MVC-004.JPG", "87KB", "07-04 10:48", "[green]35.686, 139.772[/]", "45s"
+    )
+    table.add_row(
+        "[dim]\u25cb[/]",
+        "[dim]MVC-005.JPG[/]",
+        "[dim]93KB[/]",
+        "[dim]07-04 10:55[/]",
+        "[dim]-[/]",
+        "[dim]-[/]",
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "MVC-006.JPG", "90KB", "07-04 11:02", "[green]35.689, 139.775[/]", "18s"
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "MVC-007.JPG", "86KB", "07-04 11:08", "[green]35.690, 139.776[/]", "31s"
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "MVC-008.JPG", "95KB", "07-04 11:15", "[green]35.692, 139.778[/]", "9s"
+    )
 
     # Populate track map with a simulated walk through Tokyo
     track_map = screen.query_one("#track-map", TrackMap)
     import math
+
     track_pts = []
     for i in range(100):
         t = i / 99.0
@@ -225,9 +280,14 @@ async def setup_gps(app, pilot):
         track_pts.append((lat, lon))
     track_map.set_track(track_pts)
     match_pts = [
-        (35.681, 139.767), (35.682, 139.768), (35.684, 139.770), (35.686, 139.772),
+        (35.681, 139.767),
+        (35.682, 139.768),
+        (35.684, 139.770),
+        (35.686, 139.772),
         None,
-        (35.689, 139.775), (35.690, 139.776), (35.692, 139.778),
+        (35.689, 139.775),
+        (35.690, 139.776),
+        (35.692, 139.778),
     ]
     track_map.set_matches(match_pts)
     track_map.highlight_index = 0
@@ -305,10 +365,12 @@ async def setup_thumb411(app, pilot):
 
     # Show a real .411 thumbnail preview
     from mavica_tools.tui.widgets.image_preview import ImagePreview
+
     fixture_411 = os.path.join(FIXTURES_DIR, "MVC-004F.411")
     if os.path.exists(fixture_411):
         try:
             from mavica_tools.thumb411 import decode_411
+
             img = decode_411(fixture_411)
             if img:
                 screen.query_one("#preview-original", ImagePreview).set_pil_image(
@@ -354,6 +416,7 @@ async def setup_swaptest(app, pilot):
 
 # ── Screen registry ─────────────────────────────────────────────────────────
 # (filename, screen_id_or_class, setup_function)
+
 
 def _build_screen_list():
     """Build the list of screens to screenshot."""
@@ -414,9 +477,9 @@ async def main():
     if len(sys.argv) > 1:
         requested = set(sys.argv[1:])
         screens = [
-            (f, s, fn) for f, s, fn in screens
-            if f.replace(".svg", "") in requested
-            or (isinstance(s, str) and s in requested)
+            (f, s, fn)
+            for f, s, fn in screens
+            if f.replace(".svg", "") in requested or (isinstance(s, str) and s in requested)
         ]
 
     print(f"Generating {len(screens)} screenshots to {SCREENSHOTS_DIR}/")

@@ -291,9 +291,7 @@ class TestFixtureGpx:
 
         track = parse_gpx(gpx_path)
         fixture_jpegs = sorted(
-            os.path.join(FIXTURES_DIR, f)
-            for f in os.listdir(FIXTURES_DIR)
-            if f.endswith(".JPG")
+            os.path.join(FIXTURES_DIR, f) for f in os.listdir(FIXTURES_DIR) if f.endswith(".JPG")
         )
 
         # Default 5m tolerance: MVC-002F and MVC-004F match, MVC-006F doesn't

@@ -30,7 +30,9 @@ class TrackMap(Widget):
         super().__init__(**kwargs)
         self._track: list[tuple[float, float]] = []  # (lat, lon)
         self._matches: list[tuple[float, float] | None] = []  # per-file match coords
-        self._bounds: tuple[float, float, float, float] | None = None  # min_lat, max_lat, min_lon, max_lon
+        self._bounds: tuple[float, float, float, float] | None = (
+            None  # min_lat, max_lat, min_lon, max_lon
+        )
         self._label: str = ""
         self._n_matched: int = 0
 
@@ -67,9 +69,7 @@ class TrackMap(Widget):
         pad_lon = max((max_lon - min_lon) * 0.05, 0.0001)
         return (min_lat - pad_lat, max_lat + pad_lat, min_lon - pad_lon, max_lon + pad_lon)
 
-    def _map_to_cell(
-        self, lat: float, lon: float, cols: int, rows: int
-    ) -> tuple[int, int]:
+    def _map_to_cell(self, lat: float, lon: float, cols: int, rows: int) -> tuple[int, int]:
         """Map lat/lon to braille dot coordinates (col, row)."""
         if not self._bounds:
             return (0, 0)
@@ -124,8 +124,14 @@ class TrackMap(Widget):
 
         # Braille dot offset mapping: (dx, dy) -> bit position
         dot_map = {
-            (0, 0): 0x01, (0, 1): 0x02, (0, 2): 0x04, (0, 3): 0x40,
-            (1, 0): 0x08, (1, 1): 0x10, (1, 2): 0x20, (1, 3): 0x80,
+            (0, 0): 0x01,
+            (0, 1): 0x02,
+            (0, 2): 0x04,
+            (0, 3): 0x40,
+            (1, 0): 0x08,
+            (1, 1): 0x10,
+            (1, 2): 0x20,
+            (1, 3): 0x80,
         }
 
         # Marker overlay: (row, col) -> (char, style) for match positions

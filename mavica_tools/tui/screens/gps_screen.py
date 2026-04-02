@@ -155,6 +155,7 @@ class GpsScreen(Screen):
         log = self.query_one("#log", RichLog)
         try:
             import piexif  # noqa: F401
+
             log.write("[green]piexif installed[/] — GPS coordinates will be written to EXIF.")
         except ImportError:
             log.write(
@@ -306,6 +307,7 @@ class GpsScreen(Screen):
         """Get short date string from photo."""
         try:
             from mavica_tools.utils import get_photo_timestamp
+
             ts = get_photo_timestamp(path)
             if ts:
                 return ts.strftime("%m-%d %H:%M")
@@ -313,15 +315,14 @@ class GpsScreen(Screen):
             pass
         try:
             from datetime import datetime
+
             mtime = os.path.getmtime(path)
             return datetime.fromtimestamp(mtime).strftime("%m-%d %H:%M")
         except Exception:
             return "?"
 
     @staticmethod
-    def _find_gpx_in_dir(
-        directory: str, photos: list[str] | None = None
-    ) -> tuple[str | None, str]:
+    def _find_gpx_in_dir(directory: str, photos: list[str] | None = None) -> tuple[str | None, str]:
         """Find the best .gpx file in the directory or its parent.
 
         Selection strategy (first match wins):
@@ -388,12 +389,12 @@ class GpsScreen(Screen):
                     track_max = track[-1].time
                     # Check overlap: expand track window by tolerance (5min)
                     from datetime import timedelta
+
                     margin = timedelta(minutes=5)
                     if track_min - margin <= photo_max and track_max + margin >= photo_min:
                         # Compute overlap quality: how many photos fall within track range
                         overlap = sum(
-                            1 for t in photo_times
-                            if track_min - margin <= t <= track_max + margin
+                            1 for t in photo_times if track_min - margin <= t <= track_max + margin
                         )
                         if overlap > best_overlap:
                             best_overlap = overlap
@@ -457,6 +458,7 @@ class GpsScreen(Screen):
         """Load GPX file and update track map."""
         try:
             from mavica_tools.gps import parse_gpx
+
             track = parse_gpx(gpx_path)
             self._track = track
             if track:
@@ -605,6 +607,7 @@ class GpsScreen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#photos-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(title="Select photos directory", select_directory=True),
             on_selected,
@@ -614,6 +617,7 @@ class GpsScreen(Screen):
         def on_selected(path: str) -> None:
             if path:
                 self.query_one("#gpx-path", Input).value = path
+
         self.app.push_screen(
             FilePicker(extensions=(".gpx",), title="Select GPX file"),
             on_selected,
@@ -621,6 +625,7 @@ class GpsScreen(Screen):
 
     def action_open_source(self) -> None:
         from mavica_tools.utils import open_directory
+
         source = self.query_one("#photos-path", Input).value.strip()
         if source:
             d = source if os.path.isdir(source) else os.path.dirname(source)
@@ -674,9 +679,8 @@ class GpsScreen(Screen):
         for name in os.listdir(out_dir):
             path = os.path.join(out_dir, name)
             if os.path.isdir(path) and name.startswith("import_"):
-                jpegs = (
-                    globmod.glob(os.path.join(path, "*.jpg"))
-                    + globmod.glob(os.path.join(path, "*.JPG"))
+                jpegs = globmod.glob(os.path.join(path, "*.jpg")) + globmod.glob(
+                    os.path.join(path, "*.JPG")
                 )
                 if jpegs:
                     candidates.append((os.path.getmtime(path), path, len(jpegs)))

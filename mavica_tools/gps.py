@@ -200,15 +200,25 @@ def match_photos_to_track(
         if interpolate and 0 < idx < len(track_points):
             point = _interpolate_point(track_points[idx - 1], track_points[idx], photo_time)
             dist = _haversine_m(point.lat, point.lon, best_point.lat, best_point.lon)
-            results.append(GpsMatch(
-                photo_path=path, point=point, offset_seconds=best_offset,
-                interpolated=True, nearest_distance_m=dist,
-            ))
+            results.append(
+                GpsMatch(
+                    photo_path=path,
+                    point=point,
+                    offset_seconds=best_offset,
+                    interpolated=True,
+                    nearest_distance_m=dist,
+                )
+            )
         else:
-            results.append(GpsMatch(
-                photo_path=path, point=best_point, offset_seconds=best_offset,
-                interpolated=False, nearest_distance_m=0.0,
-            ))
+            results.append(
+                GpsMatch(
+                    photo_path=path,
+                    point=best_point,
+                    offset_seconds=best_offset,
+                    interpolated=False,
+                    nearest_distance_m=0.0,
+                )
+            )
 
     return results
 

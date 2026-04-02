@@ -290,8 +290,6 @@ class TestFormatCLI:
         assert "MYmavica" in r.stdout
 
 
-
-
 # ─── mavica detect ───────────────────────────────────────────────────────
 
 
@@ -391,7 +389,6 @@ class TestFullPipeline:
         # 4. Stamp
         r = run(["stamp", carved_dir, "-m", "fd88", "-d", "auto", "--overwrite"])
         assert r.returncode == 0
-
 
     def test_fat12_pipeline(self, tmp_dir):
         """Disk image → FAT12 ls → FAT12 extract → stamp."""
