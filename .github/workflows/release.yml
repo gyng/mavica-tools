@@ -88,9 +88,9 @@ jobs:
             ## mavica-tools ${{ github.ref_name }}
 
             Download the binary for your platform:
-            - **Windows**: `mavica-tools-windows.zip` — unzip, run `mavica.exe tui`
-            - **macOS**: `mavica-tools-mac.tar.gz` — extract, run `./mavica tui`
-            - **Linux**: `mavica-tools-linux.tar.gz` — extract, run `./mavica tui`
+            - **Windows**: `mavica-tools-windows.zip` — unzip, run `mavica.exe`
+            - **macOS**: `mavica-tools-mac.tar.gz` — extract, run `./mavica`
+            - **Linux**: `mavica-tools-linux.tar.gz` — extract, run `./mavica`
 
             Or install via pip/uv:
             ```bash
