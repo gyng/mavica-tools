@@ -181,7 +181,6 @@ class TestProjectFiles:
         assert "mavica" in project["scripts"]
 
         assert "optional-dependencies" in project
-        assert "gps" in project["optional-dependencies"]
         assert "dev" in project["optional-dependencies"]
 
     def test_pyinstaller_spec_lists_all_modules(self):
@@ -201,25 +200,14 @@ class TestProjectFiles:
             assert mod in spec, f"PyInstaller spec missing: {mod}"
 
 
-class TestOptionalDependencies:
-    """Optional deps should degrade gracefully."""
+class TestBundledDependencies:
+    """Bundled deps should be available."""
 
-    def test_gps_works_without_piexif(self):
-        """GPS module should import fine; stamp_gps_exif should fail gracefully."""
-        from mavica_tools.gps import match_photos_to_track, parse_gpx
-
-        # Core functions don't need piexif
-        assert callable(parse_gpx)
-        assert callable(match_photos_to_track)
-
-    def test_piexif_is_optional_dep(self):
+    def test_piexif_is_core_dep(self):
         import tomllib
 
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         with open(os.path.join(root, "pyproject.toml"), "rb") as f:
             config = tomllib.load(f)
         deps = str(config["project"]["dependencies"])
-        assert "piexif" not in deps, "piexif should not be a hard dependency"
-
-        gps_deps = str(config["project"]["optional-dependencies"]["gps"])
-        assert "piexif" in gps_deps
+        assert "piexif" in deps, "piexif should be a core dependency"

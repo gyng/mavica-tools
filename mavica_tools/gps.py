@@ -253,10 +253,7 @@ def stamp_gps_exif(
 
     Returns (success, message).
     """
-    try:
-        import piexif
-    except ImportError:
-        return False, "piexif required: pip install piexif"
+    import piexif
 
     try:
         exif_dict = piexif.load(photo_path)

@@ -56,6 +56,7 @@ a = Analysis(
         'mavica_tools.tui.widgets.sector_map',
         'textual',
         'PIL',
+        'piexif',
     ],
     hookspath=[],
     hooksconfig={},

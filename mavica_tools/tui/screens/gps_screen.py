@@ -151,17 +151,8 @@ class GpsScreen(Screen):
         self._track: list = []  # GpsPoint list
         self._previewed = False
 
-        # Log piexif status
         log = self.query_one("#log", RichLog)
-        try:
-            import piexif  # noqa: F401
-
-            log.write("[green]piexif installed[/] — GPS coordinates will be written to EXIF.")
-        except ImportError:
-            log.write(
-                "[#ffaa00]piexif not installed[/] — preview works, but GPS won't be saved. "
-                "[dim]Install with:[/] [bold]pip install mavica-tools\\[gps][/]"
-            )
+        log.write("[green]piexif installed[/] — GPS coordinates will be written to EXIF.")
 
         if self._prefill_photos:
             self.call_later(self._apply_prefill)

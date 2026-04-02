@@ -19,7 +19,6 @@ Grab the latest binary from [Releases](https://github.com/gyng/mavica-tools/rele
 
 ```bash
 pip install mavica-tools        # or: uv tool install mavica-tools
-pip install "mavica-tools[gps]" # optional: GPS track merging
 ```
 
 ## Get Started
