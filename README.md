@@ -11,9 +11,9 @@ Works on **Windows**, **macOS**, and **Linux**.
 **Download (no Python needed):**
 
 Grab the latest binary from [Releases](https://github.com/gyng/mavica-tools/releases):
-- **Windows**: `mavica.exe`
-- **macOS**: `mavica` (`chmod +x` first)
-- **Linux**: `mavica` (`chmod +x` first)
+- **Windows**: `mavica-tools-windows.zip` — unzip, run `mavica.exe`
+- **macOS**: `mavica-tools-mac.tar.gz` — extract, run `./mavica`
+- **Linux**: `mavica-tools-linux.tar.gz` — extract, run `./mavica`
 
 **Install via pip/uv (Python 3.14+):**
 
