@@ -52,9 +52,6 @@ mavica
 
 **Recovery** — Image Disk (multipass), Browse & Recover Image (FAT12 + carve), Check & Repair Photos
 
-<details>
-<summary>More screenshots</summary>
-
 **Tag Photos (EXIF metadata)**
 ![stamp](screenshots/stamp.svg)
 
@@ -69,8 +66,6 @@ mavica
 
 **Disk health check**
 ![diskcheck](screenshots/diskcheck.svg)
-
-</details>
 
 ## CLI Quick Reference
 
