@@ -537,7 +537,7 @@ def main():
             print("WARNING: Write test will DESTROY ALL DATA on the disk.")
             try:
                 confirm = input("Type 'yes' to continue: ")
-            except EOFError, KeyboardInterrupt:
+            except (EOFError, KeyboardInterrupt):
                 print("\nCancelled.")
                 sys.exit(1)
             if confirm.strip().lower() != "yes":

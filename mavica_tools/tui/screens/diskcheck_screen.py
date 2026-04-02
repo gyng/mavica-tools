@@ -193,7 +193,7 @@ class DiskCheckScreen(Screen):
                 on_sector=on_sector,
                 on_metadata_ready=on_metadata_ready,
             )
-        except _StopRequested, asyncio.CancelledError:
+        except (_StopRequested, asyncio.CancelledError):
             log.write("[yellow]Cancelled.[/]")
             self._reset_buttons()
             return
@@ -317,7 +317,7 @@ class DiskCheckScreen(Screen):
                     on_metadata_ready=on_metadata_ready if not write else None,
                     quick=quick,
                 )
-        except _StopRequested, asyncio.CancelledError:
+        except (_StopRequested, asyncio.CancelledError):
             log.write("[yellow]Cancelled.[/]")
             self._reset_buttons()
             return

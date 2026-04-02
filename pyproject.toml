@@ -50,7 +50,7 @@ build-backend = "hatchling.build"
 testpaths = ["tests"]
 
 [tool.ruff]
-target-version = "py314"
+target-version = "py312"
 line-length = 100
 
 [tool.ruff.lint]
@@ -68,7 +68,6 @@ ignore = [
     "UP007",   # X | Y union syntax — keep Optional for 3.10
     "B007",    # unused loop control variable — common in unpacking
     "B905",    # zip-without-explicit-strict — verbose for no safety gain here
-    "RUF059",  # unused unpacked variable — common in tuple unpacking
 ]
 
 [tool.ruff.lint.per-file-ignores]

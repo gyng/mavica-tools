@@ -97,10 +97,10 @@ def build_good_disk() -> bytearray:
     # Files to write: JPEGs first, then .411s in reverse order
     # (matches real Mavica floppy layout)
     jpegs = [
-        ("MVC-004F", "JPG", _load_fixture("MVC-004F.JPG")),
-        ("MVC-002F", "JPG", _load_fixture("MVC-002F.JPG")),
-        ("MVC-006F", "JPG", _load_fixture("MVC-006F.JPG")),
         ("MVC-001F", "JPG", _load_fixture("MVC-001F.JPG")),
+        ("MVC-002F", "JPG", _load_fixture("MVC-002F.JPG")),
+        ("MVC-004F", "JPG", _load_fixture("MVC-004F.JPG")),
+        ("MVC-006F", "JPG", _load_fixture("MVC-006F.JPG")),
         ("MVC-015F", "JPG", _load_fixture("MVC-015F.JPG")),
     ]
     thumbnails = [

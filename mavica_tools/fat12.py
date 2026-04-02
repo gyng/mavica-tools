@@ -343,7 +343,7 @@ def extract_with_names(
                     ts_str += " 00:00:00"
                 ts = _dt.strptime(ts_str, "%Y-%m-%d %H:%M:%S").timestamp()
                 os.utime(out_path, (ts, ts))
-            except ValueError, OSError:
+            except (ValueError, OSError):
                 pass
 
         # Auto-stamp EXIF from FAT12 timestamps

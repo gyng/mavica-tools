@@ -537,7 +537,7 @@ class GpsScreen(Screen):
             row_key = table.ordered_rows[row].key
             col_key = table.ordered_columns[4].key  # Location column
             table.update_cell(row_key, col_key, loc)
-        except IndexError, KeyError:
+        except (IndexError, KeyError):
             pass
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
