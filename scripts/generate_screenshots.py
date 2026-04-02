@@ -35,29 +35,39 @@ async def setup_import_workflow(app, pilot):
     screen = app.screen
     src = screen.query_one("#drive-input", DriveInput)
     src.value = "A:\\"
-    screen.query_one("#output-dir", Input).value = "mavica_out/import_2025-03-15_143022"
-    table = screen.query_one("#results-table", DataTable)
-    table.add_row("OK", "MVC-001.JPG", "94.2 KB", "2001-07-04")
-    table.add_row("OK", "MVC-002.JPG", "87.6 KB", "2001-07-04")
-    table.add_row("OK", "MVC-003.JPG", "91.1 KB", "2001-07-04")
-    table.add_row("OK", "MVC-004.JPG", "88.3 KB", "2001-07-04")
-    table.add_row("OK", "MVC-005.JPG", "93.7 KB", "2001-07-04")
+    screen.query_one("#output-dir", Input).value = "mavica_out/import_2001-07-04_103000"
 
-    # Show a real photo in the preview (set_pil_image avoids async race)
-    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-004F.JPG")
-    if os.path.exists(fixture_jpg):
+    # List real fixture files in the table
+    table = screen.query_one("#results-table", DataTable)
+    fixture_files = sorted(f for f in os.listdir(FIXTURES_DIR) if f.endswith((".JPG", ".411")))
+    for name in fixture_files:
+        size_kb = os.path.getsize(os.path.join(FIXTURES_DIR, name)) / 1024
+        table.add_row("[green]OK[/]", name, f"{size_kb:.1f} KB", "2001-07-04")
+
+    # Show the first JPEG (highlighted row) in preview
+    first_jpg = next((f for f in fixture_files if f.endswith(".JPG")), None)
+    if first_jpg:
         from PIL import Image
 
-        img = Image.open(fixture_jpg)
-        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-004F.JPG")
+        img = Image.open(os.path.join(FIXTURES_DIR, first_jpg))
+        screen.query_one("#preview", ImagePreview).set_pil_image(img, first_jpg)
 
-    # Populate defrag map showing completed read
+    # Populate defrag map from the real disk image
+    from mavica_tools.fat12 import file_sector_map, parse_disk_image
+
+    disk_path = os.path.join(FIXTURES_DIR, "disk_with_photos.img")
     defrag = screen.query_one("#defrag-map", DefragMap)
-    for i in range(2880):
-        defrag.update_sector(i, "good")
+    if os.path.exists(disk_path):
+        files_on_disk, fat, data = parse_disk_image(disk_path)
+        for i in range(2880):
+            defrag.update_sector(i, "good")
+        defrag.set_file_boundaries(file_sector_map(disk_path))
 
+    jpegs = [f for f in fixture_files if f.endswith(".JPG")]
+    thumbs = [f for f in fixture_files if f.endswith(".411")]
     screen.query_one("#status", Static).update(
-        "  [bold #33ff33]Done![/] 5 photos imported (2 JPEGs, 3 thumbnails)"
+        f"  [bold #33ff33]Done![/] {len(fixture_files)} files imported "
+        f"({len(jpegs)} JPEGs, {len(thumbs)} thumbnails)"
     )
 
     # Enable post-import buttons
@@ -118,32 +128,33 @@ async def setup_recover_image(app, pilot):
     from mavica_tools.tui.widgets.image_preview import ImagePreview
 
     screen = app.screen
-    screen.query_one("#image-path", Input).value = "mavica_out/disk_images/merged.img"
+    disk_path = os.path.join(FIXTURES_DIR, "disk_with_photos.img")
+    screen.query_one("#image-path", Input).value = disk_path
     screen.query_one("#output-dir", Input).value = "mavica_out/recovered/"
-    table = screen.query_one("#results-table", DataTable)
-    table.add_row(
-        "[green]\u25cf[/]", "[green]OK[/]", "MVC-001F.JPG", "41,923", "0x008400", "2001-07-04"
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "[green]OK[/]", "MVC-002F.JPG", "34,579", "0x01DA00", "2001-07-04"
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "[green]OK[/]", "MVC-004F.JPG", "35,903", "0x033200", "2001-07-04"
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "[green]OK[/]", "MVC-006F.JPG", "50,994", "0x049200", "2001-07-04"
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "[green]OK[/]", "MVC-015F.JPG", "40,547", "0x05C400", "2001-07-04"
-    )
 
-    # Show a real photo in the preview (use set_pil_image to avoid async race)
-    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-006F.JPG")
-    if os.path.exists(fixture_jpg):
+    # Populate table from real disk image FAT12 data
+    from mavica_tools.fat12 import parse_disk_image
+
+    table = screen.query_one("#results-table", DataTable)
+    if os.path.exists(disk_path):
+        files, fat, data = parse_disk_image(disk_path)
+        for f in files:
+            sel = "[green]\u25cf[/]"
+            status = "[green]OK[/]"
+            if f.is_deleted:
+                sel = "[dim]\u25cb[/]"
+                status = "[red]DEL[/]"
+            table.add_row(
+                sel, status, f.name, f"{f.size:,}", f"0x{f.start_cluster * 512:06X}", f.date_str
+            )
+
+    # Show first JPEG in preview
+    first_jpg = os.path.join(FIXTURES_DIR, "MVC-001F.JPG")
+    if os.path.exists(first_jpg):
         from PIL import Image
 
-        img = Image.open(fixture_jpg)
-        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-006F.JPG")
+        img = Image.open(first_jpg)
+        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-001F.JPG")
 
     await pilot.pause()
 
@@ -151,48 +162,25 @@ async def setup_recover_image(app, pilot):
 async def setup_stamp(app, pilot):
     from textual.widgets import Select
 
+    from mavica_tools.tui.widgets.image_preview import ImagePreview
+
     screen = app.screen
     with screen.prevent(Input.Changed):
-        screen.query_one("#source-path", Input).value = "mavica_out/import_2001-07-04/"
+        screen.query_one("#source-path", Input).value = FIXTURES_DIR
 
-    # Simulate file list with EXIF preview
+    # List real fixture JPEGs in the table
     table = screen.query_one("#results-table", DataTable)
     table.clear()
-    table.add_row(
-        "[green]\u25cf[/]",
-        "MVC-001.JPG",
-        "94KB",
-        "[dim]No EXIF[/]",
-        "Sony Mavica MVC-FD7 | 2001-07-04",
-    )
-    table.add_row(
-        "[green]\u25cf[/]",
-        "MVC-002.JPG",
-        "88KB",
-        "[dim]No EXIF[/]",
-        "Sony Mavica MVC-FD7 | 2001-07-04",
-    )
-    table.add_row(
-        "[green]\u25cf[/]",
-        "MVC-003.JPG",
-        "91KB",
-        "[dim]No EXIF[/]",
-        "Sony Mavica MVC-FD7 | 2001-07-04",
-    )
-    table.add_row(
-        "[green]\u25cf[/]",
-        "MVC-004.JPG",
-        "87KB",
-        "Sony | FD7 | 2001-07-04",
-        "[dim]skip (has EXIF)[/]",
-    )
-    table.add_row(
-        "[green]\u25cf[/]",
-        "MVC-005.JPG",
-        "93KB",
-        "[dim]No EXIF[/]",
-        "Sony Mavica MVC-FD7 | 2001-07-04",
-    )
+    fixture_jpegs = sorted(f for f in os.listdir(FIXTURES_DIR) if f.endswith(".JPG"))
+    for name in fixture_jpegs:
+        size_kb = os.path.getsize(os.path.join(FIXTURES_DIR, name)) / 1024
+        table.add_row(
+            "[green]\u25cf[/]",
+            name,
+            f"{size_kb:.0f}KB",
+            "[dim]No EXIF[/]",
+            "Sony Mavica MVC-FD7 | 2001-07-04",
+        )
 
     # Set camera model
     try:
@@ -200,17 +188,16 @@ async def setup_stamp(app, pilot):
     except Exception:
         pass
 
-    screen.query_one("#btn-stamp", Button).label = "Tag 5 (F2)"
+    n = len(fixture_jpegs)
+    screen.query_one("#btn-stamp", Button).label = f"Tag {n} (F2)"
 
-    # Show a real photo in the preview (set_pil_image avoids async race)
-    from mavica_tools.tui.widgets.image_preview import ImagePreview
-
-    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-002F.JPG")
+    # Show a different photo than import (MVC-006F for variety)
+    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-006F.JPG")
     if os.path.exists(fixture_jpg):
         from PIL import Image
 
         img = Image.open(fixture_jpg)
-        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-002F.JPG")
+        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-006F.JPG")
 
     await pilot.pause()
 
@@ -240,92 +227,80 @@ async def setup_format(app, pilot):
 
 
 async def setup_gps(app, pilot):
+    from mavica_tools.gps import match_photos_to_track, parse_gpx
+    from mavica_tools.tui.widgets.image_preview import ImagePreview
     from mavica_tools.tui.widgets.track_map import TrackMap
 
     screen = app.screen
 
-    # Set input values using prevent() to suppress on_input_changed auto-listing
-    photos_input = screen.query_one("#photos-path", Input)
-    gpx_input = screen.query_one("#gpx-path", Input)
+    gpx_path = os.path.join(FIXTURES_DIR, "track_2001-07-04.gpx")
     with screen.prevent(Input.Changed):
-        photos_input.value = "mavica_out/import_2001-07-04/"
-        gpx_input.value = "tracks/2001-07-04_walk.gpx"
+        screen.query_one("#photos-path", Input).value = FIXTURES_DIR
+        screen.query_one("#gpx-path", Input).value = gpx_path
 
-    # Simulate a previewed state with matched photos
+    # Run real matching against fixture files
+    fixture_jpegs = sorted(
+        os.path.join(FIXTURES_DIR, f) for f in os.listdir(FIXTURES_DIR) if f.endswith(".JPG")
+    )
+    track = parse_gpx(gpx_path) if os.path.exists(gpx_path) else []
+    matches = match_photos_to_track(fixture_jpegs, track, tolerance_seconds=300) if track else []
+
+    # Populate table with real match results
     table = screen.query_one("#results-table", DataTable)
     table.clear()
     table.columns.clear()
     table.add_columns("", "Filename", "Size", "Date", "Location", "Offset")
-    table.add_row(
-        "[green]\u25cf[/]",
-        "MVC-001.JPG",
-        "94KB",
-        "07-04 10:30",
-        "[green]35.681, 139.767[/] [dim](o)[/]",
-        "12s",
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "MVC-002.JPG", "88KB", "07-04 10:35", "[green]35.682, 139.768[/]", "8s"
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "MVC-003.JPG", "91KB", "07-04 10:41", "[green]35.684, 139.770[/]", "23s"
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "MVC-004.JPG", "87KB", "07-04 10:48", "[green]35.686, 139.772[/]", "45s"
-    )
-    table.add_row(
-        "[dim]\u25cb[/]",
-        "[dim]MVC-005.JPG[/]",
-        "[dim]93KB[/]",
-        "[dim]07-04 10:55[/]",
-        "[dim]-[/]",
-        "[dim]-[/]",
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "MVC-006.JPG", "90KB", "07-04 11:02", "[green]35.689, 139.775[/]", "18s"
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "MVC-007.JPG", "86KB", "07-04 11:08", "[green]35.690, 139.776[/]", "31s"
-    )
-    table.add_row(
-        "[green]\u25cf[/]", "MVC-008.JPG", "95KB", "07-04 11:15", "[green]35.692, 139.778[/]", "9s"
-    )
+    matched_count = 0
+    match_coords = []
+    for i, (path, match) in enumerate(zip(fixture_jpegs, matches)):
+        name = os.path.basename(path)
+        size_kb = os.path.getsize(path) / 1024
+        from mavica_tools.utils import get_photo_timestamp
 
-    # Populate track map with a simulated walk through Tokyo
+        ts = get_photo_timestamp(path)
+        date_str = ts.strftime("%m-%d %H:%M") if ts else "?"
+        if match:
+            matched_count += 1
+            loc = f"[green]{match.point.lat:.3f}, {match.point.lon:.3f}[/]"
+            if i == 0:
+                loc += " [dim](o)[/]"
+            secs = match.offset_seconds
+            offset = f"{secs / 60:.0f}min" if secs >= 60 else f"{secs:.0f}sec"
+            if match.interpolated and match.nearest_distance_m > 0:
+                offset += f" ~{match.nearest_distance_m:.0f}m"
+            match_coords.append((match.point.lat, match.point.lon))
+        else:
+            loc = "[dim]-[/]"
+            offset = "[dim]-[/]"
+            match_coords.append(None)
+        table.add_row("[green]\u25cf[/]", name, f"{size_kb:.0f}KB", date_str, loc, offset)
+
+    # Populate track map with real data
     track_map = screen.query_one("#track-map", TrackMap)
-    import math
+    if track:
+        track_map.set_track([(p.lat, p.lon) for p in track])
+        track_map.set_matches(match_coords)
+        track_map.highlight_index = 0
 
-    track_pts = []
-    for i in range(100):
-        t = i / 99.0
-        lat = 35.680 + t * 0.015 + math.sin(t * 6) * 0.001
-        lon = 139.766 + t * 0.014 + math.cos(t * 4) * 0.001
-        track_pts.append((lat, lon))
-    track_map.set_track(track_pts)
-    match_pts = [
-        (35.681, 139.767),
-        (35.682, 139.768),
-        (35.684, 139.770),
-        (35.686, 139.772),
-        None,
-        (35.689, 139.775),
-        (35.690, 139.776),
-        (35.692, 139.778),
-    ]
-    track_map.set_matches(match_pts)
-    track_map.highlight_index = 0
+    # Show MVC-015F in preview (different from other screens)
+    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-015F.JPG")
+    if os.path.exists(fixture_jpg):
+        from PIL import Image
 
-    # Fix button labels and enable buttons
-    screen.query_one("#btn-preview", Button).label = "Preview 7 (p)"
+        img = Image.open(fixture_jpg)
+        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-015F.JPG")
+
+    # Button labels and status
+    n = len(fixture_jpegs)
+    screen.query_one("#btn-preview", Button).label = f"Preview {n} (p)"
     screen.query_one("#btn-preview", Button).disabled = False
-    screen.query_one("#btn-merge", Button).label = "Merge 7 (F2)"
+    screen.query_one("#btn-merge", Button).label = f"Merge {n} (F2)"
     screen.query_one("#btn-merge", Button).disabled = False
     screen.query_one("#btn-map", Button).disabled = False
-    screen.query_one("#btn-map", Button).label = "Open Map"
 
-    # Status line
     screen.query_one("#status", Static).update(
-        "  [bold]Preview:[/] [green]7[/]/8 matched, [dim]1 no match[/]  [dim](dry run \u2014 no files modified)[/]"
+        f"  [bold]Preview:[/] [green]{matched_count}[/]/{n} matched, "
+        f"[dim]{n - matched_count} no match[/]  [dim](dry run \u2014 no files modified)[/]"
     )
 
     screen.query_one("#progress", ProgressBar).update(total=8, progress=8)
@@ -419,43 +394,12 @@ async def setup_thumb411(app, pilot):
     await pilot.pause()
 
 
-async def setup_swaptest(app, pilot):
-    screen = app.screen
-
-    with screen.prevent(Input.Changed):
-        screen.query_one("#cameras-input", Input).value = "FD7, FD73, FD88"
-        screen.query_one("#disks-input", Input).value = "Maxell MF2HD, Sony 2HD, TDK MF2HD"
-
-    # Populate matrix table
-    table = screen.query_one("#matrix-table", DataTable)
-    table.clear()
-    table.columns.clear()
-    table.add_columns("", "Maxell MF2HD", "Sony 2HD", "TDK MF2HD")
-    table.add_row("[bold]FD7[/]", "[green]OK[/]", "[green]OK[/]", "[yellow]PARTIAL[/]")
-    table.add_row("[bold]FD73[/]", "[green]OK[/]", "[red]FAIL[/]", "[green]OK[/]")
-    table.add_row("[bold]FD88[/]", "[yellow]PARTIAL[/]", "[green]OK[/]", "")
-
-    analysis = screen.query_one("#analysis", Static)
-    analysis.update(
-        "[bold]Analysis:[/] 8/9 tested (89%)\n"
-        "  [red]Sony 2HD + FD73[/]: fails consistently \u2192 likely disk/camera incompatibility\n"
-        "  [yellow]TDK MF2HD + FD7[/]: partial reads \u2192 try cleaning heads"
-    )
-
-    log = screen.query_one("#log", RichLog)
-    log.write("Matrix loaded: 3 cameras \u00d7 3 disks")
-
-    await pilot.pause()
-
-
 # ── Screen registry ─────────────────────────────────────────────────────────
 # (filename, screen_id_or_class, setup_function)
 
 
 def _build_screen_list():
     """Build the list of screens to screenshot."""
-    from mavica_tools.tui.screens.swaptest import SwapTestScreen
-
     return [
         # (filename, screen_id or class instance, setup_fn)
         ("home.svg", "home", setup_home),
@@ -468,7 +412,6 @@ def _build_screen_list():
         ("gps.svg", "gps", setup_gps),
         ("diskcheck.svg", "diskcheck", setup_diskcheck),
         ("thumb411.svg", "thumb411", setup_thumb411),
-        ("swaptest.svg", SwapTestScreen, setup_swaptest),
     ]
 
 

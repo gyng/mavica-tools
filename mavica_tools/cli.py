@@ -16,7 +16,6 @@ def main():
     subparsers.add_parser("carve", help="Carve JPEG images from disk images")
     subparsers.add_parser("check", help="Check JPEG files for corruption")
     subparsers.add_parser("repair", help="Repair corrupt/truncated JPEGs")
-    subparsers.add_parser("swaptest", help="Cross-camera swap test tracker")
     subparsers.add_parser("fat12", help="FAT12 filesystem tools (ls, extract)")
     subparsers.add_parser("recover", help="Full recovery pipeline")
     subparsers.add_parser("format", help="Create Mavica-compatible FAT12 format")
@@ -54,8 +53,6 @@ def main():
         from mavica_tools.check import main as tool_main
     elif args.tool == "repair":
         from mavica_tools.repair import main as tool_main
-    elif args.tool == "swaptest":
-        from mavica_tools.swaptest import main as tool_main
     elif args.tool == "fat12":
         from mavica_tools.fat12 import main as tool_main
     elif args.tool == "recover":
@@ -80,7 +77,6 @@ def main():
         print("  mavica carve      — Extract JPEGs from raw disk images")
         print("  mavica check      — Batch-check JPEGs for corruption")
         print("  mavica repair     — Salvage pixels from corrupt JPEGs")
-        print("  mavica swaptest   — Track cross-camera swap tests")
         print("  mavica fat12      — FAT12 filesystem tools (list/extract files)")
         print("  mavica recover    — Full recovery pipeline (read+extract+check+repair)")
         print("  mavica format     — Create Mavica-compatible FAT12 floppy format")
