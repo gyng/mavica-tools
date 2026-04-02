@@ -143,12 +143,16 @@ def build_bad_sectors_disk(good_disk: bytearray) -> bytearray:
     """
     disk = bytearray(good_disk)
 
-    jpeg_004_clusters = (len(_load_fixture("MVC-004F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
+    # Cluster offsets match build_good_disk() order:
+    # MVC-001F, MVC-002F, MVC-004F, MVC-006F, MVC-015F
+    jpeg_001_clusters = (len(_load_fixture("MVC-001F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
     jpeg_002_clusters = (len(_load_fixture("MVC-002F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
+    jpeg_004_clusters = (len(_load_fixture("MVC-004F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
     jpeg_006_clusters = (len(_load_fixture("MVC-006F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
 
-    start_cluster_002 = 2 + jpeg_004_clusters
-    start_cluster_006 = start_cluster_002 + jpeg_002_clusters
+    start_cluster_002 = 2 + jpeg_001_clusters
+    start_cluster_004 = start_cluster_002 + jpeg_002_clusters
+    start_cluster_006 = start_cluster_004 + jpeg_004_clusters
 
     # MVC-006F.JPG: zero out 8 sectors in the middle.
     # FAT chain stays intact (file is extractable but has a hole).
@@ -161,12 +165,16 @@ def build_bad_sectors_disk(good_disk: bytearray) -> bytearray:
 
     # Mark a few free clusters as bad in FAT (0xFF7) — simulates
     # a disk that was scanned and had bad sectors recorded
-    next_free = 2 + jpeg_004_clusters + jpeg_002_clusters + jpeg_006_clusters
-    # Skip past .411 thumbnails
+    next_free = 2 + jpeg_001_clusters + jpeg_002_clusters + jpeg_004_clusters + jpeg_006_clusters
+    # Skip past MVC-015F and .411 thumbnails
+    next_free += (len(_load_fixture("MVC-015F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
     for _, _, thumb_data in [
+        ("MVC-016F", "411", _load_fixture("MVC-016F.411")),
+        ("MVC-015F", "411", _load_fixture("MVC-015F.411")),
         ("MVC-006F", "411", _load_fixture("MVC-006F.411")),
         ("MVC-004F", "411", _load_fixture("MVC-004F.411")),
         ("MVC-002F", "411", _load_fixture("MVC-002F.411")),
+        ("MVC-001F", "411", _load_fixture("MVC-001F.411")),
     ]:
         next_free += (len(thumb_data) + SECTOR_SIZE - 1) // SECTOR_SIZE
     # Mark 4 free clusters as bad in FAT
@@ -187,11 +195,12 @@ def build_truncated_disk(good_disk: bytearray) -> bytearray:
     """Build disk_truncated.img — MVC-002F.JPG data cut to 70%."""
     disk = bytearray(good_disk)
 
-    jpeg_004_clusters = (len(_load_fixture("MVC-004F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
+    # Cluster offsets match build_good_disk() order: MVC-001F first
+    jpeg_001_clusters = (len(_load_fixture("MVC-001F.JPG")) + SECTOR_SIZE - 1) // SECTOR_SIZE
     jpeg_002_size = len(_load_fixture("MVC-002F.JPG"))
     jpeg_002_clusters = (jpeg_002_size + SECTOR_SIZE - 1) // SECTOR_SIZE
 
-    start_cluster_002 = 2 + jpeg_004_clusters
+    start_cluster_002 = 2 + jpeg_001_clusters
     # Zero out the last 30% of MVC-002F.JPG's sectors
     cutoff_cluster = start_cluster_002 + int(jpeg_002_clusters * 0.7)
     for c in range(cutoff_cluster, start_cluster_002 + jpeg_002_clusters):
@@ -205,8 +214,8 @@ def build_deleted_files_disk(good_disk: bytearray) -> bytearray:
     """Build disk_deleted_files.img — MVC-004F.JPG dir entry marked as deleted (0xE5)."""
     disk = bytearray(good_disk)
 
-    # MVC-004F.JPG is the first directory entry (dir_index=0)
-    dir_offset = ROOT_DIR_OFFSET
+    # MVC-004F.JPG is dir_index=2 (order: MVC-001F, MVC-002F, MVC-004F, ...)
+    dir_offset = ROOT_DIR_OFFSET + 2 * 32
     disk[dir_offset] = 0xE5  # mark as deleted
 
     return disk
