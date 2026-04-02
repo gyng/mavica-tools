@@ -97,16 +97,12 @@ async def setup_multipass(app, pilot):
         defrag.update_sector(i, "good")
     defrag.update_sector(2400, "reading")
 
-    # Add file boundaries (simulated Mavica floppy layout)
-    defrag.set_file_boundaries(
-        [
-            ("MVC-001F.JPG", list(range(33, 115))),
-            ("MVC-002F.JPG", list(range(115, 183))),
-            ("MVC-004F.JPG", list(range(183, 253))),
-            ("MVC-006F.JPG", list(range(253, 353))),
-            ("MVC-015F.JPG", list(range(353, 433))),
-        ]
-    )
+    # Use real file boundaries from fixture disk image
+    from mavica_tools.fat12 import file_sector_map
+
+    disk_path = os.path.join(FIXTURES_DIR, "disk_with_photos.img")
+    if os.path.exists(disk_path):
+        defrag.set_file_boundaries(file_sector_map(disk_path))
 
     log = app.screen.query_one("#log", RichLog)
     log.write("[bold]Pass 2/5[/]  2400/2880 sectors read")
@@ -325,16 +321,16 @@ async def setup_diskcheck(app, pilot):
         else:
             defrag.update_sector(i, "good")
 
-    # Add file boundaries
-    defrag.set_file_boundaries(
-        [
-            ("MVC-001F.JPG", list(range(33, 115))),
-            ("MVC-002F.JPG", list(range(115, 183))),
-            ("MVC-004F.JPG", list(range(183, 253))),
-            ("MVC-006F.JPG", list(range(253, 353))),
-            ("MVC-015F.JPG", list(range(353, 433))),
-        ]
-    )
+    # Use real file boundaries from fixture disk image
+    from mavica_tools.fat12 import file_sector_map, parse_disk_image
+
+    disk_path = os.path.join(FIXTURES_DIR, "disk_with_photos.img")
+    if os.path.exists(disk_path):
+        defrag.set_file_boundaries(file_sector_map(disk_path))
+        files_on_disk, _, _ = parse_disk_image(disk_path)
+        file_names = " ".join(f.name for f in files_on_disk)
+    else:
+        file_names = ""
 
     screen.query_one("#progress", ProgressBar).update(total=2880, progress=2880)
 
@@ -349,7 +345,7 @@ async def setup_diskcheck(app, pilot):
     log.write("[bold]Full check complete[/]  2880 sectors tested")
     log.write("  [green]2871 good[/]  [red]5 bad[/]  [#ffaa00]4 marked[/]")
     log.write("  Speed: 14.2 KB/s  Duration: 3m 22s")
-    log.write("  Files: MVC-001F.JPG MVC-002F.JPG MVC-004F.JPG MVC-006F.JPG MVC-015F.JPG")
+    log.write(f"  Files: {file_names}")
 
     await pilot.pause()
 
@@ -360,17 +356,15 @@ async def setup_thumb411(app, pilot):
     with screen.prevent(Input.Changed):
         screen.query_one("#source-path", Input).value = "mavica_out/import_2001-07-04/"
 
-    # Populate file table with .411 entries
+    # List real fixture .411 files
     table = screen.query_one("#results-table", DataTable)
     table.clear()
-    table.add_row("[green]\u25cf[/]", "MVC-001F.411", "5.2KB", "")
-    table.add_row("[green]\u25cf[/]", "MVC-002F.411", "5.1KB", "")
-    table.add_row("[green]\u25cf[/]", "MVC-003F.411", "5.3KB", "")
-    table.add_row("[green]\u25cf[/]", "MVC-004F.411", "5.0KB", "")
-    table.add_row("[green]\u25cf[/]", "MVC-005F.411", "5.2KB", "")
-    table.add_row("[green]\u25cf[/]", "MVC-006F.411", "5.1KB", "")
+    fixture_411s = sorted(f for f in os.listdir(FIXTURES_DIR) if f.endswith(".411"))
+    for name in fixture_411s:
+        size_kb = os.path.getsize(os.path.join(FIXTURES_DIR, name)) / 1024
+        table.add_row("[green]\u25cf[/]", name, f"{size_kb:.1f}KB", "")
 
-    screen.query_one("#btn-convert", Button).label = "Convert 6 files"
+    screen.query_one("#btn-convert", Button).label = f"Convert {len(fixture_411s)} files"
 
     # Show a real .411 thumbnail preview
     from mavica_tools.tui.widgets.image_preview import ImagePreview
