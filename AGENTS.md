@@ -409,6 +409,15 @@ All tests run without hardware. Synthetic disk images and JPEG data are created 
 - **Dev**: pytest>=7.0, pytest-asyncio>=0.23
 - **CI**: GitHub Actions (Linux/Windows/macOS × Python 3.14)
 
+### Linting & Formatting
+
+Uses [ruff](https://docs.astral.sh/ruff/) for both linting and formatting, configured in `pyproject.toml`.
+
+```bash
+python scripts/lint.py          # check only (CI mode)
+python scripts/lint.py --fix    # auto-fix lint issues + reformat
+```
+
 ### Screenshots
 
 README screenshots are generated from headless TUI sessions using Textual's `run_test` API.
@@ -419,6 +428,23 @@ README screenshots are generated from headless TUI sessions using Textual's `run
 - **How it works**: For each screen, the script creates a headless `MavicaApp`, navigates to the screen, populates widgets with sample data via per-screen setup functions, then calls `app.save_screenshot()`.
 - **Adding a screenshot for a new screen**: Add an entry to the `_build_screen_list()` function and write a `setup_<name>()` function to populate the screen with representative sample data.
 - **Size**: Fixed at `(120, 36)` for consistent aspect ratio. Seeded `random` for deterministic trivia on home screen.
+
+### Releasing
+
+Always use `gh release create` to cut releases. The CI release workflow (`.github/workflows/release.yml`) also triggers on `v*` tags and will attach platform binaries.
+
+```bash
+# 1. Bump version in both files
+#    pyproject.toml: version = "X.Y.Z"
+#    mavica_tools/__init__.py: __version__ = "X.Y.Z"
+# 2. Commit, push, tag, create release
+git add pyproject.toml mavica_tools/__init__.py
+git commit -m "Bump version to X.Y.Z"
+git push
+git tag vX.Y.Z
+git push origin vX.Y.Z
+gh release create vX.Y.Z --title "vX.Y.Z" --notes "changelog here"
+```
 
 ### Adding a New Tool
 
