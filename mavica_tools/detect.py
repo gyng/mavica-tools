@@ -151,7 +151,7 @@ def _detect_windows() -> list[FloppyDrive]:
                             size_bytes=size,
                         )
                     )
-    except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+    except subprocess.TimeoutExpired, FileNotFoundError, Exception:
         pass
 
     # Fallback: always suggest A: and B:
@@ -209,7 +209,7 @@ def _detect_macos() -> list[FloppyDrive]:
                                 size_bytes=size,
                             )
                         )
-    except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+    except subprocess.TimeoutExpired, FileNotFoundError, Exception:
         pass
 
     # Fallback
@@ -275,7 +275,7 @@ def _mount_points_windows() -> list[str]:
                     mount = f"{letter}\\"  # e.g. "A:\"
                     if os.path.isdir(mount):
                         paths.append(mount)
-    except (subprocess.TimeoutExpired, FileNotFoundError, Exception):
+    except subprocess.TimeoutExpired, FileNotFoundError, Exception:
         pass
 
     # Fallback: check common floppy letters
@@ -330,7 +330,7 @@ def _mount_points_macos() -> list[str]:
                 name = info.get("MediaName", "")
                 if 1400000 <= size <= 1500000 or "floppy" in name.lower():
                     paths.append(full)
-    except (OSError, subprocess.TimeoutExpired, FileNotFoundError):
+    except OSError, subprocess.TimeoutExpired, FileNotFoundError:
         pass
     return paths
 

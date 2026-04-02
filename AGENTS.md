@@ -10,7 +10,7 @@ Cross-platform: Windows, macOS, Linux. Managed with `uv`. 337 tests.
 
 ```
 mavica-tools/
-├── .github/workflows/ci.yml     # GitHub Actions CI (Linux/Win/Mac × Py 3.11/3.12)
+├── .github/workflows/ci.yml     # GitHub Actions CI (Linux/Win/Mac × Py 3.14)
 ├── mavica_tools/                 # Python package
 │   ├── __init__.py               # Package version
 │   ├── cli.py                    # Main CLI entry point — dispatches to all tools
@@ -405,9 +405,9 @@ All tests run without hardware. Synthetic disk images and JPEG data are created 
 
 ### Dependencies
 
-- **Runtime**: Python 3.10+, Pillow>=9.0, piexif>=1.1.3 (GPS EXIF), Textual>=0.50
+- **Runtime**: Python 3.14+, Pillow>=9.0, piexif>=1.1.3 (GPS EXIF), Textual>=0.50
 - **Dev**: pytest>=7.0, pytest-asyncio>=0.23
-- **CI**: GitHub Actions (Linux/Windows/macOS × Python 3.11/3.12)
+- **CI**: GitHub Actions (Linux/Windows/macOS × Python 3.14)
 
 ### Screenshots
 

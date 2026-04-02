@@ -226,7 +226,7 @@ def read_pass_sectored(
 
         return img_path, errors
 
-    except (OSError, PermissionError):
+    except OSError, PermissionError:
         # Can't open device directly — fall back to dd
         return read_pass(device, pass_num, output_dir)
 

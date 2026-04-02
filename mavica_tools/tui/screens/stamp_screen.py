@@ -6,6 +6,7 @@ and description. Can be launched from the home screen or post-import.
 
 import glob as globmod
 import os
+from datetime import UTC
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -267,9 +268,9 @@ class StampScreen(Screen):
     def _autoselect_timezone(self) -> None:
         """Match the system timezone to the closest Select option."""
         try:
-            from datetime import datetime, timezone
+            from datetime import datetime
 
-            local_offset = datetime.now(timezone.utc).astimezone().utcoffset()
+            local_offset = datetime.now(UTC).astimezone().utcoffset()
             offset_hours = local_offset.total_seconds() / 3600
 
             # Values are strings like "-5", "+9", "+5.5", "UTC"

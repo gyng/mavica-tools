@@ -200,7 +200,7 @@ class ImportWorkflowScreen(Screen):
             boundaries = file_sector_map_from_data(data)
             if boundaries:
                 defrag.set_file_boundaries(boundaries)
-        except (OSError, PermissionError):
+        except OSError:
             pass
 
     # ── Button handlers ───────────────────────────────────────────

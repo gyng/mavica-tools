@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 
@@ -151,13 +151,9 @@ class TestMatchPhotos:
 
 class TestInterpolate:
     def test_midpoint(self):
-        p1 = GpsPoint(
-            lat=47.0, lon=-122.0, alt=0, time=datetime(2001, 7, 4, 10, 0, tzinfo=timezone.utc)
-        )
-        p2 = GpsPoint(
-            lat=48.0, lon=-123.0, alt=100, time=datetime(2001, 7, 4, 10, 10, tzinfo=timezone.utc)
-        )
-        mid_time = datetime(2001, 7, 4, 10, 5, tzinfo=timezone.utc)
+        p1 = GpsPoint(lat=47.0, lon=-122.0, alt=0, time=datetime(2001, 7, 4, 10, 0, tzinfo=UTC))
+        p2 = GpsPoint(lat=48.0, lon=-123.0, alt=100, time=datetime(2001, 7, 4, 10, 10, tzinfo=UTC))
+        mid_time = datetime(2001, 7, 4, 10, 5, tzinfo=UTC)
         result = _interpolate_point(p1, p2, mid_time)
         assert result.lat == pytest.approx(47.5)
         assert result.lon == pytest.approx(-122.5)
@@ -346,7 +342,7 @@ class TestMapHtml:
         matches = [
             GpsMatch(
                 photo_path="/photo1.jpg",
-                point=GpsPoint(47.6, -122.3, None, datetime.now(tz=timezone.utc)),
+                point=GpsPoint(47.6, -122.3, None, datetime.now(tz=UTC)),
                 offset_seconds=0,
             ),
         ]

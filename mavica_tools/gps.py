@@ -12,7 +12,7 @@ import os
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from mavica_tools.utils import get_photo_timestamp as _utils_get_timestamp
 
@@ -107,7 +107,7 @@ def _parse_gpx_time(time_str: str) -> datetime | None:
         try:
             dt = datetime.strptime(time_str, fmt)
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
             return dt
         except ValueError:
             continue
@@ -118,7 +118,7 @@ def _get_photo_time(filepath: str, use_mtime: bool = False) -> datetime | None:
     """Get photo timestamp from EXIF or file mtime, with timezone."""
     dt = _utils_get_timestamp(filepath, use_mtime=use_mtime)
     if dt and dt.tzinfo is None:
-        dt = dt.replace(tzinfo=timezone.utc)
+        dt = dt.replace(tzinfo=UTC)
     return dt
 
 
@@ -253,7 +253,10 @@ def stamp_gps_exif(
 
     Returns (success, message).
     """
-    import piexif
+    try:
+        import piexif
+    except ImportError:
+        return False, "piexif required: pip install piexif"
 
     try:
         exif_dict = piexif.load(photo_path)
@@ -483,9 +486,7 @@ def main():
                     matches.append(
                         GpsMatch(
                             photo_path=path,
-                            point=GpsPoint(
-                                lat=lat, lon=lon, alt=None, time=datetime.now(tz=timezone.utc)
-                            ),
+                            point=GpsPoint(lat=lat, lon=lon, alt=None, time=datetime.now(tz=UTC)),
                             offset_seconds=0,
                         )
                     )

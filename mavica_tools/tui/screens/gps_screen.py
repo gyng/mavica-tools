@@ -3,6 +3,7 @@
 import glob as globmod
 import os
 import webbrowser
+from datetime import UTC
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -326,7 +327,6 @@ class GpsScreen(Screen):
         Returns (path, reason) or (None, "").
         """
         import re
-        from datetime import timezone
 
         gpx_files: list[str] = []
         for d in (directory, os.path.dirname(directory)):
@@ -354,7 +354,7 @@ class GpsScreen(Screen):
                     ts = get_photo_timestamp(p)
                     if ts:
                         if ts.tzinfo is None:
-                            ts = ts.replace(tzinfo=timezone.utc)
+                            ts = ts.replace(tzinfo=UTC)
                         photo_times.append(ts)
                         photo_dates.add(ts.strftime("%Y-%m-%d"))
                         photo_dates.add(ts.strftime("%Y%m%d"))
@@ -537,7 +537,7 @@ class GpsScreen(Screen):
             row_key = table.ordered_rows[row].key
             col_key = table.ordered_columns[4].key  # Location column
             table.update_cell(row_key, col_key, loc)
-        except (IndexError, KeyError):
+        except IndexError, KeyError:
             pass
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
