@@ -2,6 +2,8 @@
 
 Recover photos from Sony Mavica floppy disks. Import, repair, and geotag — via TUI or CLI.
 
+I built this tool since it's difficult to get a good working floppy disk in 2026 and want to make sure I don't lose photos to corruption. Then I bolted on a few convenience tools for EXIF (since EXIF wasn't common back then!)
+
 Works on **Windows**, **macOS**, and **Linux**.
 
 ![mavica-tools home screen](screenshots/home.svg)
