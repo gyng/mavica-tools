@@ -28,7 +28,7 @@ pip install "mavica-tools[gps]" # optional: GPS track merging
 
 ```bash
 mavica import /mnt/floppy -m fd7
-mavica tui    # or use the interactive TUI
+mavica        # or use the interactive TUI
 ```
 
 **Recover a damaged disk:**
@@ -40,7 +40,7 @@ mavica recover device /dev/fd0 -o recovery/ -n 5
 ## TUI
 
 ```bash
-mavica tui
+mavica
 ```
 
 ![import workflow](screenshots/import_workflow.svg)
@@ -91,7 +91,7 @@ See [mavica-floppy-troubleshooting.md](mavica-floppy-troubleshooting.md) for har
 
 ```bash
 uv sync --extra dev                       # install with dev deps
-uv run mavica tui                         # run locally
+uv run mavica                             # run locally
 uv run pytest -v                          # all tests
 uv run pytest -k "not tui" -v             # fast unit tests (~1s)
 uv run pytest tests/test_tui.py -v        # TUI tests (~13s)
