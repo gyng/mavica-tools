@@ -1,6 +1,6 @@
 [project]
 name = "mavica-tools"
-version = "0.1.0"
+version = "0.2.0"
 description = "Floppy disk recovery and troubleshooting toolkit for Sony Mavica cameras"
 readme = "README.md"
 license = {text = "MIT"}
