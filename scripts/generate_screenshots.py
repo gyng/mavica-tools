@@ -37,36 +37,38 @@ async def setup_import_workflow(app, pilot):
     src.value = "A:\\"
     screen.query_one("#output-dir", Input).value = "mavica_out/import_2001-07-04_103000"
 
-    # List real fixture files in the table
-    table = screen.query_one("#results-table", DataTable)
-    fixture_files = sorted(f for f in os.listdir(FIXTURES_DIR) if f.endswith((".JPG", ".411")))
-    for name in fixture_files:
-        size_kb = os.path.getsize(os.path.join(FIXTURES_DIR, name)) / 1024
-        table.add_row("[green]OK[/]", name, f"{size_kb:.1f} KB", "2001-07-04")
-
-    # Show the first JPEG (highlighted row) in preview
-    first_jpg = next((f for f in fixture_files if f.endswith(".JPG")), None)
-    if first_jpg:
-        from PIL import Image
-
-        img = Image.open(os.path.join(FIXTURES_DIR, first_jpg))
-        screen.query_one("#preview", ImagePreview).set_pil_image(img, first_jpg)
-
-    # Populate defrag map from the real disk image
+    # List files from the real disk image (FAT12 order: JPEGs first, .411s at end)
     from mavica_tools.fat12 import file_sector_map, parse_disk_image
 
     disk_path = os.path.join(FIXTURES_DIR, "disk_with_photos.img")
-    defrag = screen.query_one("#defrag-map", DefragMap)
+    table = screen.query_one("#results-table", DataTable)
+    files_on_disk = []
     if os.path.exists(disk_path):
         files_on_disk, fat, data = parse_disk_image(disk_path)
+        for f in files_on_disk:
+            table.add_row("[green]OK[/]", f.name, f"{f.size / 1024:.1f} KB", f.date_str)
+
+    # Show the first file (a JPEG) in preview
+    first_jpg = next((f for f in files_on_disk if f.name.endswith(".JPG")), None)
+    if first_jpg:
+        fixture_jpg = os.path.join(FIXTURES_DIR, first_jpg.name)
+        if os.path.exists(fixture_jpg):
+            from PIL import Image
+
+            img = Image.open(fixture_jpg)
+            screen.query_one("#preview", ImagePreview).set_pil_image(img, first_jpg.name)
+
+    # Populate defrag map
+    defrag = screen.query_one("#defrag-map", DefragMap)
+    if os.path.exists(disk_path):
         for i in range(2880):
             defrag.update_sector(i, "good")
         defrag.set_file_boundaries(file_sector_map(disk_path))
 
-    jpegs = [f for f in fixture_files if f.endswith(".JPG")]
-    thumbs = [f for f in fixture_files if f.endswith(".411")]
+    jpegs = [f for f in files_on_disk if f.name.endswith(".JPG")]
+    thumbs = [f for f in files_on_disk if f.name.endswith(".411")]
     screen.query_one("#status", Static).update(
-        f"  [bold #33ff33]Done![/] {len(fixture_files)} files imported "
+        f"  [bold #33ff33]Done![/] {len(files_on_disk)} files imported "
         f"({len(jpegs)} JPEGs, {len(thumbs)} thumbnails)"
     )
 
@@ -156,46 +158,10 @@ async def setup_recover_image(app, pilot):
 
 
 async def setup_stamp(app, pilot):
-    from textual.widgets import Select
-
-    from mavica_tools.tui.widgets.image_preview import ImagePreview
-
-    screen = app.screen
-    with screen.prevent(Input.Changed):
-        screen.query_one("#source-path", Input).value = FIXTURES_DIR
-
-    # List real fixture JPEGs in the table
-    table = screen.query_one("#results-table", DataTable)
-    table.clear()
-    fixture_jpegs = sorted(f for f in os.listdir(FIXTURES_DIR) if f.endswith(".JPG"))
-    for name in fixture_jpegs:
-        size_kb = os.path.getsize(os.path.join(FIXTURES_DIR, name)) / 1024
-        table.add_row(
-            "[green]\u25cf[/]",
-            name,
-            f"{size_kb:.0f}KB",
-            "[dim]No EXIF[/]",
-            "Sony Mavica MVC-FD7 | 2001-07-04",
-        )
-
-    # Set camera model
-    try:
-        screen.query_one("#camera-model-select", Select).value = "fd7"
-    except Exception:
-        pass
-
-    n = len(fixture_jpegs)
-    screen.query_one("#btn-stamp", Button).label = f"Tag {n} (F2)"
-
-    # Show a different photo than import (MVC-006F for variety)
-    fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-006F.JPG")
-    if os.path.exists(fixture_jpg):
-        from PIL import Image
-
-        img = Image.open(fixture_jpg)
-        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-006F.JPG")
-
+    # Let the real screen logic load files from the fixtures directory
+    app.screen.query_one("#source-path", Input).value = FIXTURES_DIR
     await pilot.pause()
+    await pilot.pause()  # extra pause for file listing to complete
 
 
 async def setup_format(app, pilot):
@@ -351,41 +317,10 @@ async def setup_diskcheck(app, pilot):
 
 
 async def setup_thumb411(app, pilot):
-
-    screen = app.screen
-    with screen.prevent(Input.Changed):
-        screen.query_one("#source-path", Input).value = "mavica_out/import_2001-07-04/"
-
-    # List real fixture .411 files
-    table = screen.query_one("#results-table", DataTable)
-    table.clear()
-    fixture_411s = sorted(f for f in os.listdir(FIXTURES_DIR) if f.endswith(".411"))
-    for name in fixture_411s:
-        size_kb = os.path.getsize(os.path.join(FIXTURES_DIR, name)) / 1024
-        table.add_row("[green]\u25cf[/]", name, f"{size_kb:.1f}KB", "")
-
-    screen.query_one("#btn-convert", Button).label = f"Convert {len(fixture_411s)} files"
-
-    # Show a real .411 thumbnail preview
-    from mavica_tools.tui.widgets.image_preview import ImagePreview
-
-    fixture_411 = os.path.join(FIXTURES_DIR, "MVC-004F.411")
-    if os.path.exists(fixture_411):
-        try:
-            from mavica_tools.thumb411 import decode_411
-
-            img = decode_411(fixture_411)
-            if img:
-                screen.query_one("#preview-original", ImagePreview).set_pil_image(
-                    img, "MVC-004F.411"
-                )
-        except Exception:
-            pass
-
-    log = screen.query_one("#log", RichLog)
-    log.write("[dim]6 .411 file(s) found[/]")
-
+    # Let the real screen logic load .411 files from the fixtures directory
+    app.screen.query_one("#source-path", Input).value = FIXTURES_DIR
     await pilot.pause()
+    await pilot.pause()  # extra pause for file listing + preview to complete
 
 
 # ── Screen registry ─────────────────────────────────────────────────────────

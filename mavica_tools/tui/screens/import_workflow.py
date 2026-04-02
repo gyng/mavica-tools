@@ -103,6 +103,7 @@ class ImportWorkflowScreen(Screen):
 
             # Main action
             with Horizontal(classes="button-row"):
+                yield Button("Preview Disk", variant="warning", id="btn-preview")
                 yield Button("Import Photos (F2)", variant="success", id="btn-import")
                 yield Button("Stop", variant="error", id="btn-stop", disabled=True)
                 yield Button("Next Disk", variant="warning", id="btn-next-disk", disabled=True)
@@ -209,6 +210,8 @@ class ImportWorkflowScreen(Screen):
             self._browse_output()
         elif event.button.id == "btn-open-folder":
             self.action_open_output()
+        elif event.button.id == "btn-preview":
+            self._preview_disk()
         elif event.button.id == "btn-import":
             self._start_import()
         elif event.button.id == "btn-stop":
@@ -281,6 +284,63 @@ class ImportWorkflowScreen(Screen):
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
         if self._imported_files and event.cursor_row < len(self._imported_files):
             self._show_preview(self._imported_files[event.cursor_row])
+
+    # ── Preview disk ──────────────────────────────────────────────
+
+    def _preview_disk(self) -> None:
+        """List files on the source disk/directory without importing."""
+        source = self._source_path
+        if not source:
+            self.notify("Enter a floppy path, mounted drive, or disk image", severity="warning")
+            return
+        self.run_worker(self._do_preview(source), exclusive=True)
+
+    async def _do_preview(self, source: str) -> None:
+        """Read file listing from source and populate the table + defrag map."""
+        table = self.query_one("#results-table", DataTable)
+        table.clear()
+        log = self.query_one("#log", RichLog)
+        self._source_files = []
+
+        if source.lower().endswith(".img") and os.path.isfile(source):
+            # Disk image — parse FAT12
+            try:
+                from mavica_tools.fat12 import parse_disk_image
+
+                files, fat, data = parse_disk_image(source)
+                for f in files:
+                    table.add_row("", f.name, f"{f.size / 1024:.1f} KB", f.date_str)
+                    # Construct a fake path for preview ordering
+                    self._source_files.append(source)
+                log.write(f"[dim]Disk image: {len(files)} files found[/]")
+            except Exception as e:
+                log.write(f"[red]Failed to read disk image: {e}[/]")
+        elif os.path.isdir(source):
+            # Mounted directory — list Mavica files
+            from mavica_tools.utils import gather_mavica_files
+
+            files = gather_mavica_files(source)
+            self._source_files = files
+            for path in files:
+                name = os.path.basename(path)
+                try:
+                    size_kb = os.path.getsize(path) / 1024
+                    size_str = f"{size_kb:.1f} KB"
+                except OSError:
+                    size_str = "?"
+                table.add_row("", name, size_str, "")
+            log.write(f"[dim]{len(files)} file(s) on disk[/]")
+
+            # Preview first file
+            if files:
+                self._show_preview(files[0])
+                table.focus()
+        else:
+            log.write(f"[red]Cannot read: {source}[/]")
+            return
+
+        # Populate defrag map
+        self._try_populate_defrag(source)
 
     # ── Import ────────────────────────────────────────────────────
 
