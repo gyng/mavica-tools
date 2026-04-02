@@ -65,7 +65,7 @@ jobs:
 
       - name: Rename binaries
         run: |
-          mv mavica-tools-windows/mavica.exe mavica-windows.exe
+          mv mavica-tools-windows/mavica.exe mavica.exe
           mv mavica-tools-mac/mavica mavica-mac
           mv mavica-tools-linux/mavica mavica-linux
 
@@ -73,16 +73,16 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            mavica-windows.exe
+            mavica.exe
             mavica-mac
             mavica-linux
           body: |
             ## mavica-tools ${{ github.ref_name }}
 
             Download the binary for your platform — single file, no install needed:
-            - **Windows**: `mavica-windows.exe`
-            - **macOS**: `mavica-mac` (run `chmod +x mavica-mac` first)
-            - **Linux**: `mavica-linux` (run `chmod +x mavica-linux` first)
+            - **Windows**: `mavica.exe`
+            - **macOS**: `mavica-mac` (`chmod +x` first)
+            - **Linux**: `mavica-linux` (`chmod +x` first)
 
             Or install via pip/uv (Python 3.14+):
             ```bash
