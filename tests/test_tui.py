@@ -77,9 +77,9 @@ async def test_key_navigates_to_correct_screen(key, expected_screen_cls):
         await pilot.pause()
         await pilot.press(key)
         await pilot.pause()
-        assert isinstance(
-            app.screen, expected_screen_cls
-        ), f"Expected {expected_screen_cls.__name__} but got {type(app.screen).__name__}"
+        assert isinstance(app.screen, expected_screen_cls), (
+            f"Expected {expected_screen_cls.__name__} but got {type(app.screen).__name__}"
+        )
 
 
 # ---------------------------------------------------------------------------
