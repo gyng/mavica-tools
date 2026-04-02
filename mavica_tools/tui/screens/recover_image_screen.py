@@ -2,6 +2,7 @@
 
 import os
 from io import BytesIO
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -51,9 +52,11 @@ def _find_bad_sectors(data: bytes) -> set[int]:
     # Zero-filled sectors within allocated file data indicate failed reads
     for sector in allocated:
         offset = sector * _SECTOR_SIZE
-        if offset + _SECTOR_SIZE <= len(data):
-            if data[offset : offset + _SECTOR_SIZE] == _ZERO_SECTOR:
-                bad.add(sector)
+        if (
+            offset + _SECTOR_SIZE <= len(data)
+            and data[offset : offset + _SECTOR_SIZE] == _ZERO_SECTOR
+        ):
+            bad.add(sector)
 
     return bad
 
@@ -118,7 +121,7 @@ class RecoverImageScreen(Screen):
     }
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("b", "browse", "Browse", show=True),
         Binding("f2", "extract", "Extract", show=True),
@@ -654,7 +657,7 @@ class RecoverImageScreen(Screen):
         progress.update(total=len(results), progress=0)
         self._extracted_paths = []
 
-        for i, (orig_name, out_path, size, deleted) in enumerate(results):
+        for i, (orig_name, out_path, _size, _deleted) in enumerate(results):
             if worker.is_cancelled:
                 log.write("[yellow]Cancelled.[/]")
                 return i

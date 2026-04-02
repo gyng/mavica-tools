@@ -383,7 +383,7 @@ def _write_windows_device(device: str, image: bytes) -> tuple[bool, str]:
         # Lock the volume — retry a few times as a previous operation
         # (e.g. disk checker) may still be releasing its handle
         locked = False
-        for attempt in range(5):
+        for _attempt in range(5):
             locked = kernel32.DeviceIoControl(
                 handle,
                 FSCTL_LOCK_VOLUME,
@@ -539,7 +539,7 @@ def _get_device_size(device: str) -> int | None:
             BLKGETSIZE64 = 0x80081272
             with open(device, "rb") as f:
                 buf = b"\x00" * 8
-                buf = fcntl.ioctl(f.fileno(), BLKGETSIZE64, buf)
+                buf = fcntl.ioctl(f.fileno(), BLKGETSIZE64, buf)  # type: ignore[attr-defined]
                 return _struct.unpack("Q", buf)[0]
         except Exception:
             pass
@@ -699,7 +699,7 @@ def format_floppy_full(
     return True, "Formatted successfully (all sectors verified)", 0
 
 
-def _full_format_unix(device, on_sector=None):
+def _full_format_unix(device: str, on_sector=None) -> tuple[bool, str, list[int]]:
     """Full format on Linux/macOS — write zeros, read back, verify.
 
     Returns (success, message, list_of_bad_sector_indices).
@@ -742,7 +742,7 @@ def _full_format_unix(device, on_sector=None):
     return True, "", bad_list
 
 
-def _full_format_win32(device, on_sector=None):
+def _full_format_win32(device: str, on_sector=None) -> tuple[bool, str, list[int]]:
     """Full format on Windows — write zeros via Win32 API, read back, verify."""
     import ctypes
     import ctypes.wintypes as wt
@@ -770,10 +770,10 @@ def _full_format_win32(device, on_sector=None):
     if handle == ctypes.c_void_p(-1).value:
         err = ctypes.get_last_error() or kernel32.GetLastError()
         if err == 5:
-            return False, "Permission denied. Run as Administrator.", 0
+            return False, "Permission denied. Run as Administrator.", []
         elif err == 21:
-            return False, "Drive not ready. Is a disk inserted?", 0
-        return False, f"Cannot open device (Win32 error {err})", 0
+            return False, "Drive not ready. Is a disk inserted?", []
+        return False, f"Cannot open device (Win32 error {err})", []
 
     bad_list: list[int] = []
     try:
@@ -782,7 +782,7 @@ def _full_format_win32(device, on_sector=None):
         dummy = wt.DWORD(0)
 
         locked = False
-        for attempt in range(5):
+        for _attempt in range(5):
             locked = kernel32.DeviceIoControl(
                 handle,
                 FSCTL_LOCK_VOLUME,

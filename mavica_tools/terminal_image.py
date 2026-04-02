@@ -88,7 +88,7 @@ def _sixel_display(image_bytes: bytes, width: int | None = None) -> None:
     try:
         from PIL import Image
 
-        img = Image.open(io.BytesIO(image_bytes))
+        img: Image.Image = Image.open(io.BytesIO(image_bytes))
         if width:
             aspect = img.height / img.width
             img = img.resize((width, int(width * aspect)))
@@ -153,7 +153,7 @@ def _halfblock_display(image_bytes: bytes, width: int | None = None) -> None:
     try:
         from PIL import Image
 
-        img = Image.open(io.BytesIO(image_bytes))
+        img: Image.Image = Image.open(io.BytesIO(image_bytes))
         img = img.convert("RGB")
 
         # Target width
@@ -165,13 +165,14 @@ def _halfblock_display(image_bytes: bytes, width: int | None = None) -> None:
 
         img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
         pixels = img.load()
+        assert pixels is not None
 
         for y in range(0, target_h, 2):
             line = []
             for x in range(target_w):
-                tr, tg, tb = pixels[x, y]
+                tr, tg, tb = pixels[x, y]  # type: ignore[misc]
                 if y + 1 < target_h:
-                    br, bg, bb = pixels[x, y + 1]
+                    br, bg, bb = pixels[x, y + 1]  # type: ignore[misc]
                 else:
                     br, bg, bb = 0, 0, 0
                 line.append(f"\033[38;2;{tr};{tg};{tb}m\033[48;2;{br};{bg};{bb}m\u2580")

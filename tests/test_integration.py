@@ -3,6 +3,7 @@
 Tests the full recovery workflow: create disk image → carve → check → repair → stamp.
 """
 
+import contextlib
 import os
 import struct
 import tempfile
@@ -273,7 +274,7 @@ class TestRealPhotoFixtures:
         results = extract_with_names(bad_disk, extract_dir)
 
         # Find the damaged file
-        for name, path, size, deleted in results:
+        for name, path, _size, _deleted in results:
             if name == "MVC-006F.JPG":
                 check = check_jpeg_structure(path)
                 assert any("zero-byte" in issue for issue in check["issues"])
@@ -293,8 +294,7 @@ class TestEdgeCases:
     def test_zero_byte_jpeg(self, tmp_dir):
         """A zero-byte file should not crash check or repair."""
         path = os.path.join(tmp_dir, "empty.jpg")
-        with open(path, "wb") as f:
-            pass
+        open(path, "wb").close()
         result = check_jpeg_structure(path)
         assert result["valid"] is False
 
@@ -391,10 +391,8 @@ class TestFuzzLike:
             f.write(data)
 
         # Should not crash — may raise, but not crash
-        try:
+        with contextlib.suppress(Exception):
             list_files(img_path)
-        except Exception:
-            pass  # Expected — corrupt data
 
     def test_check_binary_garbage(self, tmp_dir):
         """Checking a non-JPEG binary file should not crash."""

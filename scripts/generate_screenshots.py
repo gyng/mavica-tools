@@ -214,7 +214,7 @@ async def setup_gps(app, pilot):
     table.add_columns("", "Filename", "Size", "Date", "Location", "Offset")
     matched_count = 0
     match_coords = []
-    for i, (path, match) in enumerate(zip(fixture_jpegs, matches)):
+    for i, (path, match) in enumerate(zip(fixture_jpegs, matches, strict=False)):
         name = os.path.basename(path)
         size_kb = os.path.getsize(path) / 1024
         from mavica_tools.utils import get_photo_timestamp

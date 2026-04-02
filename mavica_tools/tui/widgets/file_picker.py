@@ -1,6 +1,7 @@
 """File and directory picker modal widget."""
 
 import os
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
@@ -79,7 +80,7 @@ class FilePicker(ModalScreen[str]):
     }
     """
 
-    BINDINGS = [("escape", "cancel", "Cancel")]
+    BINDINGS: ClassVar[list] = [("escape", "cancel", "Cancel")]
 
     def __init__(
         self,

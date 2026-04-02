@@ -6,6 +6,7 @@ external GPS logger data (Garmin, phone GPX export, Google Timeline).
 """
 
 import argparse
+import contextlib
 import glob as globmod
 import math
 import os
@@ -13,6 +14,7 @@ import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from typing import Any
 
 from mavica_tools.utils import get_photo_timestamp as _utils_get_timestamp
 
@@ -61,10 +63,8 @@ def parse_gpx(gpx_path: str) -> list[GpsPoint]:
         alt = None
         ele = trkpt.find(f"{ns}ele")
         if ele is not None and ele.text:
-            try:
+            with contextlib.suppress(ValueError):
                 alt = float(ele.text)
-            except ValueError:
-                pass
 
         time_elem = trkpt.find(f"{ns}time")
         if time_elem is not None and time_elem.text:
@@ -80,10 +80,8 @@ def parse_gpx(gpx_path: str) -> list[GpsPoint]:
         alt = None
         ele = wpt.find(f"{ns}ele")
         if ele is not None and ele.text:
-            try:
+            with contextlib.suppress(ValueError):
                 alt = float(ele.text)
-            except ValueError:
-                pass
 
         time_elem = wpt.find(f"{ns}time")
         if time_elem is not None and time_elem.text:
@@ -171,7 +169,7 @@ def match_photos_to_track(
 
     track_times = [p.time for p in track_points]
 
-    results = []
+    results: list[GpsMatch | None] = []
     for path in photo_paths:
         photo_time = _get_photo_time(path, use_mtime)
         if photo_time is None:
@@ -223,7 +221,9 @@ def match_photos_to_track(
     return results
 
 
-def _decimal_to_dms(decimal_degrees: float) -> tuple[tuple, str]:
+def _decimal_to_dms(
+    decimal_degrees: float,
+) -> tuple[tuple[int, int], tuple[int, int], tuple[int, int]]:
     """Convert decimal degrees to (degrees, minutes, seconds) rational tuples + ref."""
     if decimal_degrees < 0:
         decimal_degrees = -decimal_degrees
@@ -264,7 +264,7 @@ def stamp_gps_exif(
         lat_dms = _decimal_to_dms(lat)
         lon_dms = _decimal_to_dms(lon)
 
-        gps_ifd = {
+        gps_ifd: dict[int, Any] = {
             piexif.GPSIFD.GPSLatitudeRef: b"N" if lat >= 0 else b"S",
             piexif.GPSIFD.GPSLatitude: lat_dms,
             piexif.GPSIFD.GPSLongitudeRef: b"E" if lon >= 0 else b"W",
@@ -421,7 +421,7 @@ def main():
         )
 
         matched = 0
-        for path, match in zip(files, matches):
+        for path, match in zip(files, matches, strict=False):
             name = os.path.basename(path)
             if match:
                 matched += 1

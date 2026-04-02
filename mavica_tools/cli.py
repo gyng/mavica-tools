@@ -29,14 +29,13 @@ def main():
     # Parse only the first argument to determine which tool to run
     args, remaining = parser.parse_known_args()
 
-    if args.tool is None and not remaining:
-        # No subcommand — launch TUI if interactive, otherwise show help
-        if sys.stdin.isatty() and sys.stdout.isatty():
-            from mavica_tools.tui.app import run
+    if args.tool is None and not remaining and sys.stdin.isatty() and sys.stdout.isatty():
+        # Interactive with no subcommand — launch TUI
+        from mavica_tools.tui.app import run
 
-            run()
-            return
-        # Non-interactive: fall through to help text below
+        run()
+        return
+    # Non-interactive or has remaining args: fall through to help text below
 
     if args.tool == "tui":
         from mavica_tools.tui.app import run

@@ -7,6 +7,7 @@ and description. Can be launched from the home screen or post-import.
 import glob as globmod
 import os
 from datetime import UTC
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -122,7 +123,7 @@ class StampScreen(Screen):
     }
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("b", "browse", "Browse", show=True),
         Binding("f2", "stamp", "Tag", show=True),
@@ -729,7 +730,7 @@ class StampScreen(Screen):
                 padding: 0 0 1 0;
             }
             """
-            BINDINGS = [("escape", "cancel", "Cancel")]
+            BINDINGS: ClassVar[list] = [("escape", "cancel", "Cancel")]
 
             def compose(self_inner):
                 with Vertical(id="detail-outer"):

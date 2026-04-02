@@ -4,6 +4,7 @@ import glob as globmod
 import os
 import webbrowser
 from datetime import UTC
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -76,7 +77,7 @@ class GpsScreen(Screen):
     }
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("b", "browse", "Browse", show=True),
         Binding("f2", "merge", "Merge", show=True),

@@ -2,6 +2,7 @@
 
 import glob as globmod
 import os
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -29,7 +30,7 @@ from mavica_tools.tui.widgets.image_preview import ImagePreview
 class RepairScreen(Screen):
     """Check JPEGs for corruption, then repair bad files."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("b", "browse", "Browse", show=True),
     ]

@@ -173,7 +173,7 @@ class TestDecimalToDms:
 
 class TestStampGps:
     def test_writes_gps_exif(self, tmp_dir):
-        piexif = pytest.importorskip("piexif")
+        pytest.importorskip("piexif")
         path = os.path.join(tmp_dir, "photo.jpg")
         img = Image.new("RGB", (640, 480))
         img.save(path, "JPEG")
@@ -297,7 +297,7 @@ class TestFixtureGpx:
 
         # Default 5m tolerance: MVC-002F and MVC-004F match, MVC-006F doesn't
         matches_5m = match_photos_to_track(fixture_jpegs, track, tolerance_seconds=300)
-        names = {os.path.basename(f): m for f, m in zip(fixture_jpegs, matches_5m)}
+        names = {os.path.basename(f): m for f, m in zip(fixture_jpegs, matches_5m, strict=False)}
         assert names["MVC-002F.JPG"] is not None  # 42s offset
         assert names["MVC-002F.JPG"].offset_seconds < 60
         assert names["MVC-004F.JPG"] is not None  # 3m18s offset
@@ -306,7 +306,7 @@ class TestFixtureGpx:
 
         # Increase tolerance to 7m: now MVC-006F should also match
         matches_7m = match_photos_to_track(fixture_jpegs, track, tolerance_seconds=420)
-        names_7m = {os.path.basename(f): m for f, m in zip(fixture_jpegs, matches_7m)}
+        names_7m = {os.path.basename(f): m for f, m in zip(fixture_jpegs, matches_7m, strict=False)}
         assert names_7m["MVC-006F.JPG"] is not None
         assert names_7m["MVC-006F.JPG"].offset_seconds < 420
 

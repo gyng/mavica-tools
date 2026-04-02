@@ -15,6 +15,7 @@ import sys
 from datetime import datetime
 from fractions import Fraction
 
+from mavica_tools.mavica_db import MAVICA_SPECS
 from mavica_tools.utils import gather_jpegs
 
 # EXIF tag IDs
@@ -48,21 +49,18 @@ TAG_WHITE_BALANCE = 0xA403
 TAG_DIGITAL_ZOOM_RATIO = 0xA404
 TAG_SCENE_CAPTURE_TYPE = 0xA406
 
-# Camera specs — sourced from mavica-db.tsv via mavica_db module
-from mavica_tools.mavica_db import MAVICA_SPECS
-
 # Convenience shorthand lookup
 MAVICA_MODELS = {k: v["model"] for k, v in MAVICA_SPECS.items()}
 
 
 def stamp_jpeg(
     input_path: str,
-    output_path: str = None,
-    model: str = None,
-    date: str = None,
-    description: str = None,
+    output_path: str | None = None,
+    model: str | None = None,
+    date: str | None = None,
+    description: str | None = None,
     overwrite: bool = False,
-) -> tuple[bool, str, str]:
+) -> tuple[bool, str | None, str]:
     """Add EXIF metadata to a JPEG file.
 
     Args:
@@ -203,10 +201,10 @@ def stamp_jpeg(
 
 def stamp_files(
     paths: list[str],
-    output_dir: str = None,
-    model: str = None,
-    date: str = None,
-    description: str = None,
+    output_dir: str | None = None,
+    model: str | None = None,
+    date: str | None = None,
+    description: str | None = None,
     overwrite: bool = False,
 ):
     """Stamp multiple JPEG files with metadata."""
@@ -225,10 +223,7 @@ def stamp_files(
     for i, path in enumerate(paths):
         name = os.path.basename(path)
 
-        if output_dir:
-            out_path = os.path.join(output_dir, name)
-        else:
-            out_path = None
+        out_path = os.path.join(output_dir, name) if output_dir else None
 
         ok, result_path, msg = stamp_jpeg(
             path,

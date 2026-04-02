@@ -8,6 +8,7 @@ import argparse
 import random
 import sys
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from mavica_tools.multipass import (
     HEADS,
@@ -17,6 +18,9 @@ from mavica_tools.multipass import (
     TRACKS,
     read_sectors,
 )
+
+if TYPE_CHECKING:
+    from mavica_tools.diagnose import DriveDiagnosis
 
 # Track 0 holds boot sector, FAT, root directory — critical for camera use
 CRITICAL_SECTORS = set(range(0, 33))
@@ -37,7 +41,7 @@ class DiskCheckResult:
     quick_mode: bool = False
     has_filesystem: bool = False
     file_list: list = field(default_factory=list)
-    diagnosis: object = None
+    diagnosis: "DriveDiagnosis | None" = None
     elapsed_seconds: float = 0.0
 
 
@@ -271,7 +275,7 @@ def _write_verify_win32(device, on_sector=None):
         dummy = wt.DWORD(0)
 
         locked = False
-        for attempt in range(5):
+        for _attempt in range(5):
             locked = kernel32.DeviceIoControl(
                 handle,
                 FSCTL_LOCK_VOLUME,

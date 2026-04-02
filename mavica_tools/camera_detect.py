@@ -8,6 +8,7 @@ Uses multiple heuristics:
 5. Filename patterns (MVC-NNN vs PICT0NNN)
 """
 
+import contextlib
 import glob as globmod
 import os
 from dataclasses import dataclass
@@ -250,8 +251,6 @@ def _avg_file_size(jpegs: list[str]) -> int:
         return 0
     sizes = []
     for f in jpegs[:20]:
-        try:
+        with contextlib.suppress(OSError):
             sizes.append(os.path.getsize(f))
-        except OSError:
-            pass
     return sum(sizes) // len(sizes) if sizes else 0

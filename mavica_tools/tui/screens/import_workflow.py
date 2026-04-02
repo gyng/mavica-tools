@@ -7,6 +7,7 @@ Stamping/tagging is handled by the separate Stamp screen.
 
 import glob as globmod
 import os
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -71,7 +72,7 @@ class ImportWorkflowScreen(Screen):
     }
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("f2", "start_import", "Import", show=True),
         Binding("o", "open_output", "Open Out", show=True),
@@ -467,7 +468,7 @@ class ImportWorkflowScreen(Screen):
                 )
                 progress.update(total=len(results), progress=0)
 
-                for i, (orig_name, out_path, size, deleted) in enumerate(results):
+                for i, (_orig_name, out_path, size, deleted) in enumerate(results):
                     self._imported_files.append(out_path)
                     total_bytes += size
                     prefix = "[red]DEL[/] " if deleted else f"{i + 1}"

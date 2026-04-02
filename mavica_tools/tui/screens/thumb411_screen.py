@@ -2,6 +2,7 @@
 
 import glob as globmod
 import os
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -54,7 +55,7 @@ class Thumb411Screen(Screen):
     }
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("b", "browse", "Browse", show=True),
         Binding("f2", "convert", "Convert", show=True),
@@ -307,10 +308,7 @@ class Thumb411Screen(Screen):
             sel = "[green]\u25cf[/]" if selected else "[dim]\u25cb[/]"
             name_styled = f"[bold]{name}[/]" if selected else f"[dim]{name}[/]"
             size_styled = size_str if selected else f"[dim]{size_str}[/]"
-            if out:
-                status = f"[green]{os.path.basename(out)}[/]"
-            else:
-                status = "[dim]--[/]"
+            status = f"[green]{os.path.basename(out)}[/]" if out else "[dim]--[/]"
             rows_data.append((sel, name_styled, size_styled, status))
 
         cursor = table.cursor_row
@@ -420,7 +418,7 @@ class Thumb411Screen(Screen):
 
         success = fail = 0
 
-        for progress_idx, (i, filepath) in enumerate(to_convert):
+        for _progress_idx, (i, filepath) in enumerate(to_convert):
             if worker.is_cancelled:
                 log.write("[yellow]Cancelled.[/]")
                 self._reset_button()

@@ -39,10 +39,7 @@ def _is_slow_device(path: str) -> bool:
     if len(p) >= 2 and p[1] == ":" and p[0] in ("A", "B"):
         return True
     # Linux/macOS floppy mounts
-    for prefix in ("/MNT/FLOPPY", "/MEDIA/FLOPPY", "/DEV/FD"):
-        if p.startswith(prefix):
-            return True
-    return False
+    return any(p.startswith(prefix) for prefix in ("/MNT/FLOPPY", "/MEDIA/FLOPPY", "/DEV/FD"))
 
 
 def inline_thumbnail(path: str, width: int = 2) -> str:

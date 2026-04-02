@@ -7,6 +7,7 @@ picking the first good read for each sector.
 """
 
 import argparse
+import contextlib
 import os
 import subprocess
 import sys
@@ -103,10 +104,8 @@ def read_sectors(
                 for s in track_sectors:
                     if on_sector:
                         on_sector(s, "waiting")
-                try:
+                with contextlib.suppress(OSError):
                     dev.seek(min(track_end, TOTAL_SECTORS) * SECTOR_SIZE)
-                except OSError:
-                    pass
                 sector_idx = min(track_end, TOTAL_SECTORS)
                 continue
 
@@ -135,10 +134,8 @@ def read_sectors(
                         continue
                 except OSError:
                     pass
-                try:
+                with contextlib.suppress(OSError):
                     dev.seek(track_start * SECTOR_SIZE)
-                except OSError:
-                    pass
 
             # Sector-by-sector for this track
             if sector_idx < track_start:
@@ -150,28 +147,22 @@ def read_sectors(
                     try:
                         dev.seek((s + 1) * SECTOR_SIZE)
                     except OSError:
-                        try:
+                        with contextlib.suppress(OSError):
                             dev.read(SECTOR_SIZE)
-                        except OSError:
-                            pass
                     continue
 
                 if only_sectors is not None and s not in only_sectors:
                     if on_sector:
                         on_sector(s, "waiting")
-                    try:
+                    with contextlib.suppress(OSError):
                         dev.seek((s + 1) * SECTOR_SIZE)
-                    except OSError:
-                        pass
                     continue
 
                 if on_sector:
                     on_sector(s, "reading")
 
-                try:
+                with contextlib.suppress(OSError):
                     dev.seek(s * SECTOR_SIZE)
-                except OSError:
-                    pass
 
                 try:
                     chunk = dev.read(SECTOR_SIZE)

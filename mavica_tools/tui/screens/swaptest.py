@@ -1,6 +1,7 @@
 """Swap test screen — cross-camera test tracker."""
 
 import os
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -14,7 +15,7 @@ from mavica_tools.swaptest import DEFAULT_DB, load_db, save_db
 class SwapTestScreen(Screen):
     """Interactive cross-camera swap test matrix."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
     ]
 

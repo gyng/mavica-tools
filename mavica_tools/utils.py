@@ -5,6 +5,9 @@ Common patterns extracted to reduce duplication across modules.
 
 import glob
 import os
+import platform
+import subprocess
+import time
 from datetime import datetime
 
 MAVICA_EXTENSIONS = (".jpg", ".jpeg", ".411")
@@ -112,11 +115,6 @@ def get_photo_date(filepath: str) -> str | None:
     if ts:
         return ts.strftime("%Y-%m-%d")
     return None
-
-
-import platform
-import subprocess
-import time
 
 
 def open_directory(path: str) -> None:

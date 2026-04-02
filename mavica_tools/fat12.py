@@ -106,10 +106,7 @@ def read_fat12(data: bytes) -> list[int]:
 
         word = fat_data[byte_offset] | (fat_data[byte_offset + 1] << 8)
 
-        if i % 2 == 0:
-            entry = word & 0x0FFF
-        else:
-            entry = (word >> 4) & 0x0FFF
+        entry = word & 0x0FFF if i % 2 == 0 else (word >> 4) & 0x0FFF
 
         entries.append(entry)
 
@@ -292,7 +289,7 @@ def extract_with_names(
     output_dir: str,
     include_deleted: bool = False,
     auto_stamp: bool = False,
-    camera_model: str = None,
+    camera_model: str | None = None,
 ):
     """Extract files from a Mavica disk image preserving original names.
 
@@ -355,17 +352,14 @@ def extract_with_names(
     return results
 
 
-def _auto_stamp_exif(filepath: str, entry: FileEntry, camera_model: str = None):
+def _auto_stamp_exif(filepath: str, entry: FileEntry, camera_model: str | None = None):
     """Stamp EXIF metadata from FAT12 directory entry timestamps."""
     try:
         from mavica_tools.stamp import stamp_jpeg
 
         date_str = None
         if entry.date_str:
-            if entry.time_str:
-                date_str = f"{entry.date_str} {entry.time_str}"
-            else:
-                date_str = entry.date_str
+            date_str = f"{entry.date_str} {entry.time_str}" if entry.time_str else entry.date_str
 
         if date_str or camera_model:
             stamp_jpeg(

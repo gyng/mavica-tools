@@ -284,7 +284,7 @@ def diagnose_errors(
             )
 
     # ── Produce final diagnosis ──
-    best = max(scores, key=scores.get)
+    best = max(scores, key=lambda k: scores[k])
     best_score = scores[best]
 
     if best_score == 0:

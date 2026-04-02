@@ -1,6 +1,8 @@
 """Main Textual application for mavica-tools."""
 
+import contextlib
 import os
+from typing import ClassVar
 
 from textual.app import App
 from textual.binding import Binding
@@ -185,13 +187,13 @@ class MavicaApp(App):
     SUB_TITLE = "Floppy Recovery Toolkit"
     CSS = CSS
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("q", "request_quit", "Quit", show=True, priority=True),
         Binding("h", "go_home", "Home", show=True),
         Binding("question_mark", "help", "Help", show=True),
     ]
 
-    SCREENS = {
+    SCREENS: ClassVar[dict] = {
         "home": HomeScreen,
         "import_workflow": ImportWorkflowScreen,
         "recover_image": RecoverImageScreen,
@@ -266,7 +268,7 @@ class MavicaApp(App):
                 min-width: 12;
             }
             """
-            BINDINGS = [
+            BINDINGS: ClassVar[list] = [
                 Binding("y", "confirm", show=False),
                 Binding("n", "cancel", show=False),
                 Binding("q", "confirm", show=False),
@@ -415,10 +417,8 @@ class MavicaApp(App):
             )
             self._screenshot_to_file()
         finally:
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
 
     def action_help(self) -> None:
         self.notify(

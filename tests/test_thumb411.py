@@ -23,7 +23,7 @@ def make_411(directory: str, name: str = "MVC-001.411") -> str:
     # Generate synthetic YCbCr 4:1:1 data:
     # 6 bytes per 4-pixel group, 64*48/4 = 768 groups
     data = bytearray()
-    for i in range(768):
+    for _i in range(768):
         # Y0, Y1, Y2, Y3, Cb, Cr — mid-gray with neutral chroma
         data.extend([128, 128, 128, 128, 128, 128])
     with open(path, "wb") as f:

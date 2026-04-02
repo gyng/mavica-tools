@@ -1,5 +1,7 @@
 """Format screen — create Mavica-compatible FAT12 disk images."""
 
+from typing import ClassVar
+
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
@@ -25,7 +27,7 @@ class _StopRequested(Exception):
 class FormatScreen(Screen):
     """Create Mavica-compatible FAT12 format."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
     ]
 

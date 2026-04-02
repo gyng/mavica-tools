@@ -1,5 +1,7 @@
 """Home screen — organized by user workflow priority."""
 
+from typing import ClassVar
+
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
@@ -64,7 +66,9 @@ class HomeScreen(Screen):
     }
     """
 
-    BINDINGS = [Binding(key, f"tool('{screen_id}')", show=False) for key, screen_id in _ALL_TOOLS]
+    BINDINGS: ClassVar[list] = [
+        Binding(key, f"tool('{screen_id}')", show=False) for key, screen_id in _ALL_TOOLS
+    ]
 
     _NAME_WIDTH = 20
 

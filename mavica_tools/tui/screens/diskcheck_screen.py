@@ -1,6 +1,7 @@
 """Disk checker screen — test if a floppy is safe for camera use."""
 
 import platform
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -37,7 +38,7 @@ class DiskCheckScreen(Screen):
     }
     """
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("f", "full_check", "Full Check"),
         Binding("q", "quick_check", "Quick Check"),

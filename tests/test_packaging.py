@@ -8,6 +8,7 @@ import importlib
 import os
 import subprocess
 import sys
+from typing import ClassVar
 
 import pytest
 
@@ -15,7 +16,7 @@ import pytest
 class TestModuleImports:
     """Every module should import cleanly without side effects."""
 
-    MODULES = [
+    MODULES: ClassVar[list] = [
         "mavica_tools",
         "mavica_tools.cli",
         "mavica_tools.multipass",

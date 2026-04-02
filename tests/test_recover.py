@@ -178,7 +178,7 @@ class TestRecoverFromFixtures:
         assert len(results) == 11  # all files still extractable
 
         # Find the damaged JPEG (MVC-006F.JPG) and check it
-        for name, path, size, deleted in results:
+        for name, path, _size, _deleted in results:
             if name == "MVC-006F.JPG":
                 check = check_jpeg_structure(path)
                 assert any("zero-byte" in issue for issue in check["issues"])
@@ -196,7 +196,7 @@ class TestRecoverFromFixtures:
         results = extract_with_names(trunc_disk, output_dir)
 
         # MVC-002F.JPG should be extracted but damaged
-        for name, path, size, deleted in results:
+        for name, path, _size, _deleted in results:
             if name == "MVC-002F.JPG":
                 check = check_jpeg_structure(path)
                 assert len(check["issues"]) > 0  # should have issues

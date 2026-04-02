@@ -2,6 +2,7 @@
 
 import os
 import platform
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -36,7 +37,7 @@ def _default_floppy_device() -> str:
 class MultipassScreen(Screen):
     """Multi-pass floppy disk imager with sector map."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("b", "browse", "Browse", show=True),
     ]

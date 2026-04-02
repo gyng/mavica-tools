@@ -95,7 +95,7 @@ These are the integration points. The TUI calls these directly — no subprocess
 | `fat12` | `extract_with_names(image_path, output_dir, ...)` | `list[(name, path, size, is_deleted)]` |
 | `recover` | `recover_from_images(paths, output_dir, use_fat)` | `dict` — summary with total/good/repaired/failed counts |
 | `format` | `create_disk_image(volume_label)` | `bytes` — 1.44MB FAT12 disk image |
-| `stamp` | `stamp_jpeg(path, output, model, date, ...)` | `(bool, str, str)` — success, path, message |
+| `stamp` | `stamp_jpeg(path, output, model, date, ...)` | `(bool, str | None, str)` — success, path (None on error), message |
 | `detect` | `detect_floppy_drives()` | `list[FloppyDrive]` |
 | `history` | `record_snapshot(label, sector_status, ...)` | `DiskSnapshot` |
 | `history` | `compare_snapshots(older, newer)` | `dict` — readable_change, degrading |
@@ -409,14 +409,17 @@ All tests run without hardware. Synthetic disk images and JPEG data are created 
 - **Dev**: pytest>=7.0, pytest-asyncio>=0.23
 - **CI**: GitHub Actions (Linux/Windows/macOS × Python 3.14)
 
-### Linting & Formatting
+### Linting, Formatting & Type Checking
 
-Uses [ruff](https://docs.astral.sh/ruff/) for both linting and formatting, configured in `pyproject.toml`.
+Uses [ruff](https://docs.astral.sh/ruff/) for linting/formatting and [mypy](https://mypy.readthedocs.io/) for type checking, both configured in `pyproject.toml`.
 
 ```bash
 python scripts/lint.py          # check only (CI mode)
 python scripts/lint.py --fix    # auto-fix lint issues + reformat
+python -m mypy mavica_tools/    # type check
 ```
+
+Both ruff and mypy must pass before committing. They are equally important — mypy catches type errors that ruff cannot, and ruff catches style/correctness issues mypy won't flag.
 
 ### Screenshots
 

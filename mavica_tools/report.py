@@ -104,9 +104,9 @@ def _thumbnail_html(image_path: str, max_width: int = 200) -> str:
 
 def generate_report(
     output_path: str,
-    sector_status: list[str] = None,
-    files: list[dict] = None,
-    image_dir: str = None,
+    sector_status: list[str] | None = None,
+    files: list[dict] | None = None,
+    image_dir: str | None = None,
     disk_label: str = "",
     camera_model: str = "",
     notes: str = "",
@@ -309,7 +309,7 @@ h2 {{
     return output_path
 
 
-def generate_from_recovery_dir(recovery_dir: str, output_path: str = None, **kwargs) -> str:
+def generate_from_recovery_dir(recovery_dir: str, output_path: str | None = None, **kwargs) -> str:
     """Generate a report from a recovery directory structure.
 
     Looks for merged.img, extracted/, repaired/ subdirectories.

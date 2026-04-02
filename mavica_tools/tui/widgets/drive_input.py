@@ -6,6 +6,7 @@ floppy drive selection.
 
 import asyncio
 import platform
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.containers import Horizontal
@@ -267,7 +268,7 @@ class DriveInput(Widget):
                 width: 100%;
             }
             """
-            BINDINGS = [("escape", "cancel", "Cancel")]
+            BINDINGS: ClassVar[list] = [("escape", "cancel", "Cancel")]
 
             def compose(self_inner):
                 with Vertical(id="drive-dialog"):

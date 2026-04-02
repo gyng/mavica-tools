@@ -2,6 +2,7 @@
 
 import glob as globmod
 import os
+from typing import ClassVar
 
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -17,7 +18,7 @@ from mavica_tools.tui.widgets.file_picker import FilePicker
 class CheckScreen(Screen):
     """Batch-check JPEGs for corruption."""
 
-    BINDINGS = [
+    BINDINGS: ClassVar[list] = [
         Binding("escape", "app.pop_screen", "Back", show=True),
         Binding("r", "run_check", "Run", show=True),
         Binding("b", "browse", "Browse", show=True),

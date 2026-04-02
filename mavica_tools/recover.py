@@ -10,6 +10,7 @@ import argparse
 import os
 import platform
 import sys
+from typing import Any
 
 from mavica_tools.carve import carve_jpegs
 from mavica_tools.check import check_jpeg_structure
@@ -32,7 +33,7 @@ def recover_from_images(image_paths: list[str], output_dir: str, use_fat: bool =
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    summary = {
+    summary: dict[str, Any] = {
         "merged_path": None,
         "extraction_method": None,
         "total_files": 0,

@@ -72,8 +72,7 @@ class TestReadImageFile:
 
     def test_empty_image(self, tmp_dir):
         path = os.path.join(tmp_dir, "empty.img")
-        with open(path, "wb") as f:
-            pass
+        open(path, "wb").close()
         result = read_image_file(path)
         assert len(result) == DISK_SIZE
         assert result == b"\x00" * DISK_SIZE
