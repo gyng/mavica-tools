@@ -108,4 +108,4 @@ Source: https://docs.google.com/spreadsheets/d/154tKHY2aYh4E9OnJMLbKwnPDHhunsz5l
 
 <img src="screenshots/sample-fd7.jpg" width="320" alt="Sample photo from a Sony Mavica MVC-FD7 (640x480, 2001)">
 
-*Shot on Sony Mavica MVC-FD7, recovered with mavica-tools*
+*Shot on Sony Mavica MVC-FD7 (640x480)*
