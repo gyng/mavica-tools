@@ -155,19 +155,19 @@ class TestRecoverFromFixtures:
         output_dir = os.path.join(tmp_dir, "recovery")
         summary = recover_from_images([fixture_disk_image], output_dir, use_fat=True)
 
-        assert summary["total_files"] >= 3  # at least 3 JPEGs
+        assert summary["total_files"] >= 5  # at least 5 JPEGs
         assert summary["merged_path"] is not None
 
     def test_carve_from_fixture_disk_image(self, tmp_dir, fixture_disk_image):
-        """JPEG carving from good disk image should find all 3 photos."""
+        """JPEG carving from good disk image should find all 5 photos."""
         output_dir = os.path.join(tmp_dir, "recovery")
         summary = recover_from_images([fixture_disk_image], output_dir, use_fat=False)
 
         assert summary["extraction_method"] == "carve"
-        assert summary["total_files"] >= 3
+        assert summary["total_files"] >= 5
 
     def test_recover_from_bad_sectors_disk(self, tmp_dir):
-        """Recovery from disk with zeroed sector should still extract files."""
+        """Recovery from disk with zeroed sectors should still extract files."""
         from mavica_tools.check import check_jpeg_structure
         from mavica_tools.fat12 import extract_with_names
 
@@ -175,7 +175,7 @@ class TestRecoverFromFixtures:
         output_dir = os.path.join(tmp_dir, "extracted")
         results = extract_with_names(bad_disk, output_dir)
 
-        assert len(results) == 6  # all files still extractable
+        assert len(results) == 11  # all files still extractable
 
         # Find the damaged JPEG (MVC-006F.JPG) and check it
         for name, path, size, deleted in results:

@@ -214,12 +214,12 @@ class TestRealPhotoFixtures:
         extract_dir = os.path.join(tmp_dir, "extracted")
         results = extract_with_names(fixture_disk_image, extract_dir)
 
-        # Should have 6 files (3 JPEGs + 3 .411s)
-        assert len(results) == 6
+        # Should have 11 files (5 JPEGs + 6 .411s)
+        assert len(results) == 11
 
         # Find a JPEG and run check + stamp
         jpeg_results = [(n, p, s, d) for n, p, s, d in results if n.endswith(".JPG")]
-        assert len(jpeg_results) == 3
+        assert len(jpeg_results) == 5
 
         name, path, size, deleted = jpeg_results[0]
         check_result = check_jpeg_structure(path)
@@ -234,7 +234,7 @@ class TestRealPhotoFixtures:
 
     def test_real_photos_all_valid(self, fixture_jpegs):
         """All fixture JPEGs should pass structural validation."""
-        assert len(fixture_jpegs) == 3
+        assert len(fixture_jpegs) == 5
         for jpeg_path in fixture_jpegs:
             result = check_jpeg_structure(jpeg_path)
             assert result["valid"] is True, f"{jpeg_path} failed: {result['issues']}"
@@ -245,13 +245,13 @@ class TestRealPhotoFixtures:
         """Recover a file with deleted directory entry (0xE5)."""
         deleted_disk = os.path.join(os.path.dirname(__file__), "fixtures", "disk_deleted_files.img")
 
-        # Without include_deleted — should find 5 files
+        # Without include_deleted — should find 10 files (11 - 1 deleted)
         files = list_files(deleted_disk, include_deleted=False)
-        assert len(files) == 5
+        assert len(files) == 10
 
-        # With include_deleted — should find 6, one marked deleted
+        # With include_deleted — should find 11, one marked deleted
         files = list_files(deleted_disk, include_deleted=True)
-        assert len(files) == 6
+        assert len(files) == 11
         deleted = [f for f in files if f.is_deleted]
         assert len(deleted) == 1
         assert deleted[0].name == "MVC-004F.JPG"
@@ -259,7 +259,7 @@ class TestRealPhotoFixtures:
         # Extract with deleted — should recover the file
         extract_dir = os.path.join(tmp_dir, "extracted")
         results = extract_with_names(deleted_disk, extract_dir, include_deleted=True)
-        assert len(results) == 6
+        assert len(results) == 11
         deleted_results = [(n, p) for n, p, s, d in results if d]
         assert len(deleted_results) == 1
         # Verify recovered file starts with JPEG SOI

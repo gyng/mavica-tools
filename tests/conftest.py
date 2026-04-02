@@ -28,7 +28,7 @@ def fixture_thumbnails():
 
 @pytest.fixture
 def fixture_disk_image():
-    """Path to the good FAT12 disk image with 3 JPEGs + 3 .411s."""
+    """Path to the good FAT12 disk image with 5 JPEGs + 6 .411s."""
     return os.path.join(FIXTURES_DIR, "disk_with_photos.img")
 
 

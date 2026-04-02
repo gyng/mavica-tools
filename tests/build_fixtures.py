@@ -91,19 +91,25 @@ def _load_fixture(name: str) -> bytes:
 
 
 def build_good_disk() -> bytearray:
-    """Build disk_with_photos.img — good disk with 3 JPEGs + 3 .411s."""
+    """Build disk_with_photos.img — good disk with 5 JPEGs + 5 .411s."""
     disk = bytearray(create_disk_image("MAVICA"))
 
     # Files to write: JPEGs first, then .411s in reverse order
+    # (matches real Mavica floppy layout)
     jpegs = [
         ("MVC-004F", "JPG", _load_fixture("MVC-004F.JPG")),
         ("MVC-002F", "JPG", _load_fixture("MVC-002F.JPG")),
         ("MVC-006F", "JPG", _load_fixture("MVC-006F.JPG")),
+        ("MVC-001F", "JPG", _load_fixture("MVC-001F.JPG")),
+        ("MVC-015F", "JPG", _load_fixture("MVC-015F.JPG")),
     ]
     thumbnails = [
+        ("MVC-016F", "411", _load_fixture("MVC-016F.411")),
+        ("MVC-015F", "411", _load_fixture("MVC-015F.411")),
         ("MVC-006F", "411", _load_fixture("MVC-006F.411")),
         ("MVC-004F", "411", _load_fixture("MVC-004F.411")),
         ("MVC-002F", "411", _load_fixture("MVC-002F.411")),
+        ("MVC-001F", "411", _load_fixture("MVC-001F.411")),
     ]
 
     cluster = 2  # first data cluster
@@ -285,10 +291,14 @@ def stamp_fixture_jpeg_dates():
     #   MVC-002F: 42s after 10:10 trackpoint — easy match within default 5m tolerance
     #   MVC-004F: 3m18s after 10:33 trackpoint — within 5m but tests interpolation
     #   MVC-006F: 6m15s after track ends at 11:00 — outside 5m tolerance, needs 7m+
+    #   MVC-014F: exact match at 10:20 trackpoint
+    #   MVC-015F: 1m45s after 10:45 trackpoint
     jpeg_times = {
         "MVC-002F.JPG": "2001:07:04 10:10:42",
         "MVC-004F.JPG": "2001:07:04 10:33:18",
         "MVC-006F.JPG": "2001:07:04 11:06:15",
+        "MVC-001F.JPG": "2001:07:04 10:20:00",
+        "MVC-015F.JPG": "2001:07:04 10:46:45",
     }
 
     for name, date_str in jpeg_times.items():

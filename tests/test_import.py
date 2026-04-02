@@ -142,7 +142,7 @@ class TestImportRealFixtures:
         out = os.path.join(tmp_dir, "photos")
         result = quick_import(src, out)
 
-        assert result["imported"] == 3
+        assert result["imported"] == 5
         # Verify each output is a valid JPEG (starts with SOI)
         for path in result["files"]:
             with open(path, "rb") as fh:
@@ -164,9 +164,9 @@ class TestImportRealFixtures:
         result = quick_import(src, out)
 
         # Should import both JPEGs and .411 thumbnails
-        assert result["imported"] == 6
+        assert result["imported"] == 11
         out_files = os.listdir(out)
         jpg_count = sum(1 for f in out_files if f.endswith(".JPG"))
         thumb_count = sum(1 for f in out_files if f.endswith(".411"))
-        assert jpg_count == 3
-        assert thumb_count == 3
+        assert jpg_count == 5
+        assert thumb_count == 6

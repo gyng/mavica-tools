@@ -43,10 +43,13 @@ async def setup_import_workflow(app, pilot):
     table.add_row("OK", "MVC-004.JPG", "88.3 KB", "2001-07-04")
     table.add_row("OK", "MVC-005.JPG", "93.7 KB", "2001-07-04")
 
-    # Show a real photo in the preview
+    # Show a real photo in the preview (set_pil_image avoids async race)
     fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-004F.JPG")
     if os.path.exists(fixture_jpg):
-        screen.query_one("#preview", ImagePreview).image_path = fixture_jpg
+        from PIL import Image
+
+        img = Image.open(fixture_jpg)
+        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-004F.JPG")
 
     # Populate defrag map showing completed read
     defrag = screen.query_one("#defrag-map", DefragMap)
@@ -83,6 +86,22 @@ async def setup_multipass(app, pilot):
     for i in range(2120, 2400):
         defrag.update_sector(i, "good")
     defrag.update_sector(2400, "reading")
+
+    # Add file boundaries (simulated Mavica floppy layout)
+    defrag.set_file_boundaries(
+        [
+            ("MVC-001F.JPG", list(range(33, 115))),
+            ("MVC-002F.JPG", list(range(115, 183))),
+            ("MVC-004F.JPG", list(range(183, 253))),
+            ("MVC-006F.JPG", list(range(253, 353))),
+            ("MVC-015F.JPG", list(range(353, 433))),
+        ]
+    )
+
+    log = app.screen.query_one("#log", RichLog)
+    log.write("[bold]Pass 2/5[/]  2400/2880 sectors read")
+    log.write("  [green]2250 good[/]  [red]50 bad[/]  [#33aaff]270 recovered[/]")
+
     await pilot.pause()
 
 
@@ -103,27 +122,28 @@ async def setup_recover_image(app, pilot):
     screen.query_one("#output-dir", Input).value = "mavica_out/recovered/"
     table = screen.query_one("#results-table", DataTable)
     table.add_row(
-        "[green]\u25cf[/]", "[green]OK[/]", "MVC-001.JPG", "94,208", "0x008400", "2001-07-04"
+        "[green]\u25cf[/]", "[green]OK[/]", "MVC-001F.JPG", "41,923", "0x008400", "2001-07-04"
     )
     table.add_row(
-        "[green]\u25cf[/]", "[green]OK[/]", "MVC-002.JPG", "87,552", "0x01DA00", "2001-07-04"
+        "[green]\u25cf[/]", "[green]OK[/]", "MVC-002F.JPG", "34,579", "0x01DA00", "2001-07-04"
     )
     table.add_row(
-        "[green]\u25cf[/]", "[green]OK[/]", "MVC-003.JPG", "91,136", "0x033200", "2001-07-04"
+        "[green]\u25cf[/]", "[green]OK[/]", "MVC-004F.JPG", "35,903", "0x033200", "2001-07-04"
     )
     table.add_row(
-        "[dim]\u25cb[/]",
-        "[red]DEL[/]",
-        "[dim]MVC-004.JPG[/]",
-        "[dim]88,320[/]",
-        "[dim]0x049200[/]",
-        "[dim]2001-07-04[/]",
+        "[green]\u25cf[/]", "[green]OK[/]", "MVC-006F.JPG", "50,994", "0x049200", "2001-07-04"
+    )
+    table.add_row(
+        "[green]\u25cf[/]", "[green]OK[/]", "MVC-015F.JPG", "40,547", "0x05C400", "2001-07-04"
     )
 
-    # Show a real photo in the preview
+    # Show a real photo in the preview (use set_pil_image to avoid async race)
     fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-006F.JPG")
     if os.path.exists(fixture_jpg):
-        screen.query_one("#preview", ImagePreview).image_path = fixture_jpg
+        from PIL import Image
+
+        img = Image.open(fixture_jpg)
+        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-006F.JPG")
 
     await pilot.pause()
 
@@ -182,12 +202,15 @@ async def setup_stamp(app, pilot):
 
     screen.query_one("#btn-stamp", Button).label = "Tag 5 (F2)"
 
-    # Show a real photo in the preview
+    # Show a real photo in the preview (set_pil_image avoids async race)
     from mavica_tools.tui.widgets.image_preview import ImagePreview
 
     fixture_jpg = os.path.join(FIXTURES_DIR, "MVC-002F.JPG")
     if os.path.exists(fixture_jpg):
-        screen.query_one("#preview", ImagePreview).image_path = fixture_jpg
+        from PIL import Image
+
+        img = Image.open(fixture_jpg)
+        screen.query_one("#preview", ImagePreview).set_pil_image(img, "MVC-002F.JPG")
 
     await pilot.pause()
 
@@ -327,6 +350,17 @@ async def setup_diskcheck(app, pilot):
         else:
             defrag.update_sector(i, "good")
 
+    # Add file boundaries
+    defrag.set_file_boundaries(
+        [
+            ("MVC-001F.JPG", list(range(33, 115))),
+            ("MVC-002F.JPG", list(range(115, 183))),
+            ("MVC-004F.JPG", list(range(183, 253))),
+            ("MVC-006F.JPG", list(range(253, 353))),
+            ("MVC-015F.JPG", list(range(353, 433))),
+        ]
+    )
+
     screen.query_one("#progress", ProgressBar).update(total=2880, progress=2880)
 
     # Verdict
@@ -340,7 +374,7 @@ async def setup_diskcheck(app, pilot):
     log.write("[bold]Full check complete[/]  2880 sectors tested")
     log.write("  [green]2871 good[/]  [red]5 bad[/]  [#ffaa00]4 marked[/]")
     log.write("  Speed: 14.2 KB/s  Duration: 3m 22s")
-    log.write("  Files: MVC-001.JPG MVC-002.JPG MVC-003.JPG")
+    log.write("  Files: MVC-001F.JPG MVC-002F.JPG MVC-004F.JPG MVC-006F.JPG MVC-015F.JPG")
 
     await pilot.pause()
 
