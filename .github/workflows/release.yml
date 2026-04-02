@@ -79,10 +79,9 @@ jobs:
           body: |
             ## mavica-tools ${{ github.ref_name }}
 
-            Download the binary for your platform — single file, no install needed:
+            Download for your platform — single file, no install needed:
             - **Windows**: `mavica.exe`
-            - **macOS**: `mavica-mac` (`chmod +x` first)
-            - **Linux**: `mavica-linux` (`chmod +x` first)
+            - **macOS / Linux**: download `mavica-mac` or `mavica-linux`, rename to `mavica`, `chmod +x`
 
             Or install via pip/uv (Python 3.14+):
             ```bash
